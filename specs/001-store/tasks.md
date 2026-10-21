@@ -103,3 +103,50 @@ description: "Task list for Store & history"
 ## Implementation Strategy
 
 MVP first: User Story 1 end to end, validate at its checkpoint, then the next story. The implement step belongs to `backend:build` / `frontend:tui` (+ `qa:e2e` for `## QA`), each ticking only its own section; close with `/speckit-converge`.
+
+---
+
+## Backend
+
+Appended by `backend:spec`. Built by `backend:build` (ticks only this section). Tests first.
+
+
+### Backend Setup
+
+- [ ] T018 Add deps (serde, serde_json, blake3 `pure`, rustix `fs`, time, rand, thiserror, tracing) and dev-deps (proptest, tempfile) to `Cargo.toml` — Executor: builder · Reviewer: thinker · Effort: low
+
+**Checkpoint**: `cargo build` and `cargo test` green; setup pieces covered by unit tests.
+
+### Backend Foundational
+
+- [ ] T019 `Redacted<T>` wrapper + tracing init helper in `src/domain/redact.rs`, `src/daemon/log.rs` — Executor: builder · Reviewer: thinker
+- [ ] T020 `EntryId` (ULID layout), `ShortId`, `EntryRef` value objects with unit tests in `src/domain/ids.rs` — Executor: builder · Reviewer: thinker
+
+**Checkpoint**: `cargo build` and `cargo test` green; foundational pieces covered by unit tests.
+
+### Backend US1 — Recorded entries survive restarts
+
+- [ ] T021 [US1] `Content`, `ContentHash`, `Preview` value objects in `src/domain/entry.rs` — Executor: builder · Reviewer: thinker
+- [ ] T022 [US1] Atomic write helpers + `Store::open_exclusive` with perms check and orphan sweep in `src/store/{mod,fs,perms}.rs` — Executor: builder · Reviewer: reviewer · Effort: high
+- [ ] T023 [US1] Index v1 serde types + load/commit in `src/store/index.rs` — Executor: builder · Reviewer: thinker
+
+**Checkpoint**: the US1 tests in this file's story phase pass (`cargo test`), plus the contract tests where they apply.
+
+### Backend US2 — History stays small and fresh
+
+- [ ] T024 [US2] `History` aggregate: record (de-dup, evict), touch, pin/unpin (PinLimit, idempotent), remove, clear, clear_all, expire, next_deadline in `src/domain/history.rs` — Executor: builder · Reviewer: reviewer · Effort: high
+- [ ] T025 [US2] `Store::apply(batch)` mapping mutations to content writes + one index commit + unlinks — Executor: builder · Reviewer: reviewer · Effort: high
+
+**Checkpoint**: the US2 tests in this file's story phase pass (`cargo test`), plus the contract tests where they apply.
+
+### Backend US3 — Clients read while the daemon is down
+
+- [ ] T026 [US3] `Store::open_read_only` (LOCK_SH|LOCK_NB, `DaemonRunning`) exposing only read APIs in `src/store/readonly.rs` — Executor: builder · Reviewer: thinker
+
+**Checkpoint**: the US3 tests in this file's story phase pass (`cargo test`), plus the contract tests where they apply.
+
+### Backend Polish
+
+- [ ] T027 Bench `benches/store.rs` and tune (SC-003) — Executor: builder · Reviewer: thinker
+
+**Checkpoint**: the budgets in backend.md are met; `/speckit-converge` (Backend) reports converged.

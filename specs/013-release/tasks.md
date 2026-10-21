@@ -97,3 +97,28 @@ No feature-specific setup (crate skeleton comes from 001).
 ## Implementation Strategy
 
 MVP first: User Story 1 end to end, validate at its checkpoint, then the next story. The implement step belongs to `backend:build` / `frontend:tui` (+ `qa:e2e` for `## QA`), each ticking only its own section; close with `/speckit-converge`.
+
+---
+
+## Backend
+
+Appended by `backend:spec`. Built by `backend:build` (ticks only this section). Tests first.
+
+
+### Backend US1 — Every change is checked on Tier-1 sessions
+
+- [ ] T011 [US1] `.github/workflows/ci.yml` per spec FR-001/002 — via `devsecops:pipeline` — Executor: thinker · Reviewer: reviewer · Effort: high
+
+**Checkpoint**: the US1 tests in this file's story phase pass (`cargo test`), plus the contract tests where they apply.
+
+### Backend US2 — A tag publishes everything without a stored token
+
+- [ ] T012 [US2] `.github/workflows/release.yml` per FR-003/004 — via `devsecops:pipeline` — Executor: thinker · Reviewer: reviewer · Effort: high
+
+**Checkpoint**: the US2 tests in this file's story phase pass (`cargo test`), plus the contract tests where they apply.
+
+### Backend US3 — First release by hand, then token retirement
+
+- [ ] T013 [US3] `docs/release.md` runbook + Tier-1 manual matrix — Executor: builder · Reviewer: thinker
+
+**Checkpoint**: the US3 tests in this file's story phase pass (`cargo test`), plus the contract tests where they apply.

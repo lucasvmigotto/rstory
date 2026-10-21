@@ -116,3 +116,56 @@ description: "Task list for Daemon & control socket"
 ## Implementation Strategy
 
 MVP first: User Story 1 end to end, validate at its checkpoint, then the next story. The implement step belongs to `backend:build` / `frontend:tui` (+ `qa:e2e` for `## QA`), each ticking only its own section; close with `/speckit-converge`.
+
+---
+
+## Backend
+
+Appended by `backend:spec`. Built by `backend:build` (ticks only this section). Tests first.
+
+
+### Backend Setup
+
+- [ ] T017 Add tokio (`rt`,`net`,`time`,`signal`,`io-util`,`macros`,`sync`,`fs`), tracing-subscriber, rustix `net`; dev: `jsonschema` validator — Executor: builder · Reviewer: thinker · Effort: low
+
+**Checkpoint**: `cargo build` and `cargo test` green; setup pieces covered by unit tests.
+
+### Backend Foundational
+
+- [ ] T018 Socket server: runtime dir resolution, 0700 dir, bind/stale handling, `SO_PEERCRED` check, line codec with 2 MiB limit in `src/ipc/server.rs`, `src/ipc/peercred.rs` — Executor: builder · Reviewer: reviewer · Effort: high
+- [ ] T019 Error → protocol code mapping and correlation ids in `src/ipc/error.rs` — Executor: builder · Reviewer: thinker
+
+**Checkpoint**: `cargo build` and `cargo test` green; foundational pieces covered by unit tests.
+
+### Backend US1 — Record the clipboard in the background
+
+- [ ] T020 [US1] Daemon main: single instance (store LOCK_EX), backend selection, inactive state, signal handling in `src/daemon/mod.rs` — Executor: builder · Reviewer: reviewer · Effort: high
+- [ ] T021 [US1] Capture pipeline: bounded queue, filter hook (005), batched `Store::apply`, `history_changed` fan-out in `src/daemon/pipeline.rs` — Executor: builder · Reviewer: reviewer · Effort: high
+- [ ] T022 [US1] Handlers: list, show, status, subscribe in `src/daemon/handlers.rs` — Executor: builder · Reviewer: thinker
+
+**Checkpoint**: the US1 tests in this file's story phase pass (`cargo test`), plus the contract tests where they apply.
+
+### Backend US2 — Serve a restore
+
+- [ ] T023 [US2] Restore: resolve → touch → backend serve → ack after ownership; self_owned handling in `src/daemon/restore.rs` — Executor: builder · Reviewer: reviewer · Effort: high
+
+**Checkpoint**: the US2 tests in this file's story phase pass (`cargo test`), plus the contract tests where they apply.
+
+### Backend US3 — Pause and timed pause
+
+- [ ] T024 [US3] RecordingState aggregate (pause, timed pause, persisted, resume on load) in `src/domain/pause.rs` + handlers pause/resume — Executor: builder · Reviewer: thinker
+- [ ] T025 [US3] Deadline timer (`min(next_expiry, paused_until)`) in `src/daemon/timers.rs` — Executor: builder · Reviewer: thinker
+
+**Checkpoint**: the US3 tests in this file's story phase pass (`cargo test`), plus the contract tests where they apply.
+
+### Backend US4 — Status and housekeeping
+
+- [ ] T026 [US4] Counters + status read model; reconnect policy for bridge mode in `src/daemon/state.rs` — Executor: builder · Reviewer: thinker
+
+**Checkpoint**: the US4 tests in this file's story phase pass (`cargo test`), plus the contract tests where they apply.
+
+### Backend Polish
+
+- [ ] T027 Burst tuning, RSS verification, logging review against F11 — Executor: builder · Reviewer: reviewer · Effort: high
+
+**Checkpoint**: the budgets in backend.md are met; `/speckit-converge` (Backend) reports converged.

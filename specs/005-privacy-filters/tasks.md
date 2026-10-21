@@ -98,3 +98,34 @@ No feature-specific setup (crate skeleton comes from 001).
 ## Implementation Strategy
 
 MVP first: User Story 1 end to end, validate at its checkpoint, then the next story. The implement step belongs to `backend:build` / `frontend:tui` (+ `qa:e2e` for `## QA`), each ticking only its own section; close with `/speckit-converge`.
+
+---
+
+## Backend
+
+Appended by `backend:spec`. Built by `backend:build` (ticks only this section). Tests first.
+
+
+### Backend US1 — Copies marked sensitive are never stored
+
+- [ ] T012 [US1] `CopyFilter` pre-read gates (pause, sensitive) using `SENSITIVE_HINTS` in `src/domain/filter.rs` — Executor: builder · Reviewer: thinker
+
+**Checkpoint**: the US1 tests in this file's story phase pass (`cargo test`), plus the contract tests where they apply.
+
+### Backend US2 — Oversize copies are dropped, never truncated
+
+- [ ] T013 [US2] Post-read gates (oversize via limit+1, empty) and drop of rejected bytes — Executor: builder · Reviewer: thinker
+
+**Checkpoint**: the US2 tests in this file's story phase pass (`cargo test`), plus the contract tests where they apply.
+
+### Backend US3 — Nothing recorded while paused
+
+- [ ] T014 [US3] Wire filter into the daemon pipeline with counters (`skipped_*`) in `src/daemon/pipeline.rs` — Executor: builder · Reviewer: thinker
+
+**Checkpoint**: the US3 tests in this file's story phase pass (`cargo test`), plus the contract tests where they apply.
+
+### Backend Polish
+
+- [ ] T015 README: threat model, hints, `passc` wrapper — Executor: builder · Reviewer: thinker · Effort: low
+
+**Checkpoint**: the budgets in backend.md are met; `/speckit-converge` (Backend) reports converged.

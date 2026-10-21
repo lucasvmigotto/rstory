@@ -99,3 +99,43 @@ description: "Task list for Session detection & X11 capture"
 ## Implementation Strategy
 
 MVP first: User Story 1 end to end, validate at its checkpoint, then the next story. The implement step belongs to `backend:build` / `frontend:tui` (+ `qa:e2e` for `## QA`), each ticking only its own section; close with `/speckit-converge`.
+
+---
+
+## Backend
+
+Appended by `backend:spec`. Built by `backend:build` (ticks only this section). Tests first.
+
+
+### Backend Foundational
+
+- [ ] T014 Backend trait + `FakeBackend` (scriptable events, recorded serves) in `src/backend/{mod,fake}.rs` — Executor: thinker · Reviewer: reviewer · Effort: high
+
+**Checkpoint**: `cargo build` and `cargo test` green; foundational pieces covered by unit tests.
+
+### Backend US1 — Capture on X11
+
+- [ ] T015 [US1] X11 connection, XFIXES subscription, TARGETS-first read with limit and timeout in `src/backend/x11/{mod,read}.rs` — Executor: builder · Reviewer: reviewer · Effort: high
+- [ ] T016 [US1] INCR receive in `src/backend/x11/incr.rs` — Executor: builder · Reviewer: reviewer · Effort: high
+
+**Checkpoint**: the US1 tests in this file's story phase pass (`cargo test`), plus the contract tests where they apply.
+
+### Backend US2 — Restore on X11
+
+- [ ] T017 [US2] Owner/serve state machine with SelectionRequest handling and INCR send in `src/backend/x11/serve.rs` — Executor: builder · Reviewer: reviewer · Effort: high
+- [ ] T018 [US2] `self_owned` detection by owner window id — Executor: builder · Reviewer: thinker
+
+**Checkpoint**: the US2 tests in this file's story phase pass (`cargo test`), plus the contract tests where they apply.
+
+### Backend US3 — Automatic backend selection incl. XWayland bridge
+
+- [ ] T019 [US3] `session::select` + Wayland registry probe (data-control globals) in `src/session/mod.rs` — Executor: builder · Reviewer: thinker
+- [ ] T020 [US3] Bridge mode: X11 backend with `mode = xwayland_bridge`, connect retry 3 s — Executor: builder · Reviewer: thinker
+
+**Checkpoint**: the US3 tests in this file's story phase pass (`cargo test`), plus the contract tests where they apply.
+
+### Backend Polish
+
+- [ ] T021 Document GNOME 48–51 manual check in `docs/release.md` (draft) — Executor: builder · Reviewer: thinker · Effort: low
+
+**Checkpoint**: the budgets in backend.md are met; `/speckit-converge` (Backend) reports converged.

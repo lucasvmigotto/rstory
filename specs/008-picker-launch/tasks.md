@@ -65,3 +65,17 @@ No feature-specific setup (crate skeleton comes from 001).
 ## Implementation Strategy
 
 MVP first: User Story 1 end to end, validate at its checkpoint, then the next story. The implement step belongs to `backend:build` / `frontend:tui` (+ `qa:e2e` for `## QA`), each ticking only its own section; close with `/speckit-converge`.
+
+---
+
+## Backend
+
+Appended by `backend:spec`. Built by `backend:build` (ticks only this section). Tests first.
+
+
+### Backend US1 — Open the picker from a menu
+
+- [ ] T007 [US1] `launch::plan` resolution + `TERMINALS` table in `src/launch/mod.rs` — Executor: builder · Reviewer: thinker
+- [ ] T008 [US1] `launch::spawn` detached (setsid, null stdio) + `open_picker` handler + `picker_available` in status — Executor: builder · Reviewer: thinker
+
+**Checkpoint**: the US1 tests in this file's story phase pass (`cargo test`), plus the contract tests where they apply.

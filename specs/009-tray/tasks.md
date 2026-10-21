@@ -98,3 +98,34 @@ description: "Task list for SNI tray"
 ## Implementation Strategy
 
 MVP first: User Story 1 end to end, validate at its checkpoint, then the next story. The implement step belongs to `backend:build` / `frontend:tui` (+ `qa:e2e` for `## QA`), each ticking only its own section; close with `/speckit-converge`.
+
+---
+
+## Backend
+
+Appended by `backend:spec`. Built by `backend:build` (ticks only this section). Tests first.
+
+
+### Backend Setup
+
+- [ ] T013 Add ksni (tokio), zbus (tokio, no default features), png (build-dep); `build.rs` icon ARGB generation — Executor: builder · Reviewer: thinker
+
+**Checkpoint**: `cargo build` and `cargo test` green; setup pieces covered by unit tests.
+
+### Backend US1 — Restore from the top bar
+
+- [ ] T014 [US1] ksni `Tray` impl: icon pixmaps, tooltip, entry items → restore in `src/tray/mod.rs` — Executor: builder · Reviewer: thinker
+
+**Checkpoint**: the US1 tests in this file's story phase pass (`cargo test`), plus the contract tests where they apply.
+
+### Backend US2 — Pause, timed pause, open picker, clear
+
+- [ ] T015 [US2] Pause/Resume/Pause 1 min/Open picker/Clear-confirm items wired to daemon handlers — Executor: builder · Reviewer: thinker
+
+**Checkpoint**: the US2 tests in this file's story phase pass (`cargo test`), plus the contract tests where they apply.
+
+### Backend US3 — No SNI host
+
+- [ ] T016 [US3] Watcher tracking, `status.tray` states, config `tray = false` — Executor: builder · Reviewer: thinker
+
+**Checkpoint**: the US3 tests in this file's story phase pass (`cargo test`), plus the contract tests where they apply.
