@@ -8,6 +8,6 @@
 | `Footer` | hints, status messages, confirms | one line | hints (full/short), status (pin limit, restoring), confirm (`Delete this entry? y/n`) | y/n in confirm, Esc cancels | copy keys from ux-vision |
 | `Banner` | read-only notice | one line above the list, `warning` role + words | shown/hidden | — | `picker.readonly.banner` |
 | `StateBadge` | recording state | word: Recording / Paused / Paused — resumes in m:ss / Inactive | 4 states | — | words always; color is extra |
-| `EntryLine` (CLI `ls`) | non-interactive list line | index · short id · pin · age · preview | pinned, plain | — | width-aware when a TTY, full preview when piped? no: piped prints the preview untruncated up to 256 chars |
+| `EntryLine` (CLI `ls`) | non-interactive list line | index · short id · pin · age · preview | pinned, plain | — | width-aware on a TTY; piped output prints the full preview (≤ 256 chars) as TSV with no colors |
 | `CheckLine` (doctor) | one check result | glyph · label · message · hint (indented) | ok, info, warn, fail | — | the glyph has an ASCII fallback; the hint starts with "→" (ASCII "->") |
 | Menu item (tray/panel) | see `specs/009-tray/contracts/menu.md` | label | sensitive, insensitive, hidden | host-provided | ≤ 48 chars, `⏎` for newlines |
