@@ -82,3 +82,28 @@ description: "Task list for GNOME Shell extension"
 ## Implementation Strategy
 
 MVP first: User Story 1 end to end, validate at its checkpoint, then the next story. The implement step belongs to `backend:build` / `frontend:tui` (+ `qa:e2e` for `## QA`), each ticking only its own section; close with `/speckit-converge`.
+
+---
+
+## Frontend
+
+Appended by `frontend:spec`. `[TUI]`/`[CLI]` tasks built by `frontend:tui` (ticks only this section). Depends on `000-design-system`. Snapshot and journey tests first.
+
+
+### Frontend Foundational
+
+- [ ] T011 [TUI] JS menu model module (`extension/menu.js`) per `specs/009-tray/contracts/menu.md` + Disconnected state — Executor: builder · Reviewer: thinker
+
+**Checkpoint**: unit tests green.
+
+### Frontend US1 — Install the extension from the binary
+
+- [ ] T012 [US1] [CLI] `install-gnome-extension` (embed via include_dir, write, `--enable`, `--uninstall`, version compare) in `src/install/gnome.rs` with tui.md messages — Executor: builder · Reviewer: thinker
+
+**Checkpoint**: the US1 snapshot/journey tests pass; `cargo insta review` is clean.
+
+### Frontend US2 — Panel icon and menu on GNOME
+
+- [ ] T013 [US2] [TUI] `extension.js`: PanelMenu.Button, symbolic icons per state, menu from the model, actions → client requests, full `disable()` cleanup — Executor: builder · Reviewer: reviewer · Effort: high
+
+**Checkpoint**: the US2 snapshot/journey tests pass; `cargo insta review` is clean.

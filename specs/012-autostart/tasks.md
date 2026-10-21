@@ -81,3 +81,22 @@ No feature-specific setup (crate skeleton comes from 001).
 ## Implementation Strategy
 
 MVP first: User Story 1 end to end, validate at its checkpoint, then the next story. The implement step belongs to `backend:build` / `frontend:tui` (+ `qa:e2e` for `## QA`), each ticking only its own section; close with `/speckit-converge`.
+
+---
+
+## Frontend
+
+Appended by `frontend:spec`. `[TUI]`/`[CLI]` tasks built by `frontend:tui` (ticks only this section). Depends on `000-design-system`. Snapshot and journey tests first.
+
+
+### Frontend US1 — Start at every login, any init system
+
+- [ ] T009 [US1] [CLI] `install-autostart` XDG path + messages + temp-path warning in `src/install/autostart.rs` — Executor: builder · Reviewer: thinker
+
+**Checkpoint**: the US1 snapshot/journey tests pass; `cargo insta review` is clean.
+
+### Frontend US2 — systemd user unit
+
+- [ ] T010 [US2] [CLI] `--systemd`, `--now`, `--uninstall` — Executor: builder · Reviewer: thinker
+
+**Checkpoint**: the US2 snapshot/journey tests pass; `cargo insta review` is clean.

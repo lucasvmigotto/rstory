@@ -99,3 +99,42 @@ description: "Task list for Terminal picker"
 ## Implementation Strategy
 
 MVP first: User Story 1 end to end, validate at its checkpoint, then the next story. The implement step belongs to `backend:build` / `frontend:tui` (+ `qa:e2e` for `## QA`), each ticking only its own section; close with `/speckit-converge`.
+
+---
+
+## Frontend
+
+Appended by `frontend:spec`. `[TUI]`/`[CLI]` tasks built by `frontend:tui` (ticks only this section). Depends on `000-design-system`. Snapshot and journey tests first.
+
+
+### Frontend Foundational
+
+- [ ] T014 [TUI] terminal lifecycle: init/restore, panic hook, SIGTERM/SIGHUP restore, TTY check (exit 2) in `src/picker/term.rs` — Executor: builder · Reviewer: reviewer · Effort: high
+
+**Checkpoint**: unit tests green.
+
+### Frontend US1 — Find and restore a recent copy
+
+- [ ] T015 [US1] [TUI] `update()` for query editing, filtering (nucleo), ranking, selection-by-id, Enter → Restore in `src/picker/state.rs` — Executor: builder · Reviewer: reviewer · Effort: high
+- [ ] T016 [US1] [TUI] layout + render (QueryLine, list of EntryRow, PreviewPane, Footer) with responsive splits in `src/picker/view.rs` — Executor: builder · Reviewer: thinker
+- [ ] T017 [US1] [TUI] data: initial list (socket or read-only), debounced `show` for the preview, `subscribe` reader thread — Executor: builder · Reviewer: thinker
+
+**Checkpoint**: the US1 snapshot/journey tests pass; `cargo insta review` is clean.
+
+### Frontend US2 — Manage entries from the picker
+
+- [ ] T018 [US2] [TUI] Ctrl-T pin toggle, Ctrl-D confirm mode, pin-limit status line — Executor: builder · Reviewer: thinker
+
+**Checkpoint**: the US2 snapshot/journey tests pass; `cargo insta review` is clean.
+
+### Frontend US3 — No color, no daemon, screen readers
+
+- [ ] T019 [US3] [TUI] `--plain` inline renderer, NO_COLOR/ASCII, read-only banner and Enter → exit 3, empty and too-small states — Executor: builder · Reviewer: thinker
+
+**Checkpoint**: the US3 snapshot/journey tests pass; `cargo insta review` is clean.
+
+### Frontend Polish
+
+- [ ] T020 [TUI] first-frame optimization against F6 (load before draw, no alt-screen flicker); F1 keymap footer — Executor: builder · Reviewer: reviewer · Effort: high
+
+**Checkpoint**: budgets met; `/speckit-converge` (Frontend) reports converged.

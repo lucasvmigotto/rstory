@@ -129,3 +129,16 @@ Appended by `backend:spec`. Built by `backend:build` (ticks only this section). 
 - [ ] T016 [US3] Watcher tracking, `status.tray` states, config `tray = false` — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: the US3 tests in this file's story phase pass (`cargo test`), plus the contract tests where they apply.
+
+---
+
+## Frontend
+
+Appended by `frontend:spec`. `[TUI]`/`[CLI]` tasks built by `frontend:tui` (ticks only this section). Depends on `000-design-system`. Snapshot and journey tests first.
+
+
+### Frontend US1 — Restore from the top bar
+
+- [ ] T017 [US1] Icon pixmaps from `assets/icons/png` (000-design-system T010) wired into `build.rs` — Executor: builder · Reviewer: thinker · Effort: low
+
+**Checkpoint**: the US1 snapshot/journey tests pass; `cargo insta review` is clean.

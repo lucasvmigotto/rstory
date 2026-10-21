@@ -95,3 +95,16 @@ Appended by `backend:spec`. Built by `backend:build` (ticks only this section). 
 - [ ] T010 [US2] Probe adapters with timeouts (session, store, daemon status, extension, shell version, launch, autostart) in `src/doctor/probes.rs` — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: the US2 tests in this file's story phase pass (`cargo test`), plus the contract tests where they apply.
+
+---
+
+## Frontend
+
+Appended by `frontend:spec`. `[TUI]`/`[CLI]` tasks built by `frontend:tui` (ticks only this section). Depends on `000-design-system`. Snapshot and journey tests first.
+
+
+### Frontend US1 — See what works and what's missing
+
+- [ ] T011 [US1] [CLI] text renderer (CheckLine, summary line) and `--json` in `src/doctor/render.rs` — Executor: builder · Reviewer: thinker
+
+**Checkpoint**: the US1 snapshot/journey tests pass; `cargo insta review` is clean.

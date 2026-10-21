@@ -15,13 +15,14 @@ in that layer.
 
 | # | Feature | Scope | Priority | Depends on | Frontend | Backend |
 |---|---|---|---|---|---|---|
+| 000 | [design-system](000-design-system/) | Terminal and menu design system: color roles × tiers, glyphs with ASCII fallback, keyed copy, components, icons | P1 | — | Planned | — |
 | 001 | [store](001-store/) | Entry model, history rules (de-dup, count/pin/size/expiry caps), crash-safe private store, read-only open | P1 | — | — | Planned |
 | 002 | [x11-capture](002-x11-capture/) | Session detection, `Backend` trait, X11 backend (XFIXES capture and restore, INCR), XWayland bridge selection (GNOME path) | P1 | — | — | Planned |
 | 003 | [wayland-capture](003-wayland-capture/) | Data-control backend (`ext-data-control-v1`, `zwlr` fallback), capture and restore | P1 | 002 | — | Planned |
 | 004 | [daemon](004-daemon/) | `rstory daemon`: single instance, control socket protocol v1, capture pipeline, restore ownership, pause and timed pause, counters, expiry timer, inactive state | P1 | 001, 002 | — | Planned |
 | 005 | [privacy-filters](005-privacy-filters/) | Sensitive hint skip, size-cap drop, pause gate, no-content logging | P1 | 004 | — | Planned |
 | 006 | [cli](006-cli/) | `ls`, `show`, `copy`, `pin`, `unpin`, `rm`, `clear`, `pause [--for]`, `resume`, `status`, `config`; `--json`; index and short id; exit codes; read-only when the daemon is down | P1 | 004 | Planned | Planned |
-| 007 | [picker](007-picker/) | `rstory pick` TUI: search, preview, restore, pin, unpin, delete, plain mode | P1 | 006 | Planned | — |
+| 007 | [picker](007-picker/) | `rstory pick` TUI: search, preview, restore, pin, unpin, delete, plain mode | P1 | 000, 006 | Planned | — |
 | 008 | [picker-launch](008-picker-launch/) | `picker_command`, terminal detection order, daemon-side `open_picker` | P2 | 007 | Planned | Planned |
 | 009 | [tray](009-tray/) | SNI tray: icon (normal and paused), last 10, pause, pause 1 min, open picker, clear with confirm | P2 | 004, 008 | Planned | Planned |
 | 010 | [gnome-extension](010-gnome-extension/) | Embedded GNOME Shell 48–51 extension: panel icon and menu over the control socket; `install-gnome-extension` | P1 (v0.1 gate) | 004, 008 | Planned | Planned |

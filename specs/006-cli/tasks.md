@@ -129,3 +129,41 @@ Appended by `backend:spec`. Built by `backend:build` (ticks only this section). 
 - [ ] T017 [US1] Read-only fallback adapter (`ls`/`show`) in `src/cli/source.rs` — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: the US1 tests in this file's story phase pass (`cargo test`), plus the contract tests where they apply.
+
+---
+
+## Frontend
+
+Appended by `frontend:spec`. `[TUI]`/`[CLI]` tasks built by `frontend:tui` (ticks only this section). Depends on `000-design-system`. Snapshot and journey tests first.
+
+
+### Frontend Foundational
+
+- [ ] T018 [CLI] clap command tree for every subcommand with help text and examples (`src/cli/args.rs`); `rstory completions` via clap_complete — Executor: builder · Reviewer: thinker
+
+**Checkpoint**: unit tests green.
+
+### Frontend US1 — Browse and restore from the shell
+
+- [ ] T019 [US1] [CLI] snapshots first, then `ls` renderer (TTY width-aware, piped TSV) and `show` raw output in `src/cli/render.rs` using `EntryLine` — Executor: builder · Reviewer: thinker
+- [ ] T020 [US1] [CLI] `--json` serializers per `/contracts/cli.md` with `schema: 1` — Executor: builder · Reviewer: thinker
+
+**Checkpoint**: the US1 snapshot/journey tests pass; `cargo insta review` is clean.
+
+### Frontend US2 — Manage the history
+
+- [ ] T021 [US2] [CLI] pin/unpin/rm/clear/clear --all/pause/resume commands with prompts (TTY, /dev/tty, --yes) and copy-keyed messages in `src/cli/commands.rs` — Executor: builder · Reviewer: thinker
+
+**Checkpoint**: the US2 snapshot/journey tests pass; `cargo insta review` is clean.
+
+### Frontend US3 — Read while the daemon is down
+
+- [ ] T022 [US3] [CLI] read-only fallback messaging (`cli.readonly`) and exit 3 for write commands — Executor: builder · Reviewer: thinker · Effort: low
+
+**Checkpoint**: the US3 snapshot/journey tests pass; `cargo insta review` is clean.
+
+### Frontend US4 — Status and configuration
+
+- [ ] T023 [US4] [CLI] `status` text renderer + `config [--path]` in `src/cli/status.rs` — Executor: builder · Reviewer: thinker · Effort: low
+
+**Checkpoint**: the US4 snapshot/journey tests pass; `cargo insta review` is clean.
