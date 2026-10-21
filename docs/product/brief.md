@@ -721,16 +721,16 @@ re-check on 49–51 and the rest of S2 (§17) run alongside features 003 and
 - A4. Tags are plain SemVer without a `v` prefix (K9).
 - A5. The release workflow publishes the crate before attaching binaries,
   so a release is never half-made (K9).
-- A6. `clear --all` also removes pinned entries after a confirm prompt or
-  with `--yes` (§8).
-- A7. Restoring an entry isn't recorded as a new copy. It moves that entry
-  to the top (BR2).
-- A8. Pause survives a daemon restart (BR4).
+- A6. *(Confirmed 2026-10-21)* `clear --all` also removes pinned entries
+  after a confirm prompt or with `--yes` (§8).
+- A7. *(Confirmed 2026-10-21)* Restoring an entry isn't recorded as a new
+  copy. It moves that entry to the top (BR2).
+- A8. *(Confirmed 2026-10-21)* Pause survives a daemon restart (BR4).
 - A9. Expiry counts from an entry's last copy (BR8).
 - A10. *(Retired 2026-10-21: the pin cap is 10 by owner decision.)*
 - A11. *(Confirmed 2026-10-21: caps are configurable defaults.)* The config
   accepts at most 500 entries, so the performance targets stay meaningful.
-- A17. "20 in all" counts pinned entries toward the 20, so 10 pins leave 10
+- A17. *(Confirmed 2026-10-21)* "20 in all" counts pinned entries toward the 20, so 10 pins leave 10
   slots for unpinned entries. This is how the owner's answer ("pinned up
   to 10, 20 in total") was read.
 - A18. A timed pause keeps its original end time across a daemon restart
@@ -758,7 +758,7 @@ re-check on 49–51 and the rest of S2 (§17) run alongside features 003 and
 | Q5 | GNOME capture path. | S1 | **Resolved:** the XWayland bridge (verified on 48). |
 | Q6 | Extension ↔ daemon channel. | Owner | **Resolved:** the control socket. |
 | Q7 | Does the bridge behave the same on GNOME Shell 49, 50 and 51, and for GUI-app copies? | Maintainer (VM / GNOME OS check) | Open. A v0.1 release check, not a design question. |
-| Q8 | Is A17 right (pins count toward the 20)? | Owner | Open. A one-line confirmation. |
+| Q8 | Is A17 right (pins count toward the 20)? | Owner | **Resolved:** yes, 20 in total. |
 
 ## 19. Decision log
 
@@ -786,3 +786,4 @@ re-check on 49–51 and the rest of S2 (§17) run alongside features 003 and
 | 2026-10-21 | The GNOME extension talks to the daemon over the **control socket**. | A D-Bus session service | Owner answer. One protocol and one security check for every client. |
 | 2026-10-21 | **GNOME capture goes through the XWayland bridge** with the `x11` backend. Portal and extension-fed capture move to Later. | Clipboard portal, extension-fed capture | Spike S1 on GNOME 48: no prompt, no install, capture and restore both work. Re-check on 49–51 before v0.1. |
 | 2026-10-21 | **Timed pause** (`pause --for`, plus a tray "Pause for 1 minute" item) in the MVP, with a documented `passc` wrapper. `x-kde-passwordManagerHint` is the MVP sensitive hint. `CLIPBOARD_STATE` is dropped. | Document the gap only, content heuristic | Spike S2: `pass -c` sets no hint. The owner chose the timed pause. |
+| 2026-10-21 | Clarify round (`project:spec`): pins count toward the 20; `clear --all` exists with a confirm; a restored entry moves to the top; a pause survives restarts; the licence is `GPL-3.0-or-later`. | See each spec's Clarifications | Owner answers. Confirms A6, A7, A8 and A17. |

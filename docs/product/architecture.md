@@ -275,8 +275,7 @@ uid must equal the daemon's uid (ADR-0002).
 **Language and version:** Rust edition 2024, MSRV per AA3, a pinned
 toolchain, `#![forbid(unsafe_code)]` in our crate (dependencies may use
 unsafe; audited through `cargo-deny`/`cargo-audit`). The crate is
-GPL-3.0-or-later `[ASSUMPTION: "or later" matches the LICENSE file's
-intent; confirm, §13]`.
+GPL-3.0-or-later (confirmed by the owner, 2026-10-21).
 
 ## 9. Cost estimate
 
@@ -334,10 +333,9 @@ which is enough for this project.
 
 - AA1–AA4 (§3).
 - `[ASSUMPTION]` GNOME extension UUID `rstory@lucasvmigotto.github.io`.
-- `[ASSUMPTION]` Licence expression `GPL-3.0-or-later`. The LICENSE file is
-  GPL-3.0, so confirm "only" vs "or later".
+- Licence expression `GPL-3.0-or-later`: confirmed 2026-10-21.
 - `[ASSUMPTION]` F10's wake-up bound is set in `qa:strategy`.
-- Open: brief Q7 (bridge on GNOME 49–51) and Q8 (pins count toward 20).
+- Open: brief Q7 (bridge on GNOME 49–51). Q8 is resolved (pins count toward the 20).
 
 ## 14. Review against `architecture-quality.md`
 
