@@ -1,0 +1,1 @@
+This feature implements the whole control protocol: see `/contracts/protocol.md` and `/contracts/protocol.schema.json`. Fixtures live in `/tests/fixtures/protocol/` and are shared with spec 010's JS client.
