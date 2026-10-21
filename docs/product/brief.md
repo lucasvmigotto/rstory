@@ -23,11 +23,14 @@ A background **daemon** watches the **clipboard** and records each text
 extension** on GNOME) let the user browse the **history** and **restore** an
 old entry to the clipboard. The user then presses paste themselves. The tool
 picks its **backend** (Wayland data-control or X11) at start, skips copies
-marked sensitive, and expires entries after 7 days. It needs nothing at
+marked sensitive, and expires entries after 7 days. The history is
+deliberately small (20 entries by default, up to 10 of them pinned): a
+short-term assistant, not a second shell history. It needs nothing at
 runtime except the kernel, the session's display server and, for the tray,
 the D-Bus session bus. The owner's own session is GNOME on Wayland, which
-offers no data-control protocol. v0.1 is released only once rstory works
-there.
+offers no data-control protocol. There, spike S1 showed that the X11
+backend works through the **XWayland bridge**. v0.1 is released only once
+rstory works on GNOME.
 
 ## 2. Problem & context
 
@@ -68,7 +71,7 @@ libraries make a single static binary with no native dependency feasible.
 | G4 | **Safe by default.** Sensitive copies are skipped, the store is private, and entries expire. | No copy marked by a sensitive hint ever reaches disk in the test suite. Store mode `0600`, directory `0700`. 7-day expiry. |
 | G5 | **CLI parity.** Everything the UI can do, the CLI can do, and its output can be parsed. | Every tray and picker action maps to a CLI command. Listing commands take `--json`. |
 | G6 | **Small and quiet.** Event-driven, with no polling loop where an event exists. | Daemon idle CPU ≈ 0 (no timer wake-ups beyond expiry housekeeping). RSS target in §11. |
-| G7 | **Works on the owner's GNOME Wayland session.** | v0.1 release gate: capture, restore and the panel icon work on GNOME Shell (current stable and the previous release). |
+| G7 | **Works on the owner's GNOME Wayland session.** | v0.1 release gate: capture, restore and the panel icon work on GNOME Shell 48–51. |
 
 ### Non-goals
 
@@ -85,6 +88,8 @@ libraries make a single static binary with no native dependency feasible.
 - **The primary selection (middle-click) in the MVP** (Later, opt-in).
 - **Encryption at rest in the MVP** (Later, optional).
 - **Translated interfaces.** v1 is English only (decision log, 2026-10-21).
+- **A long archive.** The history holds 20 entries by default. Searching
+  months of copies is what shell history and notes are for.
 - **Installer scripts that need root**, and distribution packages in the MVP.
 
 ## 4. Audiences
@@ -115,6 +120,9 @@ libraries make a single static binary with no native dependency feasible.
   kept out of the history, so it doesn't linger on disk.
 - J6. When I'm about to copy something private that isn't marked
   sensitive, I want to pause recording, so it never gets stored.
+- J6b. When I copy from a tool that sets no sensitive hint (such as
+  `pass -c`), I want to pause recording for a short time in the same
+  command, so I can't forget to resume and can't forget to pause.
 
 **Tray user**
 - J7. When I want a recent copy without a terminal, I want to click the
@@ -143,9 +151,10 @@ Tags: **MVP** (v0.x, gates v0.1), **Next** (v0.2), **Later**.
 |---|---|---|
 | Watch the clipboard and store text (`text/plain;charset=utf-8`; `UTF8_STRING`/`STRING` on X11) | MVP | This is the primary job (J1). |
 | Wayland backend through `ext-data-control-v1`, falling back to `zwlr_data_control_manager_v1` | MVP | Covers KDE, wlroots compositors and others (Tier 1). |
-| X11 backend through XFIXES selection notifications | MVP | X11 sessions are Tier 1. Possibly also GNOME's path through the XWayland bridge `[SPIKE S1]`. |
+| X11 backend through XFIXES selection notifications | MVP | X11 sessions are Tier 1. Also GNOME Wayland's capture path, through the XWayland bridge (S1). |
 | Session detection at start (`WAYLAND_DISPLAY`, `DISPLAY`, `XDG_SESSION_TYPE`), overridable in config or by flag | MVP | G2, J2. |
-| GNOME capture path, chosen by S1 in this order: XWayland bridge through XFIXES → clipboard portal → embedded extension feeding the daemon | MVP | G7 release gate. Mutter offers no data-control protocol. |
+| **XWayland bridge fallback:** on a Wayland session with no data-control protocol but with XWayland (`DISPLAY` set), use the X11 backend through the bridge. This is GNOME's path, and it works on any such compositor. | MVP | G7 release gate. S1 proved it on GNOME Shell 48 (decision log 2026-10-21). |
+| Clipboard portal backend, and capture fed by the GNOME extension | Later | Only needed if XWayland is missing (R13). Kept as fallbacks in the backend interface. |
 | De-duplication: re-copying identical content moves the existing entry to the top | MVP | Keeps the history useful. Stated in the input. |
 | A backend interface that lets a third backend (portal, GNOME-specific) be added without touching the store or the CLI | MVP | S1 may need it. Stated in the input. |
 | Primary selection as a second, opt-in history | Later | Different usage pattern, and doubles the privacy surface. |
@@ -159,13 +168,14 @@ Tags: **MVP** (v0.x, gates v0.1), **Next** (v0.2), **Later**.
 | `rstory daemon`: records the clipboard, and owns it while serving a restored entry | MVP | Both Wayland and X11 need a live owner for a restored value. |
 | One instance per user, enforced through the control socket in `$XDG_RUNTIME_DIR` | MVP | Two recorders would duplicate entries and fight over the clipboard. |
 | Pause / resume (nothing is recorded while paused) | MVP | J6. |
-| Expiry housekeeping (7 days), count cap (500), size cap (1 MiB) | MVP | G4. Owner decision. |
+| Timed pause: `pause --for <duration>` resumes on its own when the time is up | MVP | J6b. Closes the `pass -c` gap (S2). Decision 2026-10-21. |
+| Expiry housekeeping (7 days), count cap (20 entries in all), pin cap (10), size cap (1 MiB) | MVP | G4. Owner decision. |
 | Clean restart and store recovery after a crash | MVP | Reliability NFR (§11). |
 
 ### CLI
 | Capability | Tag | Reason |
 |---|---|---|
-| `ls`, `show <n>`, `copy <n>`, `pick`, `pin`, `unpin`, `rm`, `clear`, `pause`, `resume`, `status`, `config` | MVP | G5, J3, J4. |
+| `ls`, `show <n>`, `copy <n>`, `pick`, `pin`, `unpin`, `rm`, `clear`, `pause [--for <duration>]`, `resume`, `status`, `config` | MVP | G5, J3, J4, J6b. |
 | `--json` on listing commands (`ls`, `show`, `status`) | MVP | J3. |
 | Entries addressed by **index** (0 = most recent) or **short id** | MVP | Stated in the input. |
 | Reads without a daemon: `ls`, `show` and `pick` (browsing) read the store read-only. Writes (`copy`, `pin`, `unpin`, `rm`, `clear`, `pause`, `resume`) need the daemon and fail with a hint and a non-zero exit. | MVP | Decision 2026-10-21. Restoring needs a live owner anyway. |
@@ -183,23 +193,23 @@ Tags: **MVP** (v0.x, gates v0.1), **Next** (v0.2), **Later**.
 | Capability | Tag | Reason |
 |---|---|---|
 | StatusNotifierItem tray icon over D-Bus (pure-Rust client, icon sent as pixel data, no icon theme) | MVP | J7. Owner decision. |
-| Tray menu: last 10 entries (click restores), pause/resume (icon changes while paused), open picker (hidden when no terminal is found), clear history with a confirm step (pinned entries stay) | MVP | Owner decision. |
-| `rstory install-gnome-extension`: unpacks the embedded GNOME Shell extension into the user's extensions directory. It provides the panel icon and the same menu, and feeds clipboard changes to the daemon if S1 picks that path. | MVP | GNOME has no native tray. G7. No AppIndicator requirement. |
-| Supported GNOME Shell versions: current stable and the previous release. Older versions get the CLI and picker without a panel icon. | MVP | Owner decision. Exact numbers are §18 Q3. |
+| Tray menu: last 10 entries (click restores), pause/resume (icon changes while paused), pause for 1 minute, open picker (hidden when no terminal is found), clear history with a confirm step (pinned entries stay) | MVP | Owner decision. The timed pause item is from the 2026-10-21 decision. |
+| `rstory install-gnome-extension`: unpacks the embedded GNOME Shell extension into the user's extensions directory. It provides the panel icon and the same menu, talking to the daemon over the control socket. It carries no capture logic, since capture goes through the XWayland bridge. | MVP | GNOME has no native tray. G7. No AppIndicator requirement. |
+| Supported GNOME Shell versions: **48 through 51**. The owner runs 48 (Debian 13), and upstream's current releases are 51 and 50. A new upstream release is added when it ships, and the oldest version is dropped once Debian stable moves past it. Older versions get the CLI and picker without a panel icon. | MVP | Owner decision, 2026-10-21. |
 | Native GNOME popup list opened by a keybinding, no terminal | Next | Owner decision. |
 
 ### Open picker
 | Capability | Tag | Reason |
 |---|---|---|
-| `picker_command` config. The default tries `$TERMINAL`, then a list of common terminal emulators. When none is found, the tray entry is hidden and `doctor` lists what was searched. | MVP | The tray's "open picker" needs a terminal (S8). The list is §18 Q2. |
+| `picker_command` config. If it isn't set, the default search goes `$TERMINAL` → `xdg-terminal-exec` → `ghostty`, `kitty`, `alacritty`, `foot`, `wezterm`, `ptyxis`, `kgx`, `gnome-terminal`, `konsole`, `xfce4-terminal`, `xterm`. When none is found, the tray entry is hidden and `doctor` lists what was searched. | MVP | The tray's "open picker" needs a terminal (S8). List decided 2026-10-21. |
 
 ### Privacy & storage
 | Capability | Tag | Reason |
 |---|---|---|
-| Skip copies carrying a sensitive hint (`x-kde-passwordManagerHint` and others confirmed by S2) | MVP | J5, G4. |
+| Skip copies offering the `x-kde-passwordManagerHint` MIME type (any value), plus any hint the remaining S2 tests confirm | MVP | J5, G4. S2: the hint survives the XWayland bridge. |
 | Size cap of 1 MiB per entry. Oversize copies are dropped (never truncated) and counted. | MVP | Owner decision. |
-| Count cap of 500 and expiry of 7 days. Pinned entries are exempt from both. | MVP | Owner decision. |
-| Pause switch | MVP | J6. |
+| Count cap of 20 entries in all (pinned ones included), the oldest unpinned deleted first. Pin cap of 10. Expiry of 7 days, with pinned entries exempt. All defaults are configurable. | MVP | Owner decision 2026-10-21: a small assistant, not a second terminal history. |
+| Pause switch and timed pause | MVP | J6, J6b. |
 | Store under `$XDG_STATE_HOME/rstory` (dir `0700`, files `0600`), pure Rust, no bundled C database | MVP | G1, G4. |
 | Config at `$XDG_CONFIG_HOME/rstory/config.toml` | MVP | Stated in the input. |
 | Encrypted store at rest (passphrase or the user's keyring), optional | Later | Owner decision. The MVP relies on a private file, the filter and the short TTL. |
@@ -254,17 +264,31 @@ daemon sees the hint before reading the content, skips the copy, and
 increments the "skipped sensitive" counter shown by `rstory status`.
 `rstory ls` shows nothing new.
 *Going wrong:* a manager that sets no hint is not detected (§17 R2). The
-user's protections are pause (K7), `rstory rm 0`, and the 7-day expiry. The
-README says this plainly.
+user's protections are pause (K7), the timed pause (K3b), `rstory rm 0`,
+and the 7-day expiry. The README says this plainly.
+
+**K3b — Copy from `pass` (J6b).** `pass -c` sets no hint (S2). Following
+the README, the user has a shell function
+`passc() { rstory pause --for 50s && pass -c "$@"; }`. Running
+`passc github` pauses recording, and `pass` copies the password and
+restores the previous clipboard 45 s later. Recording resumes by itself at
+50 s, so `rstory ls` never shows the password. Meanwhile `rstory status`
+and the tray show "paused (resumes in 0:42)".
+*Going wrong:* if the daemon isn't running, `rstory pause` exits non-zero,
+so `&&` stops `pass` from copying and nothing is exposed to a later daemon.
+If the daemon restarts during the pause, the pause continues until its
+original end time (BR4).
 
 **K4 — Compositor without data-control (J9).** The user runs a compositor
-that offers neither data-control protocol, and S1's GNOME path does not
-apply to it. The daemon starts, finds no way to watch the clipboard,
-reports that in `status`, and does not pretend to record. `doctor` says:
-"This compositor offers no clipboard-monitoring protocol
-(ext-data-control-v1 / zwlr-data-control). rstory cannot record in the
-background here. Fallbacks tried: … Options: …". The CLI and picker still
-show existing history.
+that offers neither data-control protocol. If XWayland is available, the
+daemon uses the XWayland bridge, as on GNOME, and `doctor` reports
+"backend: x11 via XWayland bridge (no data-control on this compositor)".
+If XWayland is not available, the daemon starts, finds no way to watch the
+clipboard, reports that in `status`, and does not pretend to record.
+`doctor` then says: "This compositor offers no clipboard-monitoring
+protocol (ext-data-control-v1 / zwlr-data-control) and no XWayland. rstory
+cannot record in the background here. Options: enable XWayland, or …". The
+CLI and picker still show existing history.
 
 **K5 — Switch session (J2).** The user logs into an X11 session instead.
 Autostart runs the same binary, which detects X11 and uses XFIXES. The same
@@ -292,15 +316,16 @@ hidden.
 **K8 — GNOME setup (G7).** On GNOME Wayland the user runs `rstory
 install-gnome-extension`, logs out and in (Wayland requires it), and enables
 the extension (`gnome-extensions enable …` or the Extensions app). The
-rstory icon appears in the top bar with the same menu as K7. If S1 chose
-the extension as the capture path, it forwards clipboard changes to the
-daemon. `doctor` reports "GNOME Shell 4x · extension installed, enabled ·
-capture path: <S1 result>".
+rstory icon appears in the top bar with the same menu as K7. Capture
+doesn't depend on the extension: the daemon records through the XWayland
+bridge from its first start, even before the extension is installed.
+`doctor` reports "GNOME Shell 48 · Wayland, no data-control · backend: x11
+via XWayland bridge · extension installed, enabled".
 *Going wrong:* if the extension is missing or disabled, `doctor` says
-exactly that and gives the command to fix it. On an unsupported Shell
-version, the extension declines to load, `doctor` says so, and the CLI and
-picker still work. If capture depends on the extension and it is off,
-`doctor` and `status` say recording is inactive (as in K4).
+exactly that and gives the command to fix it. Capture, the CLI and the
+picker keep working. On a Shell version outside 48–51, the extension
+declines to load and `doctor` says so. If XWayland is disabled, capture is
+inactive and `doctor` explains (K4, R13).
 
 **K9 — First release (J10).** The maintainer runs `cargo publish
 --dry-run`, then publishes v0.1.0 by hand with their personal crates.io
@@ -323,14 +348,13 @@ attaching binaries, so a release is never half-made]`.
 
 ```mermaid
 flowchart LR
-  Session -->|detected at start| Backend
+  Session -->|detected at start; Wayland without data-control → x11 via XWayland bridge| Backend
   Backend -->|clipboard change| Daemon
-  GNOMEext[GNOME extension] -.->|clipboard change, if S1 picks it| Daemon
-  Daemon -->|filters: pause, sensitive hint, size cap| Capture{recorded?}
+  Daemon -->|filters: pause / timed pause, sensitive hint, size cap| Capture{recorded?}
   Capture -->|yes| History
-  History -->|holds 0..500 + pinned| Entry
+  History -->|holds ≤ 20 entries, ≤ 10 pinned| Entry
   History --- Store[(Store)]
-  Client[CLI / Picker / Tray / Panel icon] -->|control socket| Daemon
+  Client[CLI / Picker / Tray / Panel icon via GNOME extension] -->|control socket| Daemon
   Client -.->|read-only, daemon down| Store
   Daemon -->|restore: owns the clipboard| Backend
 ```
@@ -344,20 +368,21 @@ flowchart LR
             duplicate? ── yes ──► existing entry moves to top (timestamp refreshed)
                   │ no
                   ▼
-              RECORDED ──pin──► PINNED ──unpin──► RECORDED
-                  │                │
-     expiry (7 d) / count cap /   rm
+              RECORDED ──pin (≤ 10)──► PINNED ──unpin──► RECORDED
+                  │                       │
+     expiry (7 d) / count cap (20) /     rm
      rm / clear                    │
                   ▼                ▼
                DELETED (removed from disk, not only from view)
 ```
 
-Pinned entries are exempt from expiry, the count cap and `clear`
-`[ASSUMPTION: \`clear --all\` also removes pinned entries, after a confirm
-prompt or with \`--yes\`]`.
+Pinned entries count toward the 20 but are never evicted by the count cap.
+They are exempt from expiry and `clear` `[ASSUMPTION: \`clear --all\` also
+removes pinned entries, after a confirm prompt or with \`--yes\`]`. With 10
+pins, 10 slots are left for unpinned entries.
 
-**Daemon lifecycle:** starting → (backend detected) recording ⇄ paused →
-stopping. It can also go starting → *inactive*: running, but with no
+**Daemon lifecycle:** starting → (backend detected) recording ⇄ paused
+(indefinite, or timed until an end time) → stopping. It can also go starting → *inactive*: running, but with no
 capture path (K4), still serving restores where the backend allows and
 answering clients.
 
@@ -375,18 +400,21 @@ and doc uses these terms.
 | **Selection** | Umbrella term for the clipboard and the primary selection, used only where both are meant. | — |
 | **Capture** | The daemon noticing a clipboard change and deciding whether to record it. | grab, sniff |
 | **Restore** | Putting an entry back on the clipboard so the user can paste it. rstory never pastes. | paste, copy back, apply |
-| **Backend** | The code that talks to the session's display server: `wayland` or `x11` (a third, such as `portal`, possibly after S1). | driver, provider, adapter |
+| **Backend** | The code that talks to the session's display server: `wayland` or `x11` (a `portal` backend is Later). | driver, provider, adapter |
+| **XWayland bridge** | The compositor's mirroring of the Wayland clipboard to XWayland's X11 selections and back. rstory's `x11` backend uses it on Wayland sessions without data-control, such as GNOME. | X11 fallback, compat mode |
 | **Session** | The graphical login the daemon runs in, either Wayland or X11. | desktop, display |
 | **Data-control** | The Wayland protocols that let a background client watch and set the clipboard: `ext-data-control-v1`, falling back to `zwlr_data_control_manager_v1`. | clipboard protocol |
 | **Daemon** | The long-running `rstory daemon` process that captures, holds all state and owns the clipboard while serving a restore. | server, service, agent, background process |
 | **Client** | Any thin front end talking to the daemon: CLI, picker, tray, panel icon. | frontend, UI process |
 | **Control socket** | The per-user Unix socket in `$XDG_RUNTIME_DIR` that clients use to reach the daemon. | IPC pipe, API |
 | **Store** | The private on-disk files under `$XDG_STATE_HOME/rstory` that hold the history. | database, DB, cache |
-| **Pinned entry** | An entry kept regardless of expiry, the count cap and `clear`. | favorite, starred, saved |
+| **Pinned entry** | An entry kept regardless of expiry, eviction by the count cap, and `clear`. At most 10 by default (pin cap). | favorite, starred, saved |
 | **Pause** | The state in which the daemon records nothing. Shown on the tray icon and by `status`. | disable, mute, incognito |
+| **Timed pause** | A pause with an end time (`pause --for <duration>`), after which recording resumes on its own. | snooze, temporary disable |
 | **Sensitive hint** | A signal offered by the copying application that the content must not be recorded (for example the `x-kde-passwordManagerHint` MIME type). | secret flag, password flag |
 | **Size cap** | The 1 MiB per-entry maximum. Larger copies are dropped and counted, never truncated. | limit, max size |
-| **Count cap** | The 500 unpinned-entry maximum. The oldest are deleted first. | history length, max entries |
+| **Count cap** | The maximum number of entries in the history, pinned ones included (default 20). When it's exceeded, the oldest unpinned entry is deleted. | history length, max entries |
+| **Pin cap** | The maximum number of pinned entries (default 10). Pinning past it is refused. | max pins |
 | **Expiry** | Deletion of an unpinned entry 7 days after it was last copied. | TTL (allowed only in config and code: `ttl`), retention |
 | **Index** | An entry's position in the history, `0` being the most recent. Changes as entries arrive. | number, position |
 | **Short id** | A stable short prefix of an entry's id, usable wherever an index is. | hash, key |
@@ -407,27 +435,29 @@ and doc uses these terms.
 | BR1 | The content hash identifies duplicates. Re-copying identical content moves the existing entry to the top and refreshes its timestamp. It never creates a second entry. | Input §7, §9 |
 | BR2 | Restoring an entry makes the daemon the clipboard owner. The resulting clipboard change is not recorded as a new copy, but moves that entry to the top (BR1). | `[ASSUMPTION]` |
 | BR3 | While paused, nothing is recorded. Paused copies are counted, not stored. | Input §9 |
-| BR4 | Pause survives a daemon restart. Recording resumes only on `resume`. | `[ASSUMPTION: the privacy-safe default; the tray and status make the paused state visible]` |
-| BR5 | A copy carrying a sensitive hint is never stored, logged or kept in memory beyond the decision. Hints are checked from the offered MIME types before the content is read. | Input §7, §10; hint set `[SPIKE S2]` |
+| BR4 | Pause survives a daemon restart. An indefinite pause lasts until `resume`. A timed pause lasts until its original end time (or an earlier `resume`). | `[ASSUMPTION: the privacy-safe default; the tray and status make the paused state visible]` |
+| BR4b | `pause --for <duration>` sets an end time. When it passes, recording resumes by itself. A new `pause` replaces the end time. `pause --for` exits non-zero when the daemon isn't running. | Decision 2026-10-21 (S2 `pass` gap) |
+| BR5 | A copy carrying a sensitive hint is never stored, logged or kept in memory beyond the decision. Hints are checked from the offered MIME types before the content is read. MVP hint: the `x-kde-passwordManagerHint` type is offered (any value). | Input §7, §10; S2 (2026-10-21) |
+| BR5b | Backend selection: Wayland with data-control → `wayland`. Wayland without data-control but with XWayland → `x11` through the XWayland bridge. X11 → `x11`. A config or flag override wins. | S1 (2026-10-21) |
 | BR6 | A copy larger than 1 MiB is dropped and counted. It is never truncated. | Input §9, owner decision |
-| BR7 | At most 500 unpinned entries. When an insert exceeds that, the oldest unpinned entry is deleted. | Owner decision |
+| BR7 | At most 20 entries in all, pinned ones included (default). When an insert exceeds that, the oldest unpinned entry is deleted. | Owner decision 2026-10-21 (replaces 500) |
 | BR8 | An unpinned entry expires 7 days after its last copy. | Owner decision; "since last copy" `[ASSUMPTION]` |
-| BR9 | Pinned entries are exempt from expiry, the count cap and `clear`. There is no cap on the number of pinned entries. | Owner decision; "no pin cap" `[ASSUMPTION]` |
+| BR9 | Pinned entries are exempt from expiry, eviction by the count cap, and `clear`. At most 10 pinned entries (default). Pinning an 11th is refused with a message and a non-zero exit. | Owner decision 2026-10-21 |
 | BR10 | Clearing or removing deletes entries from disk, not only from view. | Input §9 |
 | BR11 | The source application of a copy is never recorded. | Owner decision |
 | BR12 | Entry content is never written to logs, error messages or `doctor` output. | Input §10 |
 | BR13 | One daemon per user and session. A second instance exits non-zero. | Input §7 |
 | BR14 | Only the daemon writes to the store. Clients without a daemon may read it, never write it. | Decision 2026-10-21 |
-| BR15 | Caps (count, size, expiry) are configurable in `config.toml`. The values above are the defaults. | `[ASSUMPTION]` |
+| BR15 | Caps (count, pins, size, expiry) are configurable in `config.toml`. The values above are the defaults. The pin cap must be lower than the count cap. | Owner: "10 (default) and 20 (default)" |
 | BR16 | The tray's "Clear history" asks for confirmation. "Open picker" is hidden when no terminal emulator is found. | Owner decision |
 | BR17 | rstory never makes a network connection. | Input §10 |
 
 ## 11. Non-functional requirements
 
 **Supported environments**
-- **Tier 1** (release-blocking): GNOME Shell on Wayland (current stable
-  and the previous release; panel icon through the extension, capture
-  through S1's path), KDE Plasma on Wayland, a wlroots compositor (sway,
+- **Tier 1** (release-blocking): GNOME Shell 48–51 on Wayland (panel icon
+  through the extension, capture through the XWayland bridge), KDE Plasma
+  on Wayland, a wlroots compositor (sway,
   headless in CI), and X11 (Xvfb in CI). GNOME and KDE are checked by hand
   or in a nested session before each tag, where CI can't run them headless.
   Decision 2026-10-21.
@@ -438,24 +468,26 @@ and doc uses these terms.
   remain buildable.
 
 **Performance** `[ASSUMPTION: these targets apply on a 2020-era laptop and are verified in project:architecture]`
+Measured at the default caps (20 entries) and at a configured 500 entries
+`[ASSUMPTION: config accepts up to 500 so targets stay meaningful]`.
 - Capture-to-listed latency (a copy appears in `rstory ls`): p95 < 100 ms.
-- `rstory pick` first frame with 500 entries: p95 < 100 ms. A search
-  keystroke redraws in < 16 ms.
-- `rstory ls` with 500 entries: < 50 ms.
-- Daemon idle CPU: no periodic wake-ups other than expiry housekeeping,
-  at most once a minute.
-- Daemon RSS: ≤ 20 MiB with 500 entries, independent of entry sizes.
-  Content stays on disk, not all held in memory.
+- `rstory pick` first frame: p95 < 100 ms. A search keystroke redraws in
+  < 16 ms.
+- `rstory ls`: < 50 ms.
+- Daemon idle CPU: no periodic wake-ups other than expiry housekeeping
+  and a pending timed-pause end, at most once a minute.
+- Daemon RSS: ≤ 20 MiB, independent of entry sizes. Content stays on disk,
+  not all held in memory. On GNOME, XWayland's own memory is not counted.
+  The daemon's X11 connection keeps an on-demand XWayland running.
 - Binary size: ≤ 15 MiB per target.
 - Daemon start to recording: < 500 ms.
 
 **Volumes**
 - Single user, single machine. Copies: hundreds a day, bursts of tens a
   second (a script copying in a loop).
-- History: up to 500 unpinned entries plus pinned ones. Typical entries
+- History: up to 20 entries by default, at most 10 pinned. Typical entries
   are under 4 KiB.
-- Worst-case store size: 500 × 1 MiB ≈ 500 MiB plus pinned entries (§17
-  R6).
+- Worst-case store size: 20 × 1 MiB ≈ 20 MiB at the defaults.
 
 **Reliability**
 - A crash or power loss never corrupts the history. Writes are atomic per
@@ -516,9 +548,9 @@ failure it can detect (§14).
 | System | Direction | Protocol | Owner | Criticality | When unavailable |
 |---|---|---|---|---|---|
 | Wayland compositor (data-control) | both: watch and set the clipboard | Wayland wire protocol, `ext-data-control-v1` / `zwlr_data_control_manager_v1`, pure Rust | compositor vendor | Critical on Wayland | Daemon goes *inactive*. `doctor` and `status` explain (K4). CLI and picker read history. |
-| X server | both | X11 wire protocol + XFIXES, pure Rust | Xorg / XWayland | Critical on X11 (and possibly GNOME, S1) | As above. If the X server exits, the daemon exits (the session is over). |
-| GNOME Shell (embedded extension) | extension → daemon (clipboard changes, menu actions); daemon → extension (entries, pause state) | GJS extension ↔ daemon. Channel decided in `project:architecture` (control socket or D-Bus). | rstory (extension) on GNOME's Shell internals | High on GNOME (panel icon, possibly capture) | `doctor` names the missing or disabled extension. CLI and picker keep working. Capture inactive if it depends on the extension. |
-| XDG Desktop Portal (clipboard, if S1 picks it) | both | D-Bus `org.freedesktop.portal.Clipboard` (needs a RemoteDesktop session the user grants) | xdg-desktop-portal + backend | Medium (one GNOME candidate) | Falls to the next path in S1's order. `doctor` reports a denied or missing grant. |
+| X server / XWayland | both | X11 wire protocol + XFIXES, pure Rust | Xorg, or the compositor's XWayland (bridge) | Critical on X11 and on GNOME Wayland (S1) | As above. If the X server exits, the daemon exits (on X11 the session is over). On Wayland it reconnects when XWayland restarts on demand `[ASSUMPTION]`. |
+| GNOME Shell (embedded extension) | extension → daemon (menu actions); daemon → extension (entries, pause state) | GJS extension ↔ daemon over the **control socket** (decision 2026-10-21) | rstory (extension) on GNOME's Shell internals | Medium on GNOME (panel icon only) | `doctor` names the missing or disabled extension. Capture, CLI and picker keep working. |
+| XDG Desktop Portal (clipboard) | — | D-Bus `org.freedesktop.portal.Clipboard` (needs a RemoteDesktop session the user grants) | xdg-desktop-portal | Not used in the MVP (Later fallback, R13) | — |
 | StatusNotifierItem host | daemon → host (icon, menu); host → daemon (clicks) | D-Bus session bus, SNI + DBusMenu, pure Rust | the bar or desktop | Low (convenience) | No icon. `doctor` says "no SNI host". Everything else works. |
 | D-Bus session bus | both | D-Bus | the session | Low (only tray, portal, possibly the extension) | Tray disabled. `doctor` reports it. |
 | Terminal emulator | rstory → terminal (spawn picker) | process exec of `picker_command` | user | Low | "Open picker" hidden. `doctor` lists the search. |
@@ -555,7 +587,7 @@ failure it can detect (§14).
 | A clean install works with only the binary and a running session, on fresh Alpine, Debian and Fedora VMs | Lagging | 3/3 before v0.1 |
 | Tier-1 environments passing the capture → list → restore suite | Leading | 4/4 per release (GNOME, KDE, sway, X11) |
 | Capture-to-listed latency | Leading | p95 < 100 ms |
-| `pick` first frame (500 entries) | Leading | p95 < 100 ms |
+| `pick` first frame (20 entries; also at a configured 500) | Leading | p95 < 100 ms |
 | Sensitive-hinted copies that reach disk in the test suite | Leading | 0, always |
 | Store and directory permissions after any operation | Leading | always `0600` / `0700` |
 | Failure modes `doctor` explains (no backend, no data-control, GNOME extension missing or disabled, store too open, daemon down, no SNI host, no terminal) | Leading | 7/7 with a plain-words message and a next step |
@@ -582,8 +614,10 @@ Stated as facts for `project:architecture` to decide from.
    no logic in it.
 
 **Usage volumes:** one user per daemon. Hundreds of copies a day, bursts of
-tens a second. 500 unpinned entries plus pinned ones. Typical entry under
-4 KiB, maximum 1 MiB. Worst-case store about 500 MiB. Clients: a picker
+tens a second. 20 entries by default (at most 10 pinned), configurable up
+to 500 `[ASSUMPTION]`. Typical entry under 4 KiB, maximum 1 MiB.
+Worst-case store about 20 MiB at the defaults and about 500 MiB at the
+configured maximum. Clients: a picker
 started per recall (dozens a day), one tray or extension connection,
 occasional CLI calls.
 
@@ -603,36 +637,41 @@ belong to `project:architecture`).
 CLI, picker, tray and extension are thin clients of one socket protocol.
 Clients may read the store read-only while the daemon is down (BR14). A
 backend interface keeps the store and the clients independent of the
-session. The GNOME extension is embedded in the binary.
+session. The GNOME extension is embedded in the binary, holds no logic or
+capture, and talks to the daemon over the control socket, so there is one
+protocol for every client. Capture on Wayland without data-control goes
+through the XWayland bridge with the `x11` backend (S1).
 
-**Open driver:** the GNOME capture path is unknown until S1, and it
-decides whether the extension carries capture logic and whether a portal
-backend exists.
+**Remaining driver uncertainty:** the bridge is verified on GNOME Shell 48
+only. Shell 49–51 must be re-checked before v0.1 (§18 Q7). If XWayland
+disappears from GNOME (R13), a portal or extension-fed backend becomes
+necessary. The backend interface keeps that possible.
 
 **Team & budget:** one maintainer plus AI agents. CI on GitHub's free
 runners. No paid infrastructure.
 
 ## 16. Candidate feature map
 
-Feature order follows dependencies. Spikes S1 and S2 (§17) run before the
-features that depend on them. S1 runs first of all.
+Feature order follows dependencies. S1 is answered for GNOME 48. Its
+re-check on 49–51 and the rest of S2 (§17) run alongside features 003 and
+006.
 
 | # | Feature | Scope | Priority | Depends on |
 |---|---|---|---|---|
-| 001 | Store & history | Entry model, de-duplication, count, size and expiry caps, pin exemption, atomic crash-safe persistence, `0700`/`0600` enforcement, read-only open for clients | MVP | — |
+| 001 | Store & history | Entry model, de-duplication, count cap (20, pins included), pin cap (10), size and expiry caps, pin exemption, atomic crash-safe persistence, `0700`/`0600` enforcement, read-only open for clients | MVP | — |
 | 002 | Session detection & backend interface | Detect Wayland or X11, config and flag override, the backend interface for capture and restore | MVP | — |
 | 003 | X11 backend | XFIXES capture of `CLIPBOARD`, text targets, owning the selection to serve a restore | MVP | 002 |
 | 004 | Wayland data-control backend | `ext-data-control-v1` with the `zwlr` fallback, capture and restore, "no data-control" detection | MVP | 002 |
-| 005 | Daemon & control socket | Single instance, socket protocol, pause and resume (persisted), wires backend → filters → store, counters, inactive state | MVP | 001, 002 |
-| 006 | Privacy filters | Sensitive-hint detection (set from S2), size-cap drop and count, pause gate, no-content logging | MVP | 005, S2 |
+| 005 | Daemon & control socket | Single instance, socket protocol (also used by the GNOME extension), pause, timed pause and resume (persisted), wires backend → filters → store, counters, inactive state | MVP | 001, 002 |
+| 006 | Privacy filters | `x-kde-passwordManagerHint` detection (plus hints found by the rest of S2), size-cap drop and count, pause gate, no-content logging | MVP | 005 |
 | 007 | CLI | `ls`, `show`, `copy`, `pin`, `unpin`, `rm`, `clear`, `pause`, `resume`, `status`, `config`, `--json`, index and short id, exit codes, daemon-down behavior | MVP | 005 |
 | 008 | Picker | `rstory pick` TUI: search, preview, restore, pin, unpin, delete, plain accessible mode, read-only when the daemon is down | MVP | 007 |
-| 009 | GNOME capture path | Whatever S1 picks: XWayland bridge through 003, a portal backend, or extension-fed capture | MVP (v0.1 gate) | S1, 003 / 005 |
+| 009 | XWayland bridge selection | Wayland without data-control + `DISPLAY` → `x11` backend through the bridge (BR5b). Reconnect when XWayland restarts. Verified on GNOME 48–51 | MVP (v0.1 gate) | 002, 003 |
 | 010 | Doctor | Session, backend, data-control, GNOME path and extension, store permissions, daemon, SNI host, terminal search | MVP | 005, 009 |
 | 011 | Autostart | `install-autostart`: XDG `.desktop` entry, or a systemd user unit when present | MVP | 005 |
 | 012 | Picker launch | `picker_command`, `$TERMINAL` and the terminal detection list | MVP | 008 |
-| 013 | SNI tray | Pure-Rust SNI + DBusMenu, pixel-data icons (normal and paused), last 10, pause, open picker (012), clear with confirm | MVP | 005, 012 |
-| 014 | GNOME extension | Embedded assets, `install-gnome-extension`, panel icon and menu equal to 013, capture feed if 009 needs it, version gate | MVP (v0.1 gate) | 005, 009, 012 |
+| 013 | SNI tray | Pure-Rust SNI + DBusMenu, pixel-data icons (normal and paused), last 10, pause, pause for 1 minute, open picker (012), clear with confirm | MVP | 005, 012 |
+| 014 | GNOME extension | Embedded assets, `install-gnome-extension`, panel icon and menu equal to 013 over the control socket, `shell-version` 48–51 | MVP (v0.1 gate) | 005, 012 |
 | 015 | Release & publishing | CI build matrix (musl x86_64 and aarch64), checksums, GitHub Releases, Tier-1 test jobs (sway headless, Xvfb), crates.io Trusted Publishing workflow in a protected environment, first-publish runbook | MVP | 001–014 (the pipeline can start early) |
 | 016 | GNOME popup list | Keybinding-opened searchable list in the extension, no terminal | Next | 014 |
 | 017 | Images | `image/png` capture and restore, content-addressed files, caps, picker placeholder or thumbnail, tray handling | Next | 001, 003, 004, 008 |
@@ -640,6 +679,7 @@ features that depend on them. S1 runs first of all.
 | 019 | Encrypted store | Optional passphrase or keyring encryption at rest | Later | 001 |
 | 020 | Pinned export/import | Move pinned entries between machines by file | Later | 001 |
 | 021 | Source app & ignore list | Record the source app where the session reveals it, per-app ignore list | Later | 005 |
+| 023 | Portal / extension-fed capture | Fallback backends for Wayland sessions with neither data-control nor XWayland | Later | 002, 014 |
 | 022 | Rich text & file lists | HTML and `text/uri-list` | Later | 017 |
 
 ## 17. Risks & assumptions
@@ -648,26 +688,28 @@ features that depend on them. S1 runs first of all.
 
 | # | Question | Resolution |
 |---|---|---|
-| S1 | **GNOME capture path.** Mutter offers no data-control protocol. Try in order: (a) the XWayland selection bridge seen through XFIXES (no prompt, no install); (b) the clipboard portal (needs a granted RemoteDesktop session); (c) the embedded extension feeding the daemon (Shell's selection-change signal). Re-check whether current Mutter has gained `ext-data-control-v1`. | Prototype on GNOME Wayland (current and previous Shell) **before anything else is built on it**. Record the result and order in the brief's decision log and in `doctor`. Restore on GNOME must be proven too. |
-| S2 | **Sensitive hints.** Which hints do password managers and browsers set (`x-kde-passwordManagerHint`, `CLIPBOARD_STATE`, others)? | Test KeePassXC, Bitwarden, 1Password, `pass`, Firefox and Chromium on Wayland and X11. Record the hint set in feature 006. |
+| S1 | **GNOME capture path.** Mutter offers no data-control protocol. | **Answered for GNOME Shell 48.7 (Debian 13, Wayland), 2026-10-21.** The Wayland registry offers only `wl_data_device_manager` v3 and `zwp_primary_selection_device_manager_v1`, with no data-control. A background X11 client (pure-Rust `x11rb`, XFIXES on `CLIPBOARD`, unfocused) got an owner-change event for every Wayland-native copy (`wl-copy`) and read its text through `UTF8_STRING`. The offered targets included the MIME types, so `x-kde-passwordManagerHint` crossed the bridge. In the other direction, a value served by an X11 owner (`xclip`) was read by a Wayland client (`wl-paste`), so restore works. **Path (a), the XWayland bridge, is chosen.** The portal and extension-fed capture move to Later. **Still to do:** re-run on Shell 49, 50 and 51 (GNOME OS or a VM) before v0.1 (§18 Q7), and test copies from GUI apps (text editor, browser) as well as `wl-copy`. |
+| S2 | **Sensitive hints.** Which hints do password managers and browsers set? | **Partly answered, 2026-10-21.** `x-kde-passwordManagerHint` is the hint the MVP honors (presence of the type, any value), and it survives the bridge. `pass -c` (1.7.4, Debian) sets **no** hint, because it calls plain `wl-copy` / `xclip`. That gap is covered by the timed pause (BR4b, K3b). The Firefox ESR binary contains the `x-kde-passwordManagerHint` string, so it probably sets the hint for saved-login copies (behavior untested). No evidence was found for `CLIPBOARD_STATE` on Linux, so it is dropped. **Still to test:** KeePassXC, Bitwarden, 1Password, Chromium, and Firefox's behavior (§18 Q1). |
 | S4 | **Pure-Rust protocol coverage.** The Wayland, X11 and D-Bus crates may lack a detail (data-control versions, INCR transfers for large X11 selections, DBusMenu). | Prototype capture and restore on one compositor of each kind (wlroots, KDE, X11) early. |
 
 ### Risks
 
 | # | Risk | Likelihood | Impact | Mitigation |
 |---|---|---|---|---|
-| R1 | No GNOME path works without the extension, or none at all (S1). | Medium | High (v0.1 gate, owner unusable) | Spike first. The extension capture path is the last resort under rstory's own control. If even that fails, re-plan before building on it. |
-| R2 | Password managers or browsers set no hint, so secrets get recorded (S2). | High for some sources | High | Pause, `rm`, the 7-day expiry, a private store, a documented threat model. An ignore list is Later. Be honest about it in the README. |
+| R1 | The XWayland bridge behaves differently on GNOME 49–51, or for GUI apps, than on 48 with `wl-copy` (S1 left to do). | Low | High (v0.1 gate) | Re-check before v0.1. The portal and extension-fed fallbacks stay possible behind the backend interface (feature 023). |
+| R2 | Password managers or browsers set no hint, so secrets get recorded (S2). Confirmed for `pass -c`. | High for some sources | High | Timed pause with a documented `passc` wrapper, pause, `rm`, the 7-day expiry, a 20-entry history, a private store, a documented threat model. An ignore list is Later. Be honest about it in the README. |
 | R3 | Restore depends on the daemon staying alive (S3). If it dies, the restored value vanishes. | Medium | Medium | A light daemon, restart on failure, documented behavior. |
 | R4 | Pure-Rust libraries miss a protocol detail (S4). | Medium | High | Early prototypes. Willingness to implement the missing piece in-tree. |
 | R5 | GNOME Shell internals change and break the extension (S7). Enabling it needs a re-login. | High per GNOME release | Medium | A minimal extension (icon, menu, capture feed) with all logic in the daemon. A declared version range. Tested on both supported versions before each release. |
-| R6 | Worst-case store size of about 500 MiB, and memory pressure if content is held in RAM. Pinned entries are unbounded. | Low | Medium | Content on disk, never all in memory. Stress test with size caps. Consider a total-size cap (§18 Q4). |
+| R6 | A user who raises the caps to the maximum gets a store of about 500 MiB, with memory pressure if content is held in RAM. | Low | Low | Defaults of 20 entries and 10 pins bound it to about 20 MiB. Content stays on disk. The config maximum is bounded. Stress test at the maximum. |
 | R7 | Copy bursts or large entries break the cap or expiry invariants (S6). | Medium | High (privacy) | Property tests on the store, a burst stress test. |
 | R8 | Tray hosts vary, and some bars have no SNI host (S5). | High | Low | The CLI and picker are complete. `doctor` reports it. The extension covers GNOME. |
 | R9 | No terminal emulator found for "Open picker" (S8). | Medium | Low | `picker_command`, a detection list, the entry hidden, `doctor`. |
 | R10 | The first manual crates.io publish fails on token scope, or Trusted Publishing is misconfigured. | Medium | Low | Dry run first. A runbook. Retire the personal token only after the first CI release succeeds. |
 | R11 | Tier-1 GNOME and KDE can't run headless in CI, so regressions slip through. | Medium | Medium | Manual or nested-session check before every tag, written in the release checklist. Automate later where possible. |
 | R12 | Some dependency's licence is incompatible with GPL-3.0. | Low | Medium | Licence policy check in CI (`devsecops:supply-chain`). |
+| R13 | A future GNOME drops XWayland, or the user disables it, which removes the bridge. | Low (v1 range) | High on GNOME | `doctor` detects it and explains. Later fallbacks are a portal backend or extension-fed capture (023). Watch GNOME's XWayland plans each release. |
+| R14 | On GNOME, the daemon's X11 connection keeps an on-demand XWayland running, which costs memory the user may notice. | Medium | Low | Document it. `doctor` reports it. It's the only background path on Mutter. |
 
 ### Assumptions (from this document)
 
@@ -685,8 +727,15 @@ features that depend on them. S1 runs first of all.
   to the top (BR2).
 - A8. Pause survives a daemon restart (BR4).
 - A9. Expiry counts from an entry's last copy (BR8).
-- A10. There is no cap on the number of pinned entries (BR9).
-- A11. Caps are configurable, and the stated values are defaults (BR15).
+- A10. *(Retired 2026-10-21: the pin cap is 10 by owner decision.)*
+- A11. *(Confirmed 2026-10-21: caps are configurable defaults.)* The config
+  accepts at most 500 entries, so the performance targets stay meaningful.
+- A17. "20 in all" counts pinned entries toward the 20, so 10 pins leave 10
+  slots for unpinned entries. This is how the owner's answer ("pinned up
+  to 10, 20 in total") was read.
+- A18. A timed pause keeps its original end time across a daemon restart
+  (BR4).
+- A19. The daemon reconnects when an on-demand XWayland restarts (§12).
 - A12. The performance targets in §11 apply on a 2020-era laptop and are
   verified in architecture.
 - A13. The control socket also checks peer credentials (§11).
@@ -700,12 +749,16 @@ features that depend on them. S1 runs first of all.
 
 | # | Question | Who answers |
 |---|---|---|
-| Q1 | Which sensitive hints to honor (S2)? | Spike S2 (maintainer) |
-| Q2 | Which terminal emulators go in the detection list, and in what order? | The maintainer, when feature 012 is built and tested on Tier-1 desktops |
-| Q3 | The exact GNOME Shell version numbers (current stable and previous) when the extension is first built. | The maintainer, at feature 014 |
-| Q4 | Should there be a total store size cap besides 500 × 1 MiB, and should pinned entries have a cap? `[NEEDS CLARIFICATION]` | Owner |
-| Q5 | Which GNOME capture path (S1), and whether a portal backend exists? | Spike S1 |
-| Q6 | Which channel connects the extension and the daemon: the control socket from GJS, or D-Bus? | `project:architecture` |
+| # | Question | Who answers | State |
+|---|---|---|---|
+| Q1 | Which sensitive hints to honor? | S2 | **Partly resolved.** `x-kde-passwordManagerHint` is honored, and `pass` is covered by the timed pause. Still to test: KeePassXC, Bitwarden, 1Password, Chromium, Firefox behavior (feature 006). |
+| Q2 | Terminal detection list and order. | Owner | **Resolved:** `$TERMINAL` → `xdg-terminal-exec` → ghostty, kitty, alacritty, foot, wezterm, ptyxis, kgx, gnome-terminal, konsole, xfce4-terminal, xterm. |
+| Q3 | GNOME Shell versions. | Owner | **Resolved:** 48–51. |
+| Q4 | Extra store caps. | Owner | **Resolved:** 20 entries in all and 10 pins by default, both configurable. |
+| Q5 | GNOME capture path. | S1 | **Resolved:** the XWayland bridge (verified on 48). |
+| Q6 | Extension ↔ daemon channel. | Owner | **Resolved:** the control socket. |
+| Q7 | Does the bridge behave the same on GNOME Shell 49, 50 and 51, and for GUI-app copies? | Maintainer (VM / GNOME OS check) | Open. A v0.1 release check, not a design question. |
+| Q8 | Is A17 right (pins count toward the 20)? | Owner | Open. A one-line confirmation. |
 
 ## 19. Decision log
 
@@ -715,10 +768,10 @@ features that depend on them. S1 runs first of all.
 | 2026-10-21 | One static binary with pure-Rust dependencies and no runtime tools or libraries. | Depend on `wl-clipboard`, `xclip`, `fzf`, GTK/Qt, `libwayland` | Owner decision. This is the product's core differentiator (G1). |
 | 2026-10-21 | The tray is in the MVP. On GNOME it comes from an embedded extension installed by the binary, not AppIndicator. | Require the AppIndicator extension, or no tray on GNOME | Owner decision. Keeps rstory self-contained. |
 | 2026-10-21 | Tray menu: last 10 entries, pause/resume, open picker (hidden when no terminal is found), clear with confirm. | Longer list, no clear in the tray | Owner decision. |
-| 2026-10-21 | Supported GNOME Shell versions are current stable and the previous one. Older versions get the CLI and picker only. | Wider range | Owner decision. Bounds extension maintenance (R5). |
+| 2026-10-21 | Supported GNOME Shell versions are current stable and the previous one. Older versions get the CLI and picker only. | Wider range | Owner decision. Bounds extension maintenance (R5). *Superseded below: 48–51.* |
 | 2026-10-21 | Terminal picker in the MVP. Native GNOME popup list is Next. | Popup in the MVP | Owner decision. |
 | 2026-10-21 | Images are not in the MVP. They are the first thing after it. | Images in the MVP | Owner decision. |
-| 2026-10-21 | Limits: 500 entries, 7 days, 1 MiB per entry. Pinned entries are exempt. | Other values | Owner decision. |
+| 2026-10-21 | Limits: 500 entries, 7 days, 1 MiB per entry. Pinned entries are exempt. | Other values | Owner decision. *Superseded below: 20 in all, 10 pins.* |
 | 2026-10-21 | The source application is never recorded in the MVP. | Record it for an ignore list | Owner decision (privacy). |
 | 2026-10-21 | No encryption at rest in the MVP. Rely on a private file, the sensitive filter and the short TTL. Encryption is Later. | Encrypt from v0.1 | Owner decision. Key management would add dependencies and setup steps. |
 | 2026-10-21 | Publishing: first publish by hand with the owner's personal token (kept in their password store, never recorded here), every later release through crates.io Trusted Publishing from GitHub Actions, the token revoked afterwards. | A stored CI token | Owner decision. crates.io has no pending publisher for a new crate. No long-lived secret in the repository. |
@@ -727,3 +780,9 @@ features that depend on them. S1 runs first of all.
 | 2026-10-21 | **Tier 1** (release-blocking): GNOME Wayland, KDE Plasma Wayland, a wlroots compositor (sway), X11. | GNOME + wlroots + X11, or headless CI only | Owner answer. Matches the success metrics. |
 | 2026-10-21 | **Without a daemon**, `ls`, `show` and `pick` (browsing) read the store read-only. Write commands fail with a hint and a non-zero exit. | Everything needs the daemon, or auto-start it | Owner answer. Keeps a single writer while making history browsable. Restoring needs a live owner anyway. |
 | 2026-10-21 | **English-only interface** in v1, with no translation catalogs. | i18n-ready catalogs from day one | Owner answer. Translations are Later. |
+| 2026-10-21 | GNOME Shell support range is **48–51** (replaces "current stable and previous"). | Upstream 50–51 only, distro-driven 46–51 | Owner answer. The owner runs 48 on Debian 13, and the literal rule would have excluded it. |
+| 2026-10-21 | **Limits: 20 entries in all and 10 pins by default**, both configurable (replaces 500 entries and unbounded pins). 7 days and 1 MiB stay. | 100 MiB total + 100 pins, no extra caps | Owner: "clipboard history should be a small assist, not a double terminal history". |
+| 2026-10-21 | The terminal search order for "open picker" (§6). | `$TERMINAL` + `xdg-terminal-exec` only | Owner answer. |
+| 2026-10-21 | The GNOME extension talks to the daemon over the **control socket**. | A D-Bus session service | Owner answer. One protocol and one security check for every client. |
+| 2026-10-21 | **GNOME capture goes through the XWayland bridge** with the `x11` backend. Portal and extension-fed capture move to Later. | Clipboard portal, extension-fed capture | Spike S1 on GNOME 48: no prompt, no install, capture and restore both work. Re-check on 49–51 before v0.1. |
+| 2026-10-21 | **Timed pause** (`pause --for`, plus a tray "Pause for 1 minute" item) in the MVP, with a documented `passc` wrapper. `x-kde-passwordManagerHint` is the MVP sensitive hint. `CLIPBOARD_STATE` is dropped. | Document the gap only, content heuristic | Spike S2: `pass -c` sets no hint. The owner chose the timed pause. |
