@@ -139,3 +139,15 @@ Appended by `backend:spec`. Built by `backend:build` (ticks only this section). 
 - [ ] T021 Document GNOME 48–51 manual check in `docs/release.md` (draft) — Executor: builder · Reviewer: thinker · Effort: low
 
 **Checkpoint**: the budgets in backend.md are met; `/speckit-converge` (Backend) reports converged.
+
+---
+
+## QA
+
+Appended by `qa:strategy`. Executed by `qa:e2e` / `qa:load` after the builds (ticks only this section).
+
+- [ ] T022 Bridge-mode CI environment (sway headless, data-control disabled, XWayland) in `tests/support/sway.rs` validated by `qa:e2e` — Executor: builder · Reviewer: thinker
+- [ ] T023 GNOME 48–51 manual matrix rows in `docs/release.md` (GUI-app copies, restore into Wayland apps) — Executor: builder · Reviewer: thinker
+- [ ] T024 Charter session → `docs/product/qa/charters/002.md` — Executor: thinker · Reviewer: reviewer · Effort: high
+
+**Checkpoint**: the journeys and suites in `qa.md` are green in CI; the exit criteria are met → Verified in `specs/README.md`.

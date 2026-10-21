@@ -138,3 +138,13 @@ Appended by `frontend:spec`. `[TUI]`/`[CLI]` tasks built by `frontend:tui` (tick
 - [ ] T020 [TUI] first-frame optimization against F6 (load before draw, no alt-screen flicker); F1 keymap footer — Executor: builder · Reviewer: reviewer · Effort: high
 
 **Checkpoint**: budgets met; `/speckit-converge` (Frontend) reports converged.
+
+---
+
+## QA
+
+Appended by `qa:strategy`. Executed by `qa:e2e` / `qa:load` after the builds (ticks only this section).
+
+- [ ] T021 `tests/e2e/E2E-K2.rs` (keyboard-only recall through a pty, X11 and sway; negative read-only path) — Executor: builder · Reviewer: reviewer · Effort: high
+
+**Checkpoint**: the journeys and suites in `qa.md` are green in CI; the exit criteria are met → Verified in `specs/README.md`.

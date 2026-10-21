@@ -142,3 +142,14 @@ Appended by `frontend:spec`. `[TUI]`/`[CLI]` tasks built by `frontend:tui` (tick
 - [ ] T017 [US1] Icon pixmaps from `assets/icons/png` (000-design-system T010) wired into `build.rs` — Executor: builder · Reviewer: thinker · Effort: low
 
 **Checkpoint**: the US1 snapshot/journey tests pass; `cargo insta review` is clean.
+
+---
+
+## QA
+
+Appended by `qa:strategy`. Executed by `qa:e2e` / `qa:load` after the builds (ticks only this section).
+
+- [ ] T018 `tests/e2e/E2E-K7.rs` (dbus-daemon + stub watcher) — Executor: builder · Reviewer: thinker
+- [ ] T019 KDE + waybar manual rows in `docs/release.md` — Executor: builder · Reviewer: thinker · Effort: low
+
+**Checkpoint**: the journeys and suites in `qa.md` are green in CI; the exit criteria are met → Verified in `specs/README.md`.

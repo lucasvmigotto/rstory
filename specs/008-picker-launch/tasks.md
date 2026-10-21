@@ -79,3 +79,13 @@ Appended by `backend:spec`. Built by `backend:build` (ticks only this section). 
 - [ ] T008 [US1] `launch::spawn` detached (setsid, null stdio) + `open_picker` handler + `picker_available` in status — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: the US1 tests in this file's story phase pass (`cargo test`), plus the contract tests where they apply.
+
+---
+
+## QA
+
+Appended by `qa:strategy`. Executed by `qa:e2e` / `qa:load` after the builds (ticks only this section).
+
+- [ ] T009 Verify the launch table against the terminals installed in the tools container (smoke) — Executor: builder · Reviewer: thinker · Effort: low
+
+**Checkpoint**: the journeys and suites in `qa.md` are green in CI; the exit criteria are met → Verified in `specs/README.md`.

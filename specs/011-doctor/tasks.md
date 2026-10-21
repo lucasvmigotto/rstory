@@ -108,3 +108,13 @@ Appended by `frontend:spec`. `[TUI]`/`[CLI]` tasks built by `frontend:tui` (tick
 - [ ] T011 [US1] [CLI] text renderer (CheckLine, summary line) and `--json` in `src/doctor/render.rs` — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: the US1 snapshot/journey tests pass; `cargo insta review` is clean.
+
+---
+
+## QA
+
+Appended by `qa:strategy`. Executed by `qa:e2e` / `qa:load` after the builds (ticks only this section).
+
+- [ ] T012 Reuse E2E-K1/K4 assertions on doctor output — Executor: builder · Reviewer: thinker · Effort: low
+
+**Checkpoint**: the journeys and suites in `qa.md` are green in CI; the exit criteria are met → Verified in `specs/README.md`.

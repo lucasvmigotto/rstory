@@ -167,3 +167,13 @@ Appended by `frontend:spec`. `[TUI]`/`[CLI]` tasks built by `frontend:tui` (tick
 - [ ] T023 [US4] [CLI] `status` text renderer + `config [--path]` in `src/cli/status.rs` — Executor: builder · Reviewer: thinker · Effort: low
 
 **Checkpoint**: the US4 snapshot/journey tests pass; `cargo insta review` is clean.
+
+---
+
+## QA
+
+Appended by `qa:strategy`. Executed by `qa:e2e` / `qa:load` after the builds (ticks only this section).
+
+- [ ] T024 `tests/e2e/E2E-K6.rs` (scripting, non-TTY) — Executor: builder · Reviewer: thinker
+
+**Checkpoint**: the journeys and suites in `qa.md` are green in CI; the exit criteria are met → Verified in `specs/README.md`.

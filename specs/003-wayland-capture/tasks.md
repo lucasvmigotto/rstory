@@ -112,3 +112,14 @@ Appended by `backend:spec`. Built by `backend:build` (ticks only this section). 
 - [ ] T013 KDE Plasma manual check entry in `docs/release.md` — Executor: builder · Reviewer: thinker · Effort: low
 
 **Checkpoint**: the budgets in backend.md are met; `/speckit-converge` (Backend) reports converged.
+
+---
+
+## QA
+
+Appended by `qa:strategy`. Executed by `qa:e2e` / `qa:load` after the builds (ticks only this section).
+
+- [ ] T014 KDE manual matrix row in `docs/release.md` — Executor: builder · Reviewer: thinker · Effort: low
+- [ ] T015 Charter session → `docs/product/qa/charters/003.md` — Executor: thinker · Reviewer: reviewer · Effort: high
+
+**Checkpoint**: the journeys and suites in `qa.md` are green in CI; the exit criteria are met → Verified in `specs/README.md`.

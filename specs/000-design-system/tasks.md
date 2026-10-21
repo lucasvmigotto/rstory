@@ -41,3 +41,13 @@ description: "Task list for the terminal & menu design system"
 ### Phase 5: Polish
 
 - [ ] T011 [TUI] Optional `docs/demo.tape` (vhs) for the README picker demo — Executor: builder · Reviewer: thinker · Effort: low
+
+---
+
+## QA
+
+Appended by `qa:strategy`. Executed by `qa:e2e` / `qa:load` after the builds (ticks only this section).
+
+- [ ] T012 Icon review checklist (16 px mono) recorded in the PR template — Executor: builder · Reviewer: thinker · Effort: low
+
+**Checkpoint**: the journeys and suites in `qa.md` are green in CI; the exit criteria are met → Verified in `specs/README.md`.

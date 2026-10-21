@@ -122,3 +122,14 @@ Appended by `backend:spec`. Built by `backend:build` (ticks only this section). 
 - [ ] T013 [US3] `docs/release.md` runbook + Tier-1 manual matrix — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: the US3 tests in this file's story phase pass (`cargo test`), plus the contract tests where they apply.
+
+---
+
+## QA
+
+Appended by `qa:strategy`. Executed by `qa:e2e` / `qa:load` after the builds (ticks only this section).
+
+- [ ] T014 Gate wiring spec for `devsecops:pipeline` from `test-strategy.md` §6 (PR, dev, main, tag, nightly) — Executor: thinker · Reviewer: reviewer · Effort: high
+- [ ] T015 Flaky-test policy wiring (nextest config, quarantine label) — Executor: builder · Reviewer: thinker
+
+**Checkpoint**: the journeys and suites in `qa.md` are green in CI; the exit criteria are met → Verified in `specs/README.md`.

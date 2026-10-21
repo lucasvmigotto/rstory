@@ -107,3 +107,14 @@ Appended by `frontend:spec`. `[TUI]`/`[CLI]` tasks built by `frontend:tui` (tick
 - [ ] T013 [US2] [TUI] `extension.js`: PanelMenu.Button, symbolic icons per state, menu from the model, actions → client requests, full `disable()` cleanup — Executor: builder · Reviewer: reviewer · Effort: high
 
 **Checkpoint**: the US2 snapshot/journey tests pass; `cargo insta review` is clean.
+
+---
+
+## QA
+
+Appended by `qa:strategy`. Executed by `qa:e2e` / `qa:load` after the builds (ticks only this section).
+
+- [ ] T014 GNOME Shell 48–51 manual matrix + leak-check procedure in `docs/release.md` — Executor: builder · Reviewer: thinker
+- [ ] T015 Charter session per Shell version → `docs/product/qa/charters/010.md` — Executor: thinker · Reviewer: reviewer · Effort: high
+
+**Checkpoint**: the journeys and suites in `qa.md` are green in CI; the exit criteria are met → Verified in `specs/README.md`.

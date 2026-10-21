@@ -100,3 +100,13 @@ Appended by `frontend:spec`. `[TUI]`/`[CLI]` tasks built by `frontend:tui` (tick
 - [ ] T010 [US2] [CLI] `--systemd`, `--now`, `--uninstall` — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: the US2 snapshot/journey tests pass; `cargo insta review` is clean.
+
+---
+
+## QA
+
+Appended by `qa:strategy`. Executed by `qa:e2e` / `qa:load` after the builds (ticks only this section).
+
+- [ ] T011 Re-login manual rows (GNOME, KDE, sway) in `docs/release.md` — Executor: builder · Reviewer: thinker · Effort: low
+
+**Checkpoint**: the journeys and suites in `qa.md` are green in CI; the exit criteria are met → Verified in `specs/README.md`.
