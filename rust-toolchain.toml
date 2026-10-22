@@ -1,0 +1,6 @@
+# Single source of the Rust toolchain version (Containerfile, devcontainer and CI read it).
+[toolchain]
+channel = "1.98.1"
+components = ["rustfmt", "clippy"]
+targets = ["x86_64-unknown-linux-musl", "aarch64-unknown-linux-musl"]
+profile = "minimal"
