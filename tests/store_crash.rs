@@ -94,11 +94,40 @@ fn check(dir: &Path, acked: &[(EntryId, Vec<u8>)], inserts: usize) -> Result<(),
     Ok(())
 }
 
+/// Copies a directory tree, keeping permission bits.
+fn copy_tree(from: &Path, to: &Path) {
+    fs::create_dir(to).unwrap();
+    fs::set_permissions(to, fs::metadata(from).unwrap().permissions()).unwrap();
+    for e in fs::read_dir(from).unwrap() {
+        let e = e.unwrap();
+        let target = to.join(e.file_name());
+        if e.file_type().unwrap().is_dir() {
+            copy_tree(&e.path(), &target);
+        } else {
+            fs::copy(e.path(), &target).unwrap();
+        }
+    }
+}
+
+/// How many mutating calls recovering (opening) the store in `dir` makes.
+fn recovery_mutations(dir: &Path) -> u64 {
+    let scratch = tempfile::tempdir().unwrap();
+    let copy = scratch.path().join("store");
+    if dir.exists() {
+        copy_tree(dir, &copy);
+    }
+    let rec = FaultFs::recording();
+    drop(Store::open_exclusive(&copy, Caps::default(), rec.clone()));
+    rec.mutations()
+}
+
+/// `recovery_raw`, when set, picks a crash point inside the next open's own recovery work
+/// (reduced modulo the number of calls it makes, so the first and last are reachable).
 fn scenario(
     inserts: usize,
     crash_at: u64,
     fault: Fault,
-    recovery_crash: Option<u64>,
+    recovery_raw: Option<u64>,
 ) -> Result<(), TestCaseError> {
     let tmp = tempfile::tempdir().unwrap();
     let dir = tmp.path().join("store");
@@ -106,9 +135,10 @@ fn scenario(
     let acked = workload(&dir, &faulty, inserts);
     faulty.power_off();
 
-    if let Some(n) = recovery_crash {
+    if let Some(raw) = recovery_raw {
         // The machine dies again while the next open is recovering.
-        let again = FaultFs::new(n, fault);
+        let at = raw % (recovery_mutations(&dir) + 1);
+        let again = FaultFs::new(at, fault);
         drop(Store::open_exclusive(&dir, Caps::default(), again.clone()));
         again.power_off();
     }
@@ -120,11 +150,11 @@ proptest! {
 
     #[test]
     fn acknowledged_inserts_survive(
-        (inserts, crash_at, recovery_at) in (1usize..8).prop_flat_map(|n| (Just(n), 0..=total_mutations(n), 0u64..6)),
+        (inserts, crash_at, recovery_raw) in (1usize..8).prop_flat_map(|n| (Just(n), 0..=total_mutations(n), 0u64..1000)),
     ) {
         for fault in [Fault::Crash, Fault::PowerLoss] {
             scenario(inserts, crash_at, fault, None)?;
-            scenario(inserts, crash_at, fault, Some(recovery_at))?;
+            scenario(inserts, crash_at, fault, Some(recovery_raw))?;
         }
     }
 }
