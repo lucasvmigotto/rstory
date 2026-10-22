@@ -99,6 +99,25 @@ impl History {
         self.entries.iter().position(|e| e.hash == *hash)
     }
 
+    /// The one count-cap rule, used by `record` and `enforce_limits`: unpinned entries number at
+    /// most `max(max_entries - pinned, 1)`, so `len <= max_entries` unless pins fill the cap, and
+    /// the newest unpinned entry is always kept (the latest copy must survive a restart).
+    /// Evicts the oldest unpinned first; pins are never touched.
+    fn evict_over_cap(&mut self) -> Vec<EntryId> {
+        let pinned = self.entries.iter().filter(|e| e.pinned).count();
+        let allowance = (self.limits.max_entries as usize)
+            .saturating_sub(pinned)
+            .max(1);
+        let mut evicted = Vec::new();
+        while self.entries.len() - pinned > allowance {
+            let Some(pos) = self.entries.iter().rposition(|e| !e.pinned) else {
+                break;
+            };
+            evicted.push(self.entries.remove(pos).id);
+        }
+        evicted
+    }
+
     fn ttl(&self) -> time::Duration {
         time::Duration::try_from(self.limits.ttl).unwrap_or(time::Duration::MAX)
     }
@@ -170,19 +189,7 @@ impl History {
                 preview: content.preview(),
             },
         );
-        let mut evicted = Vec::new();
-        while self.entries.len() > self.limits.max_entries as usize {
-            // Index 0 is the entry just inserted: it is never the one evicted.
-            let Some(pos) = self.entries[1..]
-                .iter()
-                .rposition(|e| !e.pinned)
-                .map(|p| p + 1)
-            else {
-                break;
-            };
-            debug_assert!(pos > 0);
-            evicted.push(self.entries.remove(pos).id);
-        }
+        let evicted = self.evict_over_cap();
         Recorded::Inserted { id, evicted }
     }
 
@@ -270,12 +277,7 @@ impl History {
     /// pinned entries; `pin` keeps refusing new pins while `pinned >= max_pinned`.
     pub fn enforce_limits(&mut self, now: OffsetDateTime) -> Vec<EntryId> {
         let mut removed = self.expire(now);
-        while self.entries.len() > self.limits.max_entries as usize {
-            let Some(pos) = self.entries.iter().rposition(|e| !e.pinned) else {
-                break;
-            };
-            removed.push(self.entries.remove(pos).id);
-        }
+        removed.extend(self.evict_over_cap());
         removed
     }
 
