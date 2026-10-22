@@ -1,0 +1,7 @@
+---
+source: src/ui/tests.rs
+expression: out
+---
+# tier=truecolor width=40 ascii=true
+| Read-only: daemon not running
+  ~ 1..30 fg=#D7AF00

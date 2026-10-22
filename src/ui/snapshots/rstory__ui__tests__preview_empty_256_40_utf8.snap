@@ -1,0 +1,13 @@
+---
+source: src/ui/tests.rs
+expression: out
+---
+# tier=256 width=40 ascii=false
+|│
+  ~ 0..1 fg=idx245
+|│
+  ~ 0..1 fg=idx245
+|│
+  ~ 0..1 fg=idx245
+|│
+  ~ 0..1 fg=idx245

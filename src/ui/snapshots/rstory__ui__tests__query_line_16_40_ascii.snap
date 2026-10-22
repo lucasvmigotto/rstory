@@ -1,0 +1,15 @@
+---
+source: src/ui/tests.rs
+expression: out
+---
+# tier=16 width=40 ascii=true
+| > _                   14/14  Recording
+  ~ 1..2 fg=Cyan ; 3..4 fg=Cyan ; 23..28 fg=DarkGray
+| > reb_                 2/14  Recording
+  ~ 1..2 fg=Cyan ; 6..7 fg=Cyan ; 24..28 fg=DarkGray
+| > zzz_                    0/14  Paused
+  ~ 1..2 fg=Cyan ; 6..7 fg=Cyan ; 27..31 fg=DarkGray ; 33..39 fg=Yellow
+| > ong-branch-name-indeed_ 1/14  Paused
+  ~ 1..2 fg=Cyan ; 25..26 fg=Cyan ; 27..31 fg=DarkGray ; 33..39 fg=Yellow
+| > x_                     3/3  Inactive
+  ~ 1..2 fg=Cyan ; 4..5 fg=Cyan ; 26..29 fg=DarkGray ; 31..39 fg=Red

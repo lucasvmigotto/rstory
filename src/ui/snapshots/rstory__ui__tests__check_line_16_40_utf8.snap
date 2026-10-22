@@ -1,0 +1,16 @@
+---
+source: src/ui/tests.rs
+expression: out
+---
+# tier=16 width=40 ascii=false
+|✓ store  opened, 0700
+|i backend  x11 (XFIXES)
+  ~ 0..1 fg=DarkGray
+|! autostart  not installed
+  ~ 0..1 fg=Yellow
+|  → run `rstory install-autostart`
+  ~ 0..34 fg=DarkGray
+|✗ daemon  not running
+  ~ 0..1 fg=Red
+|  → run `rstory daemon`
+  ~ 0..23 fg=DarkGray

@@ -1,0 +1,15 @@
+---
+source: src/ui/tests.rs
+expression: out
+---
+# tier=256 width=40 ascii=false
+| > _                   14/14  Recording
+  ~ 1..2 fg=idx37 ; 3..4 fg=idx37 ; 23..28 fg=idx245
+| > reb_                 2/14  Recording
+  ~ 1..2 fg=idx37 ; 6..7 fg=idx37 ; 24..28 fg=idx245
+| > zzz_                    0/14  Paused
+  ~ 1..2 fg=idx37 ; 6..7 fg=idx37 ; 27..31 fg=idx245 ; 33..39 fg=idx178
+| > ong-branch-name-indeed_ 1/14  Paused
+  ~ 1..2 fg=idx37 ; 25..26 fg=idx37 ; 27..31 fg=idx245 ; 33..39 fg=idx178
+| > x_                     3/3  Inactive
+  ~ 1..2 fg=idx37 ; 4..5 fg=idx37 ; 26..29 fg=idx245 ; 31..39 fg=idx160

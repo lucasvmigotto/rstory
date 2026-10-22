@@ -1,0 +1,10 @@
+---
+source: src/ui/tests.rs
+expression: out
+---
+# tier=mono width=40 ascii=true
+| Enter restore  Tab preview  Ctrl-T p...
+| Enter restore  Tab preview  Esc quit
+| Pin limit reached (10). Unpin an ent...
+| Restoring...
+| Delete this entry? y/n

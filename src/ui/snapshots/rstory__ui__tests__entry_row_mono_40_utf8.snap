@@ -1,0 +1,15 @@
+---
+source: src/ui/tests.rs
+expression: out
+---
+# tier=mono width=40 ascii=false
+|     3m    https://github.com/lucasvmig…
+| >  now    cargo test -p rstory --test …
+  ~ 0..40 REV
+|     2h 📌 git reset --soft HEAD~1 && g…
+|     3m    git rebase -i HEAD~3
+  ~ 15..18 BOLD UL
+| >   5d 📌 git rebase -i HEAD~3
+  ~ 0..9 REV ; 10..15 REV ; 15..18 REV BOLD UL ; 18..40 REV
+|     1d    日本語のテキスト\tline⏎secon…
+  ~ 11..12 BOLD UL
