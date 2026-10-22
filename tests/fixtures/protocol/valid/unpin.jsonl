@@ -1,0 +1,2 @@
+{"v":1,"id":5,"op":"unpin","args":{"ref":"01JBD8X"}}
+{"v":1,"id":5,"ok":true,"result":{"entry":{"id":"01JBD8XQ4H2G6F5E4D3C2B1A09","short_id":"01JBD8X","index":0,"size":20,"created":"2026-10-21T13:58:40Z","last_copied":"2026-10-21T14:05:02Z","pinned":false,"preview":"git rebase -i HEAD~3"}}}

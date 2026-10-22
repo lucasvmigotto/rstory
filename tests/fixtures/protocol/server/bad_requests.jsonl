@@ -1,0 +1,12 @@
+{"v":1,"id":3,"op":"list","args":{"limit":0}}
+{"v":1,"id":4,"op":"list","args":{"limit":501}}
+{"v":1,"id":5,"op":"show","args":{}}
+{"v":1,"id":6,"op":"show","args":{"ref":"a b"}}
+{"v":1,"id":7,"op":"restore","args":{"ref":7}}
+{"v":1,"id":8,"op":"pause","args":{"for":"0s"}}
+{"v":1,"id":9,"op":"pause","args":{"for":"25h"}}
+{"v":1,"id":10,"op":"pause","args":{"for":"fifty"}}
+{"v":1,"id":11,"op":"clear","args":{"all":"yes"}}
+{"v":1,"id":12,"op":"subscribe","args":{"events":["nope"]}}
+{"v":1,"id":13,"op":"explode","args":{}}
+{"v":1,"id":14,"op":"list","args":[]}
