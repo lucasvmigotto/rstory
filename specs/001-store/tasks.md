@@ -88,8 +88,8 @@ description: "Task list for Store & history"
 
 ## Phase 6: Polish & Cross-Cutting
 
-- [ ] T015 [P] `benches/store.rs`: open+list 500 < 10 ms, insert ≤ 20 ms (SC-003) — Executor: builder · Reviewer: thinker
-- [ ] T016 Run quickstart.md validation — Executor: scout · Reviewer: thinker · Effort: low
+- [x] T015 [P] `benches/store.rs`: open+list 500 < 10 ms, insert ≤ 20 ms (SC-003) — Executor: builder · Reviewer: thinker
+- [x] T016 Run quickstart.md validation — Executor: scout · Reviewer: thinker · Effort: low
 - [ ] T017 QA tasks — see `## QA` (appended by `qa:strategy`) — Executor: thinker · Reviewer: reviewer · Effort: high
 
 ---
@@ -147,7 +147,7 @@ Appended by `backend:spec`. Built by `backend:build` (ticks only this section). 
 
 ### Backend Polish
 
-- [ ] T027 Bench `benches/store.rs` and tune (SC-003) — Executor: builder · Reviewer: thinker
+- [x] T027 Bench `benches/store.rs` and tune (SC-003) — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: the budgets in backend.md are met; `/speckit-converge` (Backend) reports converged.
 
