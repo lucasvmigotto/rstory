@@ -1,0 +1,55 @@
+{
+  // Human layer for rstory (one module: a single Rust crate + the embedded GNOME extension).
+  // The reference environment for every task is the `tools` image (Containerfile + Makefile);
+  // run `make <recipe>` on the host when you need CI's answer.
+  "name": "rstory",
+  // ghcr.io/lucasvmigotto/devenv:debian-trixie (multi-arch index digest)
+  "image": "ghcr.io/lucasvmigotto/devenv@sha256:8c03237c815252c8d1e3cb993475a158876a3d3841cd236b8f985ae2dbedf3a9",
+  "features": {
+    // Version mirrors rust-toolchain.toml (the single source); rustup honours that file anyway.
+    "ghcr.io/devcontainers/features/rust:1": {
+      "version": "1.98.1",
+      "profile": "minimal",
+      "targets": "x86_64-unknown-linux-musl,aarch64-unknown-linux-musl"
+    }
+  },
+  "remoteUser": "developer",
+  "containerEnv": {
+    "CARGO_TARGET_DIR": "/home/developer/target",
+    "TZ": "UTC",
+    "LANG": "C.UTF-8"
+  },
+  "runArgs": ["--userns=keep-id", "--name", "rstory-devcontainer"],
+  "mounts": [
+    "source=rstory-dev-cargo-registry,target=/usr/local/cargo/registry,type=volume",
+    "source=rstory-dev-target,target=/home/developer/target,type=volume",
+    "source=rstory-dev-vscode-extensions,target=/home/developer/.vscode-server/extensions,type=volume"
+  ],
+  "postCreateCommand": {
+    "cache-ownership": "sudo chown -R developer:developer /usr/local/cargo/registry /home/developer/target /home/developer/.vscode-server",
+    "toolchain": "rustup show active-toolchain && rustc --version"
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "rust-lang.rust-analyzer",
+        "tamasfe.even-better-toml",
+        "dbaeumer.vscode-eslint",
+        "editorconfig.editorconfig"
+      ],
+      "settings": {
+        "[rust]": {
+          "editor.defaultFormatter": "rust-lang.rust-analyzer",
+          "editor.formatOnSave": true
+        },
+        "rust-analyzer.check.command": "clippy",
+        "rust-analyzer.check.extraArgs": ["--all-targets", "--", "-D", "warnings"],
+        "[javascript]": {
+          "editor.defaultFormatter": "dbaeumer.vscode-eslint",
+          "editor.formatOnSave": true
+        },
+        "eslint.workingDirectories": ["extension"]
+      }
+    }
+  }
+}
