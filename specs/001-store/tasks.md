@@ -161,3 +161,10 @@ Appended by `qa:strategy`. Executed by `qa:e2e` / `qa:load` after the builds (ti
 - [ ] T029 Nightly property job with 100 000 cases (gate wiring for `devsecops:pipeline`) — Executor: builder · Reviewer: thinker · Effort: low
 
 **Checkpoint**: the journeys and suites in `qa.md` are green in CI; the exit criteria are met → Verified in `specs/README.md`.
+
+---
+
+## Convergence (Backend) — 2026-10-22
+
+Converged. FR-001–FR-018 and SC-001–SC-004 map to code in `src/domain/{entry,ids,history,redact}.rs`, `src/store/{mod,index,perms,readonly,fs,fault}.rs`, `src/config/mod.rs`, with tests in `tests/{store_crash,store_fail,store_h8,store_open,store_readonly,store_trace,history_props}.rs` and `tests/fitness/`. Reviews: fresh-context reviewer (us1 ×2, us2 ×2) and thinker (foundation, us3, polish). The crash and power-loss suites passed at 4 096 cases (2 048 after the batch-sync tuning). No unbuilt backend work remains. The open tasks are the QA layer (T017, T028, T029: wave 6).
+
