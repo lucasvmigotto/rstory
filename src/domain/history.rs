@@ -172,9 +172,15 @@ impl History {
         );
         let mut evicted = Vec::new();
         while self.entries.len() > self.limits.max_entries as usize {
-            let Some(pos) = self.entries.iter().rposition(|e| !e.pinned) else {
+            // Index 0 is the entry just inserted: it is never the one evicted.
+            let Some(pos) = self.entries[1..]
+                .iter()
+                .rposition(|e| !e.pinned)
+                .map(|p| p + 1)
+            else {
                 break;
             };
+            debug_assert!(pos > 0);
             evicted.push(self.entries.remove(pos).id);
         }
         Recorded::Inserted { id, evicted }
@@ -251,13 +257,26 @@ impl History {
     /// count is below the cap again; this only reports the fact (for doctor and status).
     #[must_use]
     pub fn pins_over_cap(&self) -> Option<(usize, usize)> {
-        None
+        let pinned = self.entries.iter().filter(|e| e.pinned).count();
+        let max = self.limits.max_pinned as usize;
+        (pinned > max).then_some((pinned, max))
     }
 
     /// Brings a loaded history within its limits: expires, then evicts the oldest unpinned
-    /// entries while over `max_entries`. Pins are never touched. Returns every removed id.
+    /// entries while over `max_entries`. Returns every removed id.
+    ///
+    /// Owner decision 2026-10-22 (pins above lowered caps): existing pins are never evicted,
+    /// expired or unpinned because the caps shrank, so `len` may exceed `max_entries` only by
+    /// pinned entries; `pin` keeps refusing new pins while `pinned >= max_pinned`.
     pub fn enforce_limits(&mut self, now: OffsetDateTime) -> Vec<EntryId> {
-        unimplemented!("enforce_limits")
+        let mut removed = self.expire(now);
+        while self.entries.len() > self.limits.max_entries as usize {
+            let Some(pos) = self.entries.iter().rposition(|e| !e.pinned) else {
+                break;
+            };
+            removed.push(self.entries.remove(pos).id);
+        }
+        removed
     }
 
     /// The instant at which the next unpinned entry expires (`last_copied + ttl`), if any.
@@ -513,7 +532,11 @@ mod tests {
     }
 
     fn pinned_entries(n: usize) -> Vec<Entry> {
-        let mut h = History::new(limits());
+        let mut h = History::new(Limits {
+            max_entries: 50,
+            max_pinned: 50,
+            ..limits()
+        });
         fill(&mut h, 0, n);
         for e in h.entries().to_vec() {
             h.pin(&e.id).unwrap();

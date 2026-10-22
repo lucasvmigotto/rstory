@@ -23,7 +23,7 @@ fn one_insert_makes_exactly_the_documented_calls() {
     let cdir = dir.join("content");
     let ctmp = cdir.join(format!(".tmp-{id}"));
     let itmp = dir.join("index.json.tmp");
-    let expected = vec![
+    let expected = [
         Op::CreateNew(ctmp.clone()),
         Op::WriteAll(ctmp.clone()),
         Op::SyncAll(ctmp.clone()),
@@ -78,7 +78,7 @@ fn a_remove_commits_the_index_then_unlinks_and_syncs_the_content_directory() {
     store.apply(vec![Mutation::Remove(id)], now).unwrap();
 
     let itmp = dir.join("index.json.tmp");
-    let expected = vec![
+    let expected = [
         Op::CreateNew(itmp.clone()),
         Op::WriteAll(itmp.clone()),
         Op::SyncAll(itmp.clone()),

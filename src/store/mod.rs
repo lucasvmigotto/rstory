@@ -6,7 +6,7 @@ pub mod fs;
 pub mod index;
 pub mod perms;
 
-use std::collections::HashSet;
+use std::collections::{BTreeSet, HashSet};
 use std::io;
 use std::os::unix::fs::OpenOptionsExt;
 use std::path::{Path, PathBuf};
@@ -127,6 +127,8 @@ pub struct Store<F: Fs> {
     caps: Caps,
     history: History,
     pause: PauseState,
+    /// Content files whose unlink failed after a commit; retried by the next `apply`.
+    pending_unlink: BTreeSet<EntryId>,
     _lock: std::fs::File,
 }
 
@@ -140,6 +142,22 @@ impl<F: Fs> Store<F> {
     /// [`StoreError::StoreTooOpen`], [`StoreError::Locked`], [`StoreError::UnknownVersion`],
     /// [`StoreError::Corrupt`], [`StoreError::Io`].
     pub fn open_exclusive(dir: &Path, caps: Caps, fs: F) -> Result<Self, StoreError> {
+        Self::open_exclusive_at(dir, caps, fs, OffsetDateTime::now_utc())
+    }
+
+    /// [`Store::open_exclusive`] with an explicit clock (for expiry on open).
+    ///
+    /// After the sweep the history is brought within the caps (expired entries, then the oldest
+    /// unpinned over `max_entries`), through the same durable path as `apply`.
+    ///
+    /// # Errors
+    /// As [`Store::open_exclusive`].
+    pub fn open_exclusive_at(
+        dir: &Path,
+        caps: Caps,
+        fs: F,
+        now: OffsetDateTime,
+    ) -> Result<Self, StoreError> {
         if let Some(path) = perms::first_too_open(&fs, dir)? {
             return Err(StoreError::StoreTooOpen { path });
         }
@@ -154,14 +172,20 @@ impl<F: Fs> Store<F> {
             max_pinned: caps.max_pinned,
             ttl: caps.ttl,
         };
-        Ok(Self {
+        let mut store = Self {
             fs,
             dir: dir.to_path_buf(),
             caps,
             history: History::from_entries(limits, index.entries),
             pause: index.state.pause,
+            pending_unlink: BTreeSet::new(),
             _lock: lock,
-        })
+        };
+        let mut enforced = store.history.clone();
+        enforced.enforce_limits(now);
+        let pause = store.pause;
+        store.persist(enforced, pause, &[])?;
+        Ok(store)
     }
 
     /// The persisted pause state.
@@ -173,12 +197,19 @@ impl<F: Fs> Store<F> {
     /// Number of content files whose unlink failed and is waiting for a retry.
     #[must_use]
     pub fn pending_unlinks(&self) -> usize {
-        0
+        self.pending_unlink.len()
     }
 
-    /// Retries the unlinks that failed earlier; returns how many are still pending.
+    /// Retries the unlinks that failed earlier (the daemon's housekeeping calls this); returns
+    /// how many are still pending. `apply` does it first on every call.
     pub fn retry_pending_unlinks(&mut self) -> usize {
-        0
+        if self.pending_unlink.is_empty() {
+            return 0;
+        }
+        let ids: Vec<EntryId> = self.pending_unlink.iter().copied().collect();
+        self.pending_unlink.clear();
+        self.unlink(&ids);
+        self.pending_unlink.len()
     }
 
     /// The history aggregate (read-only view).
@@ -216,6 +247,7 @@ impl<F: Fs> Store<F> {
         batch: Vec<Mutation>,
         now: OffsetDateTime,
     ) -> Result<Vec<Outcome>, StoreError> {
+        self.retry_pending_unlinks();
         for m in &batch {
             if let Mutation::RecordCopy(c) = m
                 && u64::from(c.size()) > self.caps.max_entry_bytes
@@ -261,17 +293,9 @@ impl<F: Fs> Store<F> {
             });
         }
 
-        let kept: HashSet<EntryId> = history.entries().iter().map(|e| e.id).collect();
         // Entries inserted and evicted within the same batch never reach the disk.
+        let kept: HashSet<EntryId> = history.entries().iter().map(|e| e.id).collect();
         let to_write: Vec<_> = pending.iter().filter(|(id, _)| kept.contains(id)).collect();
-        let to_unlink: Vec<EntryId> = self
-            .history
-            .entries()
-            .iter()
-            .map(|e| e.id)
-            .filter(|id| !kept.contains(id))
-            .collect();
-
         let mut written: Vec<EntryId> = Vec::new();
         for (id, content) in &to_write {
             written.push(*id);
@@ -281,6 +305,32 @@ impl<F: Fs> Store<F> {
             }
         }
 
+        self.persist(history, pause, &written)?;
+        tracing::debug!(
+            mutations = batch.len(),
+            written = written.len(),
+            "batch applied"
+        );
+        Ok(outcomes)
+    }
+
+    /// Makes `history` and `pause` the stored state: one index commit if anything changed
+    /// (discarding `written` content files if it fails), then the unlink of every entry that
+    /// is gone and a sync of the content directory.
+    fn persist(
+        &mut self,
+        history: History,
+        pause: PauseState,
+        written: &[EntryId],
+    ) -> Result<(), StoreError> {
+        let kept: HashSet<EntryId> = history.entries().iter().map(|e| e.id).collect();
+        let to_unlink: Vec<EntryId> = self
+            .history
+            .entries()
+            .iter()
+            .map(|e| e.id)
+            .filter(|id| !kept.contains(id))
+            .collect();
         if history != self.history || pause != self.pause {
             let index = Index {
                 version: index::VERSION,
@@ -288,21 +338,14 @@ impl<F: Fs> Store<F> {
                 state: State { pause },
             };
             if let Err(e) = index::commit(&self.fs, &self.dir, &index) {
-                self.discard(&written);
+                self.discard(written);
                 return Err(e.into());
             }
             self.history = history;
             self.pause = pause;
         }
-
         self.unlink(&to_unlink);
-        tracing::debug!(
-            mutations = batch.len(),
-            written = written.len(),
-            unlinked = to_unlink.len(),
-            "batch applied"
-        );
-        Ok(outcomes)
+        Ok(())
     }
 
     /// Convenience: records one copy (a batch of one) and returns the entry's id.
@@ -332,19 +375,22 @@ impl<F: Fs> Store<F> {
         }
     }
 
-    /// After the commit: unlink the content of removed entries and sync the directory. Failures
-    /// leave orphans for the next open's sweep, so they are logged, not returned.
-    fn unlink(&self, ids: &[EntryId]) {
+    /// After the commit: unlink the content of removed entries and sync the directory. A
+    /// failure keeps the id in `pending_unlink` (retried later) and leaves at worst an orphan
+    /// for the next open's sweep, so it is logged, not returned.
+    fn unlink(&mut self, ids: &[EntryId]) {
+        let mut done = false;
         for id in ids {
             match self.fs.remove_file(&self.content_path(id)) {
-                Ok(()) => {}
+                Ok(()) => done = true,
                 Err(e) if e.kind() == io::ErrorKind::NotFound => {}
-                Err(e) => tracing::warn!(id = %id, kind = ?e.kind(), "could not unlink content"),
+                Err(e) => {
+                    tracing::warn!(id = %id, kind = ?e.kind(), "could not unlink content; will retry");
+                    self.pending_unlink.insert(*id);
+                }
             }
         }
-        if !ids.is_empty()
-            && let Err(e) = self.fs.sync_dir(&self.dir.join(CONTENT_DIR))
-        {
+        if done && let Err(e) = self.fs.sync_dir(&self.dir.join(CONTENT_DIR)) {
             tracing::warn!(kind = ?e.kind(), "could not sync the content directory");
         }
     }
@@ -422,20 +468,26 @@ fn sweep<F: Fs>(fs: &F, dir: &Path, index: Index) -> Result<Index, StoreError> {
 
 const TMP_PREFIX: &str = ".tmp-";
 
-/// Creates `path` when missing and syncs its parent, so the new directory entry is durable.
+/// Creates `path` when missing, and syncs the parent of every directory that was created
+/// (`create_dir_all` may create several), so each new directory entry is durable.
 fn ensure_dir<F: Fs>(fs: &F, path: &Path) -> io::Result<()> {
-    match fs.mode(path) {
-        Ok(_) => Ok(()),
-        Err(e) if e.kind() == io::ErrorKind::NotFound => {
-            fs.create_dir_all(path, perms::DIR_MODE)?;
-            match path.parent() {
-                Some(p) if p.as_os_str().is_empty() => fs.sync_dir(Path::new(".")),
-                Some(parent) => fs.sync_dir(parent),
-                None => Ok(()),
-            }
+    let mut missing: Vec<&Path> = Vec::new();
+    for p in path.ancestors().filter(|p| !p.as_os_str().is_empty()) {
+        match fs.mode(p) {
+            Ok(_) => break,
+            Err(e) if e.kind() == io::ErrorKind::NotFound => missing.push(p),
+            Err(e) => return Err(e),
         }
-        Err(e) => Err(e),
     }
+    if missing.is_empty() {
+        return Ok(());
+    }
+    fs.create_dir_all(path, perms::DIR_MODE)?;
+    for m in missing {
+        let parent = m.parent().filter(|p| !p.as_os_str().is_empty());
+        fs.sync_dir(parent.unwrap_or(Path::new(".")))?;
+    }
+    Ok(())
 }
 
 /// Non-blocking `flock(LOCK_EX)` on the lock file; released when the handle is dropped.
