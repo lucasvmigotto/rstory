@@ -33,7 +33,7 @@ OFFLINE := --network=none
 FEATURES := --features fault-injection
 TTY := $(shell [ -t 0 ] && echo -it)
 
-.PHONY: help image fetch fmt fmt-check lint check test bench test-integration build build-static ext-lint ext-test doctor shell clean-cache
+.PHONY: help image fetch fmt fmt-check lint check test bench test-integration build build-static test-launch ext-lint ext-test doctor shell clean-cache
 
 help: ## List recipes
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-17s %s\n", $$1, $$2}'
@@ -55,6 +55,9 @@ lint: image ## Clippy with warnings as errors, offline
 
 check: image ## Type-check, offline
 	$(RUN) $(OFFLINE) $(IMAGE) cargo check --locked --offline $(FEATURES) --all-targets
+
+test-launch: image ## Picker-launch tests only (quickstart: cargo test launch::), offline
+	$(RUN) $(OFFLINE) $(IMAGE) cargo test --locked --offline $(FEATURES) launch::
 
 test: image ## Unit, property, snapshot and contract tests, offline
 	$(RUN) $(OFFLINE) $(IMAGE) cargo test --locked --offline $(FEATURES)
