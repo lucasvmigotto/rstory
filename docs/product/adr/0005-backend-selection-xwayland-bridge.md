@@ -36,5 +36,4 @@ server with backoff (100 ms → 5 s) when XWayland restarts on demand.
   (brief Q7).
 
 ### Confirmation
-An integration test under headless sway with data-control disabled plus
-XWayland. A manual check on GNOME 48–51 before v0.1.
+An integration test under headless mutter (the real GNOME compositor: no data-control, XWayland on demand; cross-protocol copies need a keyboard seat, so they're manual). A manual check on GNOME 48–51 before v0.1.

@@ -52,7 +52,7 @@ The session is detected at start, and the right backend is picked: the X11 backe
 
 **Why this priority**: G2 and the v0.1 GNOME gate (G7).
 
-**Independent Test**: Run the selection logic against fake environments and fake registry results. Under a headless compositor with data-control disabled and XWayland on, capture works through the X11 backend.
+**Independent Test**: Run the selection logic against fake environments and fake registry results. Under headless mutter (no data-control, XWayland on demand), selection picks `x11` / `xwayland_bridge`, and capture works through Mutter's XWayland. Cross-protocol copies (Wayland app ↔ X11) are covered by the manual GNOME matrix, because headless mutter has a seat with no keyboard, so no Wayland client can own a selection there (corrected 2026-10-22 by `devcontainer:setup`).
 
 **Acceptance Scenarios**:
 

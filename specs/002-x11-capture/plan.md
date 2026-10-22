@@ -16,7 +16,7 @@ Define the `Backend` trait and its event stream, implement the X11 backend on x1
 
 **Storage**: N/A
 
-**Testing**: Unit (selection table, target ranking, Latin-1 conversion), integration under Xvfb (capture, serve, INCR 1 MiB), integration under headless sway with XWayland and data-control disabled (bridge mode)
+**Testing**: Unit (selection table, target ranking, Latin-1 conversion), integration under Xvfb (capture, serve, INCR 1 MiB), integration under headless mutter with XWayland (bridge mode)
 
 **Target Platform**: Linux x86_64/aarch64, glibc or musl; Tier-1 sessions: GNOME 48–51 Wayland (bridge), KDE Wayland, sway, X11
 

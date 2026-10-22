@@ -28,12 +28,12 @@ Work ONLY in .worktrees/feat-x11-capture (branch feat/x11-capture, off dev; do n
 Goal: complete T001, T002, T003, T014 of specs/002-x11-capture/tasks.md.
 
 Inputs: specs/002-x11-capture/spec.md, plan.md, data-model.md, contracts/, backend.md / tui.md / ui.md / qa.md where present; /contracts/protocol.md; docs/product/architecture.md §5.3 (module boundaries); .specify/memory/constitution.md.
-May change: contracts/backend.md, src/backend/fake.rs, src/backend/mod.rs, src/backend/{mod,fake}.rs, tests/fixtures/sway-bridge.conf, tests/support/sway.rs, tests/support/x11.rs; Cargo.toml only to add the dependencies named in plan.md; specs/002-x11-capture/tasks.md (tick only these task ids).
+May change: contracts/backend.md, src/backend/fake.rs, src/backend/mod.rs, src/backend/{mod,fake}.rs, tests/support/mutter.rs, tests/support/sway.rs, tests/support/x11.rs; Cargo.toml only to add the dependencies named in plan.md; specs/002-x11-capture/tasks.md (tick only these task ids).
 Must not touch: other features' source files beyond their public API, /contracts/* (a spec change goes through backend:spec), docs/product/*.
 
 Do:
 1. T001: [P] Add test fixtures: Xvfb launcher helper and a minimal X11 test client in `tests/support/x11.rs`
-2. T002: [P] Add headless-sway-with-XWayland launcher (data-control disabled) in `tests/support/sway.rs` + `tests/fixtures/sway-bridge.conf`
+2. T002: [P] Add a headless-mutter launcher (`mutter --headless --wayland --virtual-monitor`, private D-Bus, Xauthority from `$XDG_RUNTIME_DIR/.mutter-Xwaylandauth.*`) in `tests/support/mutter.rs`
 3. T003: Define `Backend` trait, `BackendEvent`, errors and a `FakeBackend` in `src/backend/mod.rs`, `src/backend/fake.rs` per `contracts/backend.md`
 4. T014: Backend trait + `FakeBackend` (scriptable events, recorded serves) in `src/backend/{mod,fake}.rs`
 
@@ -117,7 +117,7 @@ Must not touch: other features' source files beyond their public API, /contracts
 
 Do:
 1. T008: [P] [US3] selection table tests (≥ 8 rows incl. override, no_session, no_data_control_no_xwayland) in `src/session/tests.rs` (SC-003)
-2. T009: [P] [US3] bridge-mode capture/restore test in `tests/bridge_capture.rs`
+2. T009: [P] [US3] bridge-mode test on headless mutter: selection = x11/xwayland_bridge, and capture/restore between X11 clients on Mutter's XWayland, in `tests/bridge_capture.rs` (cross-protocol copies: manual GNOME matrix)
 3. T010: [US3] Backend implementation — see `## Backend` (appended by `backend:spec`)
 4. T019: [US3] `session::select` + Wayland registry probe (data-control globals) in `src/session/mod.rs`
 5. T020: [US3] Bridge mode: X11 backend with `mode = xwayland_bridge`, connect retry 3 s
@@ -173,7 +173,7 @@ Must not touch: other features' source files beyond their public API, /contracts
 
 Do:
 1. T013: QA tasks — see `## QA` (appended by `qa:strategy`)
-2. T022: Bridge-mode CI environment (sway headless, data-control disabled, XWayland) in `tests/support/sway.rs` validated by `qa:e2e`
+2. T022: Bridge-mode CI environment (headless mutter) in `tests/support/mutter.rs` validated by `qa:e2e`
 3. T023: GNOME 48–51 manual matrix rows in `docs/release.md` (GUI-app copies, restore into Wayland apps)
 
 Never: network calls at runtime, real clipboard contents in fixtures, logging content, editing other branches, publishing, secrets.

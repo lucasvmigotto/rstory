@@ -48,4 +48,4 @@ Event → text p95 < 20 ms. A 1 MiB INCR round trip < 200 ms.
 
 ## Test plan
 
-Xvfb integration (capture, serve, INCR, owner exit, self_owned), bridge-mode integration on headless sway, a selection table test, a Latin-1 conversion unit test.
+Xvfb integration (capture, serve, INCR, owner exit, self_owned), bridge-mode integration on headless mutter, a selection table test, a Latin-1 conversion unit test.

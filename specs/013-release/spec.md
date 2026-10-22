@@ -28,7 +28,7 @@ Every PR runs format, lint, unit and property tests, fitness functions, and inte
 
 **Acceptance Scenarios**:
 
-1. **Given** a PR, **When** CI runs, **Then** `cargo fmt --check`, `cargo clippy -D warnings`, `cargo test`, `cargo deny check`, the integration suites (sway headless, Xvfb, XWayland-bridge mode) and the musl static build checks (F2, F5) run on both architectures.
+1. **Given** a PR, **When** CI runs, **Then** `cargo fmt --check`, `cargo clippy -D warnings`, `cargo test`, `cargo deny check`, the integration suites (sway headless, Xvfb, headless mutter for bridge mode) and the musl static build checks (F2, F5) run on both architectures.
 2. **Given** any job fails, **When** the PR is viewed, **Then** it can't be merged (branch protection, set up by `devsecops:pipeline`).
 
 ---
@@ -72,7 +72,7 @@ A runbook guides the first manual publish and the switch to Trusted Publishing.
 ### Functional Requirements
 
 - **FR-001**: CI MUST run on PRs into `dev` and `main`, and on pushes to `dev`/`main`, with jobs for x86_64 and aarch64.
-- **FR-002**: The integration jobs MUST start headless sway (`WLR_BACKENDS=headless`, with XWayland), Xvfb, and a sway session with data-control disabled (bridge mode).
+- **FR-002**: The integration jobs MUST start headless sway (`WLR_BACKENDS=headless`, with XWayland), Xvfb, and headless mutter (no data-control, XWayland on demand: bridge mode; `--no-x11`: the no-capture-path case).
 - **FR-003**: The release workflow MUST run on tags matching `[0-9]+.[0-9]+.[0-9]+`, in the `release` environment, with `id-token: write`, and publish before creating the GitHub release.
 - **FR-004**: Artifacts MUST be `rstory-X.Y.Z-<arch>-unknown-linux-musl.tar.gz` (binary, LICENSE, README) plus `SHA256SUMS`.
 - **FR-005**: `Cargo.toml` MUST declare `license = "GPL-3.0-or-later"`, and the README MUST state it.

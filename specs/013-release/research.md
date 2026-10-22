@@ -14,5 +14,5 @@ Phase 0 for `013-release`. Every Technical Context item is resolved; no `NEEDS C
 
 ## R3. Headless sessions in CI
 
-- **Decision**: sway `WLR_BACKENDS=headless WLR_LIBINPUT_NO_DEVICES=1` with XWayland; Xvfb; bridge mode = sway with data-control protocols disabled via config/env
+- **Decision**: sway `WLR_BACKENDS=headless WLR_LIBINPUT_NO_DEVICES=1` with XWayland; Xvfb; bridge mode = headless mutter (`mutter --headless --wayland --virtual-monitor`), the real GNOME compositor with no data-control. sway has no switch to disable data-control. Headless mutter has no keyboard seat, so cross-protocol copies stay manual (corrected 2026-10-22).
 - **Alternatives rejected**: real GNOME in CI (not feasible headless → manual matrix)
