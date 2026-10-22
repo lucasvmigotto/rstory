@@ -17,8 +17,14 @@ fn payload(i: usize) -> Vec<u8> {
 }
 
 fn config() -> ProptestConfig {
-    let cases = std::env::var("PROPTEST_CASES").ok().and_then(|v| v.parse().ok()).unwrap_or(256);
-    ProptestConfig { cases, ..ProptestConfig::default() }
+    let cases = std::env::var("PROPTEST_CASES")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(256);
+    ProptestConfig {
+        cases,
+        ..ProptestConfig::default()
+    }
 }
 
 proptest! {

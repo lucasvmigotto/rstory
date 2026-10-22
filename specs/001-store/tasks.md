@@ -41,13 +41,13 @@ description: "Task list for Store & history"
 
 ### Tests for User Story 1 ⚠️
 
-- [ ] T006 [P] [US1] proptest crash-injection suite in `tests/store_crash.rs` (SC-001) — Executor: builder · Reviewer: thinker
-- [ ] T007 [P] [US1] permission tests (dir 0700, files 0600, `store_too_open`) in `tests/fitness/perms.rs` (F9) — Executor: builder · Reviewer: thinker
-- [ ] T008 [P] [US1] orphan-sweep and unknown-version tests in `tests/store_open.rs` — Executor: builder · Reviewer: thinker
+- [x] T006 [P] [US1] proptest crash-injection suite in `tests/store_crash.rs` (SC-001) — Executor: builder · Reviewer: thinker
+- [x] T007 [P] [US1] permission tests (dir 0700, files 0600, `store_too_open`) in `tests/fitness/perms.rs` (F9) — Executor: builder · Reviewer: thinker
+- [x] T008 [P] [US1] orphan-sweep and unknown-version tests in `tests/store_open.rs` — Executor: builder · Reviewer: thinker
 
 ### Implementation for User Story 1
 
-- [ ] T009 [US1] Backend implementation — see `## Backend` (appended by `backend:spec`) — Executor: builder · Reviewer: thinker
+- [x] T009 [US1] Backend implementation — see `## Backend` (appended by `backend:spec`) — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: User Story 1 passes its tests independently.
 
@@ -126,9 +126,9 @@ Appended by `backend:spec`. Built by `backend:build` (ticks only this section). 
 
 ### Backend US1 — Recorded entries survive restarts
 
-- [ ] T021 [US1] `Content`, `ContentHash`, `Preview` value objects in `src/domain/entry.rs` — Executor: builder · Reviewer: thinker
-- [ ] T022 [US1] Atomic write helpers + `Store::open_exclusive` with perms check and orphan sweep in `src/store/{mod,fs,perms}.rs` — Executor: builder · Reviewer: reviewer · Effort: high
-- [ ] T023 [US1] Index v1 serde types + load/commit in `src/store/index.rs` — Executor: builder · Reviewer: thinker
+- [x] T021 [US1] `Content`, `ContentHash`, `Preview` value objects in `src/domain/entry.rs` — Executor: builder · Reviewer: thinker
+- [x] T022 [US1] Atomic write helpers + `Store::open_exclusive` with perms check and orphan sweep in `src/store/{mod,fs,perms}.rs` — Executor: builder · Reviewer: reviewer · Effort: high
+- [x] T023 [US1] Index v1 serde types + load/commit in `src/store/index.rs` — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: the US1 tests in this file's story phase pass (`cargo test`), plus the contract tests where they apply.
 

@@ -22,7 +22,11 @@ fn populate(dir: &Path) {
     let mut s = open(dir).unwrap();
     for i in 0..3 {
         let c = Content::new(format!("entry {i}").into_bytes(), 1 << 20).unwrap();
-        s.insert(&c, OffsetDateTime::from_unix_timestamp(1_800_000_000 + i).unwrap()).unwrap();
+        s.insert(
+            &c,
+            OffsetDateTime::from_unix_timestamp(1_800_000_000 + i).unwrap(),
+        )
+        .unwrap();
     }
 }
 
@@ -63,7 +67,11 @@ fn open_directory_is_refused_and_nothing_is_written() {
         other => panic!("expected StoreTooOpen, got {:?}", other.map(|_| ())),
     }
     assert_eq!(fs::read_dir(&dir).unwrap().count(), 0);
-    assert_eq!(mode(&dir), 0o755, "permissions are reported, not silently fixed");
+    assert_eq!(
+        mode(&dir),
+        0o755,
+        "permissions are reported, not silently fixed"
+    );
 }
 
 #[test]
@@ -73,7 +81,11 @@ fn open_files_are_refused_and_named() {
         let dir = t.path().join("s");
         populate(&dir);
         let rel = if rel.ends_with("@ENTRY") {
-            let first = fs::read_dir(dir.join("content")).unwrap().next().unwrap().unwrap();
+            let first = fs::read_dir(dir.join("content"))
+                .unwrap()
+                .next()
+                .unwrap()
+                .unwrap();
             format!("content/{}", first.file_name().to_str().unwrap())
         } else {
             rel.to_string()

@@ -1,6 +1,8 @@
 //! Opening: orphan sweep both ways, unknown version, exclusive lock.
 
 use std::fs;
+use std::io::Write;
+use std::os::unix::fs::OpenOptionsExt;
 use std::path::Path;
 
 use rstory::config::Caps;
@@ -14,12 +16,28 @@ fn now(n: i64) -> OffsetDateTime {
     OffsetDateTime::from_unix_timestamp(1_800_000_000 + n).unwrap()
 }
 
+/// Like `fs::write`, but 0600 so the store accepts the file.
+fn write_private(path: impl AsRef<Path>, bytes: &[u8]) {
+    let mut f = fs::OpenOptions::new()
+        .write(true)
+        .create(true)
+        .truncate(true)
+        .mode(0o600)
+        .open(path)
+        .unwrap();
+    f.write_all(bytes).unwrap();
+}
+
 fn open(dir: &Path) -> Result<Store<RealFs>, StoreError> {
     Store::open_exclusive(dir, Caps::default(), RealFs)
 }
 
 fn insert(s: &mut Store<RealFs>, text: &str, n: i64) -> EntryId {
-    s.insert(&Content::new(text.as_bytes().to_vec(), 1 << 20).unwrap(), now(n)).unwrap()
+    s.insert(
+        &Content::new(text.as_bytes().to_vec(), 1 << 20).unwrap(),
+        now(n),
+    )
+    .unwrap()
 }
 
 #[test]
@@ -31,9 +49,9 @@ fn content_without_a_row_is_swept() {
         (insert(&mut s, "one", 1), insert(&mut s, "two", 2))
     };
     let stray = EntryId::new(now(3));
-    fs::write(dir.join("content").join(stray.to_string()), b"stray").unwrap();
-    fs::write(dir.join("content").join(".tmp-leftover"), b"half").unwrap();
-    fs::write(dir.join("index.json.tmp"), b"half").unwrap();
+    write_private(dir.join("content").join(stray.to_string()), b"stray");
+    write_private(dir.join("content").join(".tmp-leftover"), b"half");
+    write_private(dir.join("index.json.tmp"), b"half");
 
     let s = open(&dir).unwrap();
     assert_eq!(s.entries().len(), 2);
@@ -60,7 +78,10 @@ fn row_without_content_is_dropped_and_the_index_recommitted() {
         assert_eq!(s.entries()[0].id, b);
     }
     let raw = fs::read_to_string(dir.join("index.json")).unwrap();
-    assert!(!raw.contains(&a.to_string()), "dropped row must be gone from disk");
+    assert!(
+        !raw.contains(&a.to_string()),
+        "dropped row must be gone from disk"
+    );
     assert!(raw.contains(&b.to_string()));
 }
 
@@ -70,7 +91,7 @@ fn unknown_version_is_refused_and_the_file_is_untouched() {
     let dir = t.path().join("s");
     drop(open(&dir).unwrap());
     let original = br#"{"version":2,"entries":[],"future":{"x":1}}"#;
-    fs::write(dir.join("index.json"), original).unwrap();
+    write_private(dir.join("index.json"), original);
 
     let err = open(&dir).unwrap_err();
     assert!(matches!(err, StoreError::UnknownVersion(2)), "{err:?}");
