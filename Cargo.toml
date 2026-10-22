@@ -45,6 +45,10 @@ required-features = ["fault-injection"]
 name = "support_smoke"
 required-features = ["session-tests"]
 
+[[test]]
+name = "x11_capture"
+required-features = ["session-tests"]
+
 [[bench]]
 name = "store"
 harness = false
