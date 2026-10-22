@@ -71,12 +71,12 @@ description: "Task list for Session detection & X11 capture"
 
 ### Tests for User Story 3 ⚠️
 
-- [ ] T008 [P] [US3] selection table tests (≥ 8 rows incl. override, no_session, no_data_control_no_xwayland) in `src/session/tests.rs` (SC-003) — Executor: builder · Reviewer: thinker
-- [ ] T009 [P] [US3] bridge-mode test on headless mutter: selection = x11/xwayland_bridge, and capture/restore between X11 clients on Mutter's XWayland, in `tests/bridge_capture.rs` (cross-protocol copies: manual GNOME matrix) — Executor: builder · Reviewer: thinker
+- [x] T008 [P] [US3] selection table tests (≥ 8 rows incl. override, no_session, no_data_control_no_xwayland) in `src/session/tests.rs` (SC-003) — Executor: builder · Reviewer: thinker
+- [x] T009 [P] [US3] bridge-mode test on headless mutter: selection = x11/xwayland_bridge, and capture/restore between X11 clients on Mutter's XWayland, in `tests/bridge_capture.rs` (cross-protocol copies: manual GNOME matrix) — Executor: builder · Reviewer: thinker
 
 ### Implementation for User Story 3
 
-- [ ] T010 [US3] Backend implementation — see `## Backend` (appended by `backend:spec`) — Executor: builder · Reviewer: thinker
+- [x] T010 [US3] Backend implementation — see `## Backend` (appended by `backend:spec`) — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: User Story 3 passes its tests independently.
 
@@ -129,8 +129,8 @@ Appended by `backend:spec`. Built by `backend:build` (ticks only this section). 
 
 ### Backend US3 — Automatic backend selection incl. XWayland bridge
 
-- [ ] T019 [US3] `session::select` + Wayland registry probe (data-control globals) in `src/session/mod.rs` — Executor: builder · Reviewer: thinker
-- [ ] T020 [US3] Bridge mode: X11 backend with `mode = xwayland_bridge`, connect retry 3 s — Executor: builder · Reviewer: thinker
+- [x] T019 [US3] `session::select` + Wayland registry probe (data-control globals) in `src/session/mod.rs` — Executor: builder · Reviewer: thinker
+- [x] T020 [US3] Bridge mode: X11 backend with `mode = xwayland_bridge`, connect retry 3 s — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: the US3 tests in this file's story phase pass (`cargo test`), plus the contract tests where they apply.
 
