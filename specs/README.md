@@ -15,7 +15,7 @@ in that layer.
 
 | # | Feature | Scope | Priority | Depends on | Frontend | Backend |
 |---|---|---|---|---|---|---|
-| 000 | [design-system](000-design-system/) | Terminal and menu design system: color roles × tiers, glyphs with ASCII fallback, keyed copy, components, icons | P1 | — | Planned | — |
+| 000 | [design-system](000-design-system/) | Terminal and menu design system: color roles × tiers, glyphs with ASCII fallback, keyed copy, components, icons | P1 | — | Implemented | — |
 | 001 | [store](001-store/) | Entry model, history rules (de-dup, count/pin/size/expiry caps), crash-safe private store, read-only open | P1 | — | — | Implemented |
 | 002 | [x11-capture](002-x11-capture/) | Session detection, `Backend` trait, X11 backend (XFIXES capture and restore, INCR), XWayland bridge selection (GNOME path) | P1 | — | — | Planned |
 | 003 | [wayland-capture](003-wayland-capture/) | Data-control backend (`ext-data-control-v1`, `zwlr` fallback), capture and restore | P1 | 002 | — | Planned |

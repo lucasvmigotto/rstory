@@ -51,3 +51,10 @@ Appended by `qa:strategy`. Executed by `qa:e2e` / `qa:load` after the builds (ti
 - [ ] T012 Icon review checklist (16 px mono) recorded in the PR template — Executor: builder · Reviewer: thinker · Effort: low
 
 **Checkpoint**: the journeys and suites in `qa.md` are green in CI; the exit criteria are met → Verified in `specs/README.md`.
+
+---
+
+## Convergence (Frontend) — 2026-10-22
+
+Converged. FR-001–FR-006 map to `src/ui/{theme,glyphs,copy,text,ansi}.rs`, `src/ui/widgets/*.rs` and `assets/icons/` (SVG sources plus 30 PNGs). 144 snapshots cover 4 tiers × 80/40 cols × ASCII on/off. The 16 px mono icon check passed (distinct silhouettes). T011 (optional vhs demo) is deferred.
+
