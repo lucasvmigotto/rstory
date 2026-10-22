@@ -31,6 +31,8 @@ RUN := $(ENGINE) run --rm --init $(USERNS) \
 OFFLINE := --network=none
 # Test-only feature: FaultFs for the crash and power-loss suites (never in release builds).
 FEATURES := --features fault-injection
+# Lint and check also compile the session tests (Xvfb / mutter), which `make test` skips.
+LINT_FEATURES := --features fault-injection,session-tests
 TTY := $(shell [ -t 0 ] && echo -it)
 
 .PHONY: help image fetch fmt fmt-check lint check test bench test-integration build build-static test-launch ext-lint ext-test doctor shell clean-cache
@@ -51,10 +53,10 @@ fmt-check: image ## Check formatting (CI)
 	$(RUN) $(OFFLINE) $(IMAGE) cargo fmt --all -- --check
 
 lint: image ## Clippy with warnings as errors, offline
-	$(RUN) $(OFFLINE) $(IMAGE) cargo clippy --locked --offline $(FEATURES) --all-targets -- -D warnings
+	$(RUN) $(OFFLINE) $(IMAGE) cargo clippy --locked --offline $(LINT_FEATURES) --all-targets -- -D warnings
 
 check: image ## Type-check, offline
-	$(RUN) $(OFFLINE) $(IMAGE) cargo check --locked --offline $(FEATURES) --all-targets
+	$(RUN) $(OFFLINE) $(IMAGE) cargo check --locked --offline $(LINT_FEATURES) --all-targets
 
 test-launch: image ## Picker-launch tests only (quickstart: cargo test launch::), offline
 	$(RUN) $(OFFLINE) $(IMAGE) cargo test --locked --offline $(FEATURES) launch::
