@@ -5,6 +5,7 @@ pub mod fault;
 pub mod fs;
 pub mod index;
 pub mod perms;
+pub mod readonly;
 
 use std::collections::{BTreeSet, HashSet};
 use std::io;
@@ -41,6 +42,9 @@ pub enum StoreError {
     /// Another handle holds the exclusive lock.
     #[error("the store is locked by another process")]
     Locked,
+    /// A read-only open found the daemon's exclusive lock held: use the daemon (its socket).
+    #[error("the daemon holds the store: use its socket")]
+    DaemonRunning,
     /// The content is larger than `max_entry_bytes`.
     #[error("content is {size} bytes; the limit is {max}")]
     TooLarge {
