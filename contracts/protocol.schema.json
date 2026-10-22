@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/lucasvmigotto/rstory/contracts/protocol.schema.json",
+  "title": "rstory control protocol v1",
+  "x-status": "canonical",
+  "$defs": {
+    "Ref": {"type": "string", "pattern": "^([0-9]+|[0-9A-Za-z]{4,26})$"},
+    "Duration": {"type": "string", "pattern": "^[0-9]+[smh]$"},
+    "EntrySummary": {
+      "type": "object",
+      "required": ["id", "short_id", "index", "size", "created", "last_copied", "pinned", "preview"],
+      "properties": {
+        "id": {"type": "string", "minLength": 26, "maxLength": 26},
+        "short_id": {"type": "string", "minLength": 4},
+        "index": {"type": "integer", "minimum": 0},
+        "size": {"type": "integer", "minimum": 1, "maximum": 1048576},
+        "created": {"type": "string", "format": "date-time"},
+        "last_copied": {"type": "string", "format": "date-time"},
+        "pinned": {"type": "boolean"},
+        "preview": {"type": "string", "maxLength": 1024}
+      }
+    },
+    "State": {
+      "type": "object",
+      "required": ["state"],
+      "properties": {
+        "state": {"enum": ["recording", "paused", "inactive"]},
+        "paused_until": {"type": ["string", "null"], "format": "date-time"},
+        "reason": {"type": "string"}
+      }
+    },
+    "Status": {
+      "allOf": [{"$ref": "#/$defs/State"}],
+      "type": "object",
+      "required": ["backend", "entries", "pinned", "max_entries", "max_pinned", "counters", "tray", "picker_available", "version", "protocol"],
+      "properties": {
+        "backend": {"enum": ["wayland", "x11", "none"]},
+        "mode": {"enum": ["native", "xwayland_bridge", null]},
+        "entries": {"type": "integer"}, "pinned": {"type": "integer"},
+        "max_entries": {"type": "integer"}, "max_pinned": {"type": "integer"},
+        "counters": {
+          "type": "object",
+          "required": ["skipped_sensitive", "skipped_oversize", "skipped_paused", "dropped_burst"],
+          "additionalProperties": {"type": "integer", "minimum": 0}
+        },
+        "tray": {"enum": ["active", "no_host", "no_bus", "disabled"]},
+        "picker_available": {"type": "boolean"},
+        "version": {"type": "string"},
+        "protocol": {"const": 1}
+      }
+    },
+    "Error": {
+      "type": "object",
+      "required": ["code", "message"],
+      "properties": {
+        "code": {"enum": ["bad_request", "too_large", "unsupported_version", "internal", "not_found", "ambiguous", "pin_limit", "inactive", "backend_error", "no_terminal", "picker_command_failed"]},
+        "message": {"type": "string"}
+      }
+    },
+    "Request": {
+      "type": "object",
+      "required": ["v", "id", "op"],
+      "properties": {
+        "v": {"const": 1},
+        "id": {"type": "integer", "minimum": 0},
+        "op": {"enum": ["list", "show", "restore", "pin", "unpin", "rm", "clear", "pause", "resume", "status", "open_picker", "subscribe"]},
+        "args": {"type": "object"}
+      }
+    },
+    "Response": {
+      "type": "object",
+      "required": ["v", "id", "ok"],
+      "properties": {
+        "v": {"const": 1},
+        "id": {"type": "integer"},
+        "ok": {"type": "boolean"},
+        "result": {},
+        "error": {"$ref": "#/$defs/Error"}
+      }
+    },
+    "Event": {
+      "type": "object",
+      "required": ["v", "event", "data"],
+      "properties": {
+        "v": {"const": 1},
+        "event": {"enum": ["history_changed", "pause_changed"]},
+        "data": {"type": "object"}
+      }
+    }
+  },
+  "oneOf": [{"$ref": "#/$defs/Request"}, {"$ref": "#/$defs/Response"}, {"$ref": "#/$defs/Event"}]
+}

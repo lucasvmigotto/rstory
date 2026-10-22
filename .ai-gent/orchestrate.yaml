@@ -1,0 +1,11 @@
+# Role → model mapping for rstory (agents:orchestrate). Specs and cards name roles only.
+agent: claude
+roles:
+  thinker:  {model: opus,   effort: high}                       # plans, design-heavy cards, charters, merge calls
+  builder:  {model: sonnet, effort: medium}                     # implements cards (tests first)
+  reviewer: {model: opus,   effort: high, fresh_context: true}  # reviews protocol/backend/crash-safety/terminal-lifecycle cards
+  scout:    {model: haiku,  effort: low}                        # lookups, CI watching (devsecops:watch)
+max_parallel: 4
+worktrees: .worktrees/        # one per feature branch, off dev
+ledger: .ai-gent/orchestrate-status.md
+cards: specs/*/cards.md
