@@ -38,6 +38,10 @@ required-features = ["fault-injection"]
 name = "store_trace"
 required-features = ["fault-injection"]
 
+[[bench]]
+name = "store"
+harness = false
+
 [dependencies]
 blake3 = { version = "1.8.7", default-features = false, features = ["pure"] }
 rand = "0.10.3"
