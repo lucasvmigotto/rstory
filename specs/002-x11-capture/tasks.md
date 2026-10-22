@@ -151,3 +151,10 @@ Appended by `qa:strategy`. Executed by `qa:e2e` / `qa:load` after the builds (ti
 - [ ] T024 Charter session → `docs/product/qa/charters/002.md` — Executor: thinker · Reviewer: reviewer · Effort: high
 
 **Checkpoint**: the journeys and suites in `qa.md` are green in CI; the exit criteria are met → Verified in `specs/README.md`.
+
+---
+
+## Convergence (Backend) — 2026-10-22
+
+Converged. FR-001–FR-010 map to `src/backend/{mod,fake}.rs`, `src/backend/x11/*` and `src/session/mod.rs`, with session suites on Xvfb, headless sway and headless mutter (434 tests green after the rebase onto dev). Review: a focused thinker review (re-run of every suite, unsafe = 0, no content in logs). The fresh-context review was deferred because of the owner's session budget and should be done before Verified. Open: T013 (QA), the GNOME 48–51 manual matrix (`docs/release.md`), and F2/F3 (`cargo deny` is not in the tools image).
+
