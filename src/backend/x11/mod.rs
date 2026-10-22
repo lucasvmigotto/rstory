@@ -21,7 +21,7 @@ use thiserror::Error;
 use tokio::io::Interest;
 use tokio::net::UnixStream as AsyncUnix;
 use tokio::sync::{mpsc, oneshot};
-use x11rb::connection::Connection;
+use x11rb::connection::{Connection, RequestConnection};
 use x11rb::errors::ReplyError;
 use x11rb::protocol::Event;
 use x11rb::protocol::xfixes::{ConnectionExt as _, SelectionEventMask};
@@ -187,8 +187,6 @@ pub fn reachable(opts: &X11Options) -> bool {
 // ---------------------------------------------------------------------------------------------
 // Engine
 
-// Some atoms are only used by the serve side.
-#[allow(dead_code)]
 pub(crate) struct Atoms {
     pub clipboard: u32,
     pub targets: u32,
@@ -197,7 +195,6 @@ pub(crate) struct Atoms {
     pub text: u32,
     pub plain_utf8: u32,
     pub incr: u32,
-    pub multiple: u32,
     pub prop_targets: u32,
     pub prop_data: u32,
 }
@@ -243,7 +240,6 @@ pub(crate) struct Engine {
     pub read: Option<read::ReadOp>,
     pub serve: serve::ServeState,
     pub read_timeout: Duration,
-    #[allow(dead_code)]
     pub incr_threshold: usize,
     pub dead: bool,
 }
@@ -548,12 +544,11 @@ fn blocking_setup(conn: &Arc<RustConnection>) -> Result<(u32, Atoms), ConnectErr
         "TEXT",
         "text/plain;charset=utf-8",
         "INCR",
-        "MULTIPLE",
         "RSTORY_TARGETS",
         "RSTORY_DATA",
     ]
     .map(intern);
-    let mut a = [0u32; 10];
+    let mut a = [0u32; 9];
     for (slot, c) in a.iter_mut().zip(cookies) {
         *slot = c?.reply().map_err(|_| ConnectError::Unreachable)?.atom;
     }
@@ -565,9 +560,8 @@ fn blocking_setup(conn: &Arc<RustConnection>) -> Result<(u32, Atoms), ConnectErr
         text: a[4],
         plain_utf8: a[5],
         incr: a[6],
-        multiple: a[7],
-        prop_targets: a[8],
-        prop_data: a[9],
+        prop_targets: a[7],
+        prop_data: a[8],
     };
     let root = conn.setup().roots[0].root;
     let win = conn.generate_id().map_err(unreachable)?;
@@ -606,14 +600,19 @@ impl X11Backend {
     pub async fn connect(opts: X11Options) -> Result<Self, ConnectError> {
         let read_timeout = opts.read_timeout;
         let incr_threshold = opts.incr_threshold;
-        let (conn, watch, _screen, win, atoms) = tokio::task::spawn_blocking(move || {
-            let (conn, watch, screen) = open(&opts)?;
-            let conn = Arc::new(conn);
-            let (win, atoms) = blocking_setup(&conn)?;
-            Ok::<_, ConnectError>((conn, watch, screen, win, atoms))
-        })
-        .await
-        .map_err(|_| ConnectError::Unreachable)??;
+        let (conn, watch, _screen, win, atoms, incr_threshold) =
+            tokio::task::spawn_blocking(move || {
+                let (conn, watch, screen) = open(&opts)?;
+                let conn = Arc::new(conn);
+                // A served chunk must fit one request.
+                let incr_threshold = incr_threshold
+                    .min(conn.maximum_request_bytes().saturating_sub(256))
+                    .max(1024);
+                let (win, atoms) = blocking_setup(&conn)?;
+                Ok::<_, ConnectError>((conn, watch, screen, win, atoms, incr_threshold))
+            })
+            .await
+            .map_err(|_| ConnectError::Unreachable)??;
         let watch = AsyncUnix::from_std(watch).map_err(|_| ConnectError::Unreachable)?;
         let (tx, events) = EventStream::channel();
         let (cmds, rx) = mpsc::unbounded_channel();

@@ -55,11 +55,11 @@ description: "Task list for Session detection & X11 capture"
 
 ### Tests for User Story 2 ⚠️
 
-- [ ] T006 [P] [US2] Xvfb serve tests (targets, 1 MiB INCR round trip, ownership loss, self_owned) in `tests/x11_serve.rs` (SC-002) — Executor: builder · Reviewer: thinker
+- [x] T006 [P] [US2] Xvfb serve tests (targets, 1 MiB INCR round trip, ownership loss, self_owned) in `tests/x11_serve.rs` (SC-002) — Executor: builder · Reviewer: thinker
 
 ### Implementation for User Story 2
 
-- [ ] T007 [US2] Backend implementation — see `## Backend` (appended by `backend:spec`) — Executor: builder · Reviewer: thinker
+- [x] T007 [US2] Backend implementation — see `## Backend` (appended by `backend:spec`) — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: User Story 2 passes its tests independently.
 
@@ -122,8 +122,8 @@ Appended by `backend:spec`. Built by `backend:build` (ticks only this section). 
 
 ### Backend US2 — Restore on X11
 
-- [ ] T017 [US2] Owner/serve state machine with SelectionRequest handling and INCR send in `src/backend/x11/serve.rs` — Executor: builder · Reviewer: reviewer · Effort: high
-- [ ] T018 [US2] `self_owned` detection by owner window id — Executor: builder · Reviewer: thinker
+- [x] T017 [US2] Owner/serve state machine with SelectionRequest handling and INCR send in `src/backend/x11/serve.rs` — Executor: builder · Reviewer: reviewer · Effort: high
+- [x] T018 [US2] `self_owned` detection by owner window id — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: the US2 tests in this file's story phase pass (`cargo test`), plus the contract tests where they apply.
 
