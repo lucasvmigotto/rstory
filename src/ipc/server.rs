@@ -3,8 +3,6 @@
 //! The server is generic over the daemon: it forwards parsed commands over a [`Link`] and
 //! pushes the events it is given. It knows nothing of the store or the backends.
 
-#![allow(dead_code, unused_imports, unused_variables)]
-
 use std::collections::HashSet;
 use std::io;
 use std::os::unix::fs::{FileTypeExt, MetadataExt, PermissionsExt};
@@ -105,7 +103,14 @@ pub fn runtime_dir(
     uid: u32,
     run_user_root: &Path,
 ) -> Result<PathBuf, RuntimeDirError> {
-    todo!("runtime_dir")
+    if let Some(dir) = env.filter(|d| !d.is_empty()) {
+        return Ok(PathBuf::from(dir));
+    }
+    let fallback = run_user_root.join(uid.to_string());
+    match std::fs::metadata(&fallback) {
+        Ok(m) if m.is_dir() && m.uid() == uid => Ok(fallback),
+        _ => Err(RuntimeDirError::Unavailable(fallback)),
+    }
 }
 
 /// `<runtime_dir>/rstory/control.sock`.
@@ -124,7 +129,44 @@ pub fn socket_path(runtime_dir: &Path) -> PathBuf {
 /// I/O errors; `AddrInUse` when a live socket is there; `InvalidInput` when the path holds
 /// something else, or the directory belongs to another user.
 pub fn bind(runtime_dir: &Path) -> io::Result<UnixListener> {
-    todo!("bind")
+    let dir = runtime_dir.join(SOCKET_DIR);
+    match std::fs::create_dir(&dir) {
+        Ok(()) => {}
+        Err(e) if e.kind() == io::ErrorKind::AlreadyExists => {
+            if std::fs::metadata(&dir)?.uid() != rustix::process::getuid().as_raw() {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidInput,
+                    "the socket directory belongs to another user",
+                ));
+            }
+        }
+        Err(e) => return Err(e),
+    }
+    std::fs::set_permissions(&dir, std::fs::Permissions::from_mode(0o700))?;
+
+    let path = dir.join(SOCKET_FILE);
+    match std::fs::symlink_metadata(&path) {
+        Ok(m) if m.file_type().is_socket() => {
+            if std::os::unix::net::UnixStream::connect(&path).is_ok() {
+                return Err(io::Error::new(
+                    io::ErrorKind::AddrInUse,
+                    "another process is serving the control socket",
+                ));
+            }
+            std::fs::remove_file(&path)?;
+        }
+        Ok(_) => {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "the socket path holds something that is not a socket",
+            ));
+        }
+        Err(e) if e.kind() == io::ErrorKind::NotFound => {}
+        Err(e) => return Err(e),
+    }
+    let listener = UnixListener::bind(&path)?;
+    std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600))?;
+    Ok(listener)
 }
 
 /// Accepts connections until `shutdown` turns true. Peers whose uid is not `expected_uid` are
@@ -133,9 +175,44 @@ pub async fn serve(
     listener: UnixListener,
     link: Link,
     expected_uid: u32,
-    shutdown: watch::Receiver<bool>,
+    mut shutdown: watch::Receiver<bool>,
 ) {
-    todo!("serve")
+    let slots = Arc::new(Semaphore::new(MAX_CONNECTIONS));
+    loop {
+        let accepted = tokio::select! {
+            biased;
+            _ = shutdown.changed() => break,
+            r = listener.accept() => r,
+        };
+        let stream = match accepted {
+            Ok((stream, _)) => stream,
+            Err(e) => {
+                tracing::warn!(kind = ?e.kind(), "accept failed");
+                tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                continue;
+            }
+        };
+        match peer_cred(&stream) {
+            Ok(c) if c.uid == expected_uid => {}
+            Ok(c) => {
+                tracing::warn!(uid = c.uid, "peer_rejected");
+                continue;
+            }
+            Err(e) => {
+                tracing::warn!(kind = ?e.kind(), "peer credentials unavailable; closing");
+                continue;
+            }
+        }
+        let Ok(slot) = Arc::clone(&slots).try_acquire_owned() else {
+            tracing::warn!(limit = MAX_CONNECTIONS, "too many connections; closing");
+            continue;
+        };
+        let (link, shutdown) = (link.clone(), shutdown.clone());
+        tokio::spawn(async move {
+            connection(stream, link, shutdown).await;
+            drop(slot);
+        });
+    }
 }
 
 async fn recv_event(
