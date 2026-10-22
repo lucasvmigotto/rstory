@@ -76,11 +76,11 @@ description: "Task list for Store & history"
 
 ### Tests for User Story 3 ⚠️
 
-- [ ] T013 [US3] read-only handle tests (shared lock, `daemon_running`) in `tests/store_readonly.rs` — Executor: builder · Reviewer: thinker
+- [x] T013 [US3] read-only handle tests (shared lock, `daemon_running`) in `tests/store_readonly.rs` — Executor: builder · Reviewer: thinker
 
 ### Implementation for User Story 3
 
-- [ ] T014 [US3] Backend implementation — see `## Backend` (appended by `backend:spec`) — Executor: builder · Reviewer: thinker
+- [x] T014 [US3] Backend implementation — see `## Backend` (appended by `backend:spec`) — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: User Story 3 passes its tests independently.
 
@@ -141,7 +141,7 @@ Appended by `backend:spec`. Built by `backend:build` (ticks only this section). 
 
 ### Backend US3 — Clients read while the daemon is down
 
-- [ ] T026 [US3] `Store::open_read_only` (LOCK_SH|LOCK_NB, `DaemonRunning`) exposing only read APIs in `src/store/readonly.rs` — Executor: builder · Reviewer: thinker
+- [x] T026 [US3] `Store::open_read_only` (LOCK_SH|LOCK_NB, `DaemonRunning`) exposing only read APIs in `src/store/readonly.rs` — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: the US3 tests in this file's story phase pass (`cargo test`), plus the contract tests where they apply.
 

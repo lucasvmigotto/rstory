@@ -400,7 +400,7 @@ impl<F: Fs> Store<F> {
     }
 
     fn content_path(&self, id: &EntryId) -> PathBuf {
-        self.dir.join(CONTENT_DIR).join(id.to_string())
+        content_file(&self.dir, id)
     }
 
     /// Content files are written once: temp, fsync, rename, fsync of the directory.
@@ -468,6 +468,11 @@ fn sweep<F: Fs>(fs: &F, dir: &Path, index: Index) -> Result<Index, StoreError> {
         );
     }
     Ok(next)
+}
+
+/// Path of an entry's content file.
+pub(crate) fn content_file(dir: &Path, id: &EntryId) -> PathBuf {
+    dir.join(CONTENT_DIR).join(id.to_string())
 }
 
 const TMP_PREFIX: &str = ".tmp-";
