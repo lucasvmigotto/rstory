@@ -12,6 +12,7 @@ use tokio::sync::mpsc;
 
 #[cfg(any(test, feature = "testing"))]
 pub mod fake;
+pub mod wayland;
 pub mod x11;
 
 /// Which protocol a backend speaks.
