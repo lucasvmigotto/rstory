@@ -139,12 +139,21 @@ impl<F: Fs> Store<F> {
                 max: self.caps.max_entry_bytes,
             });
         }
+        let too_large = || StoreError::TooLarge {
+            size: content.len(),
+            max: self.caps.max_entry_bytes,
+        };
+        let size = u32::try_from(content.len()).map_err(|_| too_large())?;
         let id = EntryId::new(now);
-        self.write_content(&id, content.as_bytes())?;
+        if let Err(e) = self.write_content(&id, content.as_bytes()) {
+            // Not acknowledged: leave no file behind (a rename may already have happened).
+            let _ = self.fs.remove_file(&self.content_path(&id));
+            return Err(e.into());
+        }
         let row = Entry {
             id,
             hash: content.hash(),
-            size: u32::try_from(content.len()).unwrap_or(u32::MAX),
+            size,
             created: now,
             last_copied: now,
             pinned: false,
@@ -191,12 +200,17 @@ impl<F: Fs> Store<F> {
         let mut removed = 0usize;
         for p in self.fs.read_dir(&cdir)? {
             let name = p.file_name().and_then(|n| n.to_str()).unwrap_or_default();
-            let referenced = EntryId::parse(name)
+            let row = EntryId::parse(name)
                 .ok()
-                .filter(|id| self.index.entries.iter().any(|e| e.id == *id));
-            match referenced {
-                Some(id) => {
-                    present.insert(id);
+                .and_then(|id| self.index.entries.iter().find(|e| e.id == id));
+            match row {
+                // A torn file (power loss) is as good as none: drop the row and the file.
+                Some(e) if self.fs.len(&p)? != u64::from(e.size) => {
+                    self.fs.remove_file(&p)?;
+                    removed += 1;
+                }
+                Some(e) => {
+                    present.insert(e.id);
                 }
                 None if name.starts_with(TMP_PREFIX) || EntryId::parse(name).is_ok() => {
                     self.fs.remove_file(&p)?;

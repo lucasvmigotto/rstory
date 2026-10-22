@@ -25,6 +25,9 @@ pub struct State {
 }
 
 /// The content of `index.json`.
+///
+/// Unknown fields: v1 readers ignore unknown fields and drop them on rewrite; any field that
+/// must survive requires a version bump.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Index {
     /// Format version; must be [`VERSION`].
@@ -104,7 +107,14 @@ pub fn commit<F: Fs>(fs: &F, dir: &Path, index: &Index) -> Result<(), IndexError
     let bytes = serde_json::to_vec(index).map_err(|e| io::Error::other(e.to_string()))?;
     let tmp = dir.join(INDEX_TMP);
     let result = (|| {
-        let mut f = fs.create_new(&tmp, perms::FILE_MODE)?;
+        let mut f = match fs.create_new(&tmp, perms::FILE_MODE) {
+            Err(e) if e.kind() == io::ErrorKind::AlreadyExists => {
+                // A stale temp (failed cleanup, earlier crash) must not block every commit.
+                fs.remove_file(&tmp)?;
+                fs.create_new(&tmp, perms::FILE_MODE)?
+            }
+            other => other?,
+        };
         f.write_all(&bytes)?;
         f.sync_all()?;
         drop(f);
