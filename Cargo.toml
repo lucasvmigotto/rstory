@@ -40,6 +40,11 @@ required-features = ["fault-injection"]
 name = "store_trace"
 required-features = ["fault-injection"]
 
+# Session tests need a display server (container tools image); skipped without the feature.
+[[test]]
+name = "support_smoke"
+required-features = ["session-tests"]
+
 [[bench]]
 name = "store"
 harness = false

@@ -18,8 +18,8 @@ description: "Task list for Session detection & X11 capture"
 
 ## Phase 1: Setup
 
-- [ ] T001 [P] Add test fixtures: Xvfb launcher helper and a minimal X11 test client in `tests/support/x11.rs` — Executor: builder · Reviewer: thinker · Effort: low
-- [ ] T002 [P] Add a headless-mutter launcher (`mutter --headless --wayland --virtual-monitor`, private D-Bus, Xauthority from `$XDG_RUNTIME_DIR/.mutter-Xwaylandauth.*`) in `tests/support/mutter.rs` — Executor: builder · Reviewer: thinker
+- [x] T001 [P] Add test fixtures: Xvfb launcher helper and a minimal X11 test client in `tests/support/x11.rs` — Executor: builder · Reviewer: thinker · Effort: low
+- [x] T002 [P] Add a headless-mutter launcher (`mutter --headless --wayland --virtual-monitor`, private D-Bus, Xauthority from `$XDG_RUNTIME_DIR/.mutter-Xwaylandauth.*`) in `tests/support/mutter.rs` — Executor: builder · Reviewer: thinker
 
 ---
 
