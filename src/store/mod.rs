@@ -137,25 +137,27 @@ pub struct Store<F: Fs> {
 }
 
 impl<F: Fs> Store<F> {
-    /// Opens (creating if needed) the store at `dir` and holds `LOCK_EX` while alive.
-    ///
-    /// Nothing is written when the store is too open. After locking, orphans are swept both
-    /// ways: content files without a row are unlinked, rows without content are dropped.
+    /// Convenience for callers without a clock source: [`Store::open_exclusive_at`] with the
+    /// wall clock. The daemon passes its own clock to `open_exclusive_at`.
     ///
     /// # Errors
-    /// [`StoreError::StoreTooOpen`], [`StoreError::Locked`], [`StoreError::UnknownVersion`],
-    /// [`StoreError::Corrupt`], [`StoreError::Io`].
+    /// As [`Store::open_exclusive_at`].
     pub fn open_exclusive(dir: &Path, caps: Caps, fs: F) -> Result<Self, StoreError> {
         Self::open_exclusive_at(dir, caps, fs, OffsetDateTime::now_utc())
     }
 
-    /// [`Store::open_exclusive`] with an explicit clock (for expiry on open).
+    /// Opens (creating if needed) the store at `dir` and holds `LOCK_EX` while alive. This is
+    /// the primary open: `now` drives expiry on open.
     ///
-    /// After the sweep the history is brought within the caps (expired entries, then the oldest
-    /// unpinned over `max_entries`), through the same durable path as `apply`.
+    /// Nothing is written when the store is too open. After locking, orphans are swept both
+    /// ways (content files without a row are unlinked, rows without content are dropped), then
+    /// the history is brought within the caps (expired entries, then the oldest unpinned over
+    /// the cap), through the same durable path as `apply`.
     ///
     /// # Errors
-    /// As [`Store::open_exclusive`].
+    /// [`StoreError::StoreTooOpen`], [`StoreError::Locked`] (another handle, including a
+    /// read-only one, holds the lock), [`StoreError::UnknownVersion`], [`StoreError::Corrupt`],
+    /// [`StoreError::Io`].
     pub fn open_exclusive_at(
         dir: &Path,
         caps: Caps,
@@ -207,12 +209,13 @@ impl<F: Fs> Store<F> {
     /// Retries the unlinks that failed earlier (the daemon's housekeeping calls this); returns
     /// how many are still pending. `apply` does it first on every call.
     pub fn retry_pending_unlinks(&mut self) -> usize {
-        if self.pending_unlink.is_empty() {
-            return 0;
-        }
+        // Defence in depth: never unlink the content of an entry that is still listed.
+        let live: HashSet<EntryId> = self.history.entries().iter().map(|e| e.id).collect();
+        self.pending_unlink.retain(|id| !live.contains(id));
         let ids: Vec<EntryId> = self.pending_unlink.iter().copied().collect();
-        self.pending_unlink.clear();
-        self.unlink(&ids);
+        if !ids.is_empty() {
+            self.unlink(&ids);
+        }
         self.pending_unlink.len()
     }
 
@@ -394,11 +397,20 @@ impl<F: Fs> Store<F> {
         let mut done = false;
         for id in ids {
             match self.fs.remove_file(&self.content_path(id)) {
-                Ok(()) => done = true,
-                Err(e) if e.kind() == io::ErrorKind::NotFound => {}
+                Ok(()) => {
+                    done = true;
+                    if self.pending_unlink.remove(id) {
+                        tracing::debug!(id = %id, "pending unlink succeeded on retry");
+                    }
+                }
+                Err(e) if e.kind() == io::ErrorKind::NotFound => {
+                    self.pending_unlink.remove(id);
+                }
                 Err(e) => {
-                    tracing::warn!(id = %id, kind = ?e.kind(), "could not unlink content; will retry");
-                    self.pending_unlink.insert(*id);
+                    // Warn once, when the id enters the set; retries stay quiet.
+                    if self.pending_unlink.insert(*id) {
+                        tracing::warn!(id = %id, kind = ?e.kind(), "could not unlink content; will retry");
+                    }
                 }
             }
         }
