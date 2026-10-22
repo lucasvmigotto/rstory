@@ -59,12 +59,12 @@ description: "Task list for Store & history"
 
 ### Tests for User Story 2 ⚠️
 
-- [ ] T010 [P] [US2] proptest invariants (count cap with pins counted, pin cap, de-dup, expiry, clear vs clear_all) in `tests/history_props.rs` (SC-002) — Executor: builder · Reviewer: thinker
-- [ ] T011 [P] [US2] boundary tests: 21st insert evicts oldest unpinned; 11th pin → `pin_limit` in `src/domain/history.rs` tests — Executor: builder · Reviewer: thinker
+- [x] T010 [P] [US2] proptest invariants (count cap with pins counted, pin cap, de-dup, expiry, clear vs clear_all) in `tests/history_props.rs` (SC-002) — Executor: builder · Reviewer: thinker
+- [x] T011 [P] [US2] boundary tests: 21st insert evicts oldest unpinned; 11th pin → `pin_limit` in `src/domain/history.rs` tests — Executor: builder · Reviewer: thinker
 
 ### Implementation for User Story 2
 
-- [ ] T012 [US2] Backend implementation — see `## Backend` (appended by `backend:spec`) — Executor: builder · Reviewer: thinker
+- [x] T012 [US2] Backend implementation — see `## Backend` (appended by `backend:spec`) — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: User Story 2 passes its tests independently.
 
@@ -134,8 +134,8 @@ Appended by `backend:spec`. Built by `backend:build` (ticks only this section). 
 
 ### Backend US2 — History stays small and fresh
 
-- [ ] T024 [US2] `History` aggregate: record (de-dup, evict), touch, pin/unpin (PinLimit, idempotent), remove, clear, clear_all, expire, next_deadline in `src/domain/history.rs` — Executor: builder · Reviewer: reviewer · Effort: high
-- [ ] T025 [US2] `Store::apply(batch)` mapping mutations to content writes + one index commit + unlinks — Executor: builder · Reviewer: reviewer · Effort: high
+- [x] T024 [US2] `History` aggregate: record (de-dup, evict), touch, pin/unpin (PinLimit, idempotent), remove, clear, clear_all, expire, next_deadline in `src/domain/history.rs` — Executor: builder · Reviewer: reviewer · Effort: high
+- [x] T025 [US2] `Store::apply(batch)` mapping mutations to content writes + one index commit + unlinks — Executor: builder · Reviewer: reviewer · Effort: high
 
 **Checkpoint**: the US2 tests in this file's story phase pass (`cargo test`), plus the contract tests where they apply.
 

@@ -187,12 +187,16 @@ fn small_caps() -> Caps {
 }
 
 /// Applies each round as one batch; returns the contents (newest first) after the last
-/// acknowledged batch and whether a batch failed in flight.
-fn batch_workload(dir: &Path, fs: &FaultFs, rounds: &[Vec<usize>]) -> (Vec<Vec<u8>>, bool) {
+/// acknowledged batch and the round that failed in flight, if any.
+fn batch_workload(
+    dir: &Path,
+    fs: &FaultFs,
+    rounds: &[Vec<usize>],
+) -> (Vec<Vec<u8>>, Option<Vec<usize>>) {
     let caps = small_caps();
     let mut snapshot = Vec::new();
     let Ok(mut store) = Store::open_exclusive(dir, caps, fs.clone()) else {
-        return (snapshot, true);
+        return (snapshot, None);
     };
     for (r, round) in rounds.iter().enumerate() {
         let batch = round
@@ -201,7 +205,7 @@ fn batch_workload(dir: &Path, fs: &FaultFs, rounds: &[Vec<usize>]) -> (Vec<Vec<u
             .collect();
         let now = OffsetDateTime::from_unix_timestamp(1_800_000_000 + 10 * r as i64).unwrap();
         if store.apply(batch, now).is_err() {
-            return (snapshot, true);
+            return (snapshot, Some(round.clone()));
         }
         snapshot = store
             .entries()
@@ -209,18 +213,35 @@ fn batch_workload(dir: &Path, fs: &FaultFs, rounds: &[Vec<usize>]) -> (Vec<Vec<u
             .map(|e| store.content(&e.id).unwrap())
             .collect();
     }
-    (snapshot, false)
+    (snapshot, None)
 }
 
 fn batch_total_mutations(rounds: &[Vec<usize>]) -> u64 {
     let tmp = tempfile::tempdir().unwrap();
     let fs = FaultFs::recording();
     let (_, inflight) = batch_workload(&tmp.path().join("store"), &fs, rounds);
-    assert!(!inflight);
+    assert!(inflight.is_none());
     fs.mutations()
 }
 
-fn batch_check(dir: &Path, snapshot: &[Vec<u8>], inflight: bool) -> Result<(), TestCaseError> {
+/// The contents after recording `round` on `before` (no pins): de-dup moves to the front, the
+/// cap of 3 evicts the oldest.
+fn model_apply(before: &[Vec<u8>], round: &[usize]) -> Vec<Vec<u8>> {
+    let mut v = before.to_vec();
+    for &i in round {
+        let p = payload(i);
+        v.retain(|c| *c != p);
+        v.insert(0, p);
+        v.truncate(3);
+    }
+    v
+}
+
+fn batch_check(
+    dir: &Path,
+    snapshot: &[Vec<u8>],
+    inflight: &Option<Vec<usize>>,
+) -> Result<(), TestCaseError> {
     let store = Store::open_exclusive(dir, small_caps(), RealFs).expect("store reopens");
     let attempted: BTreeSet<Vec<u8>> = (0..8).map(payload).collect();
     prop_assert!(store.entries().len() <= 3, "count cap");
@@ -233,13 +254,15 @@ fn batch_check(dir: &Path, snapshot: &[Vec<u8>], inflight: bool) -> Result<(), T
     }
     let distinct: BTreeSet<_> = contents.iter().collect();
     prop_assert_eq!(distinct.len(), contents.len(), "de-dup");
-    if !inflight {
-        prop_assert_eq!(
-            &contents,
-            snapshot,
-            "an acknowledged batch is fully visible"
-        );
+    // Atomic: either the last acknowledged state, or that state plus the in-flight batch.
+    let mut allowed = vec![snapshot.to_vec()];
+    if let Some(round) = inflight {
+        allowed.push(model_apply(snapshot, round));
     }
+    prop_assert!(
+        allowed.contains(&contents),
+        "state is neither before nor after the batch"
+    );
     // Evicted entries' files are gone: orphans left by a crash between commit and unlink were swept.
     let on_disk: BTreeSet<String> = fs::read_dir(dir.join("content"))
         .unwrap()
@@ -274,7 +297,7 @@ proptest! {
                     drop(Store::open_exclusive(&dir, small_caps(), again.clone()));
                     again.power_off();
                 }
-                batch_check(&dir, &snapshot, inflight)?;
+                batch_check(&dir, &snapshot, &inflight)?;
             }
         }
     }

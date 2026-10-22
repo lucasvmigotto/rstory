@@ -16,10 +16,10 @@ use time::OffsetDateTime;
 
 use crate::config::Caps;
 use crate::domain::entry::{Content, Entry, PauseState};
-use crate::domain::history::{HistoryError, Recorded};
+use crate::domain::history::{History, HistoryError, Limits, Recorded};
 use crate::domain::ids::EntryId;
 use fs::{Fs, FsFile};
-use index::{Index, IndexError};
+use index::{Index, IndexError, State};
 
 /// Name of the lock file.
 pub const LOCK_FILE: &str = "store.lock";
@@ -125,7 +125,8 @@ pub struct Store<F: Fs> {
     fs: F,
     dir: PathBuf,
     caps: Caps,
-    index: Index,
+    history: History,
+    pause: PauseState,
     _lock: std::fs::File,
 }
 
@@ -147,21 +148,38 @@ impl<F: Fs> Store<F> {
         let lock = take_lock(&dir.join(LOCK_FILE))?;
 
         let index = index::load(&fs, dir)?.unwrap_or_default();
-        let mut store = Self {
+        let index = sweep(&fs, dir, index)?;
+        let limits = Limits {
+            max_entries: caps.max_entries,
+            max_pinned: caps.max_pinned,
+            ttl: caps.ttl,
+        };
+        Ok(Self {
             fs,
             dir: dir.to_path_buf(),
             caps,
-            index,
+            history: History::from_entries(limits, index.entries),
+            pause: index.state.pause,
             _lock: lock,
-        };
-        store.sweep()?;
-        Ok(store)
+        })
+    }
+
+    /// The persisted pause state.
+    #[must_use]
+    pub fn pause(&self) -> PauseState {
+        self.pause
+    }
+
+    /// The history aggregate (read-only view).
+    #[must_use]
+    pub fn history(&self) -> &History {
+        &self.history
     }
 
     /// The rows, newest first.
     #[must_use]
     pub fn entries(&self) -> &[Entry] {
-        &self.index.entries
+        self.history.entries()
     }
 
     /// Reads the content of an entry.
@@ -172,65 +190,152 @@ impl<F: Fs> Store<F> {
         Ok(self.fs.read(&self.content_path(id))?)
     }
 
-    /// Applies a batch as one transaction. NOT YET IMPLEMENTED (T025).
+    /// Applies a batch as one transaction: the history rules run on a copy, content files for
+    /// the new entries are written first, then ONE index commit, then the content of evicted,
+    /// removed and expired entries is unlinked (and the directory synced). A crash between the
+    /// commit and the unlinks leaves orphans that the next open sweeps.
+    ///
+    /// Nothing changes when a mutation is refused (`NotFound`, `PinLimit`) or I/O fails
+    /// before the commit.
     ///
     /// # Errors
-    /// [`StoreError`].
+    /// [`StoreError::TooLarge`], [`StoreError::History`], [`StoreError::Io`].
     pub fn apply(
         &mut self,
         batch: Vec<Mutation>,
         now: OffsetDateTime,
     ) -> Result<Vec<Outcome>, StoreError> {
-        unimplemented!("T025")
+        for m in &batch {
+            if let Mutation::RecordCopy(c) = m
+                && u64::from(c.size()) > self.caps.max_entry_bytes
+            {
+                return Err(StoreError::TooLarge {
+                    size: c.len(),
+                    max: self.caps.max_entry_bytes,
+                });
+            }
+        }
+
+        let mut history = self.history.clone();
+        let mut pause = self.pause;
+        let mut pending: Vec<(EntryId, &Content)> = Vec::new();
+        let mut outcomes = Vec::with_capacity(batch.len());
+        for m in &batch {
+            outcomes.push(match m {
+                Mutation::RecordCopy(c) => {
+                    let id = EntryId::new(now);
+                    let r = history.record(c, id, now);
+                    if matches!(r, Recorded::Inserted { .. }) {
+                        pending.push((id, c));
+                    }
+                    Outcome::Recorded(r)
+                }
+                Mutation::Touch(id) => {
+                    history.touch(id, now)?;
+                    Outcome::Touched
+                }
+                Mutation::Pin(id) => Outcome::Pinned(history.pin(id)?),
+                Mutation::Unpin(id) => Outcome::Unpinned(history.unpin(id)?),
+                Mutation::Remove(id) => {
+                    history.remove(id)?;
+                    Outcome::Removed
+                }
+                Mutation::Clear => Outcome::Cleared(history.clear()),
+                Mutation::ClearAll => Outcome::Cleared(history.clear_all()),
+                Mutation::Expire => Outcome::Expired(history.expire(now)),
+                Mutation::SetPause(p) => {
+                    pause = *p;
+                    Outcome::PauseSet
+                }
+            });
+        }
+
+        let kept: HashSet<EntryId> = history.entries().iter().map(|e| e.id).collect();
+        // Entries inserted and evicted within the same batch never reach the disk.
+        let to_write: Vec<_> = pending.iter().filter(|(id, _)| kept.contains(id)).collect();
+        let to_unlink: Vec<EntryId> = self
+            .history
+            .entries()
+            .iter()
+            .map(|e| e.id)
+            .filter(|id| !kept.contains(id))
+            .collect();
+
+        let mut written: Vec<EntryId> = Vec::new();
+        for (id, content) in &to_write {
+            written.push(*id);
+            if let Err(e) = self.write_content(id, content.as_bytes()) {
+                self.discard(&written);
+                return Err(e.into());
+            }
+        }
+
+        if history != self.history || pause != self.pause {
+            let index = Index {
+                version: index::VERSION,
+                entries: history.entries().to_vec(),
+                state: State { pause },
+            };
+            if let Err(e) = index::commit(&self.fs, &self.dir, &index) {
+                self.discard(&written);
+                return Err(e.into());
+            }
+            self.history = history;
+            self.pause = pause;
+        }
+
+        self.unlink(&to_unlink);
+        tracing::debug!(
+            mutations = batch.len(),
+            written = written.len(),
+            unlinked = to_unlink.len(),
+            "batch applied"
+        );
+        Ok(outcomes)
     }
 
-    /// MINIMAL, TEMPORARY (T022): writes the content file, then commits the index with the new
-    /// row prepended. No caps, de-dup or expiry: the `History` card (T024/T025) replaces this
-    /// with `apply`.
+    /// Convenience: records one copy (a batch of one) and returns the entry's id.
     ///
     /// # Errors
-    /// [`StoreError::TooLarge`], [`StoreError::Io`].
+    /// As [`Store::apply`].
     pub fn insert(
         &mut self,
         content: &Content,
         now: OffsetDateTime,
     ) -> Result<EntryId, StoreError> {
-        if u64::try_from(content.len()).map_or(true, |n| n > self.caps.max_entry_bytes) {
-            return Err(StoreError::TooLarge {
-                size: content.len(),
-                max: self.caps.max_entry_bytes,
-            });
+        let mut out = self.apply(vec![Mutation::RecordCopy(content.clone())], now)?;
+        match out.pop() {
+            Some(Outcome::Recorded(Recorded::Inserted { id, .. } | Recorded::Refreshed { id })) => {
+                Ok(id)
+            }
+            _ => Err(StoreError::Io(io::Error::other(
+                "record produced no outcome",
+            ))),
         }
-        let too_large = || StoreError::TooLarge {
-            size: content.len(),
-            max: self.caps.max_entry_bytes,
-        };
-        let size = u32::try_from(content.len()).map_err(|_| too_large())?;
-        let id = EntryId::new(now);
-        if let Err(e) = self.write_content(&id, content.as_bytes()) {
-            // Not acknowledged: leave no file behind (a rename may already have happened).
-            let _ = self.fs.remove_file(&self.content_path(&id));
-            return Err(e.into());
+    }
+
+    /// Best-effort removal of content files that were written but never committed.
+    fn discard(&self, ids: &[EntryId]) {
+        for id in ids {
+            let _ = self.fs.remove_file(&self.content_path(id));
         }
-        let row = Entry {
-            id,
-            hash: content.hash(),
-            size,
-            created: now,
-            last_copied: now,
-            pinned: false,
-            preview: content.preview(),
-        };
-        let mut next = self.index.clone();
-        next.entries.insert(0, row);
-        if let Err(e) = index::commit(&self.fs, &self.dir, &next) {
-            // Not acknowledged: drop the unreferenced file now (the sweep covers a crash).
-            let _ = self.fs.remove_file(&self.content_path(&id));
-            return Err(e.into());
+    }
+
+    /// After the commit: unlink the content of removed entries and sync the directory. Failures
+    /// leave orphans for the next open's sweep, so they are logged, not returned.
+    fn unlink(&self, ids: &[EntryId]) {
+        for id in ids {
+            match self.fs.remove_file(&self.content_path(id)) {
+                Ok(()) => {}
+                Err(e) if e.kind() == io::ErrorKind::NotFound => {}
+                Err(e) => tracing::warn!(id = %id, kind = ?e.kind(), "could not unlink content"),
+            }
         }
-        self.index = next;
-        tracing::debug!(id = %id, size = content.len(), "entry stored");
-        Ok(id)
+        if !ids.is_empty()
+            && let Err(e) = self.fs.sync_dir(&self.dir.join(CONTENT_DIR))
+        {
+            tracing::warn!(kind = ?e.kind(), "could not sync the content directory");
+        }
     }
 
     fn content_path(&self, id: &EntryId) -> PathBuf {
@@ -254,53 +359,54 @@ impl<F: Fs> Store<F> {
         }
         result
     }
+}
 
-    fn sweep(&mut self) -> Result<(), StoreError> {
-        let _ = self.fs.remove_file(&self.dir.join(index::INDEX_TMP));
-        let cdir = self.dir.join(CONTENT_DIR);
-        let mut present = HashSet::new();
-        let mut removed = 0usize;
-        for p in self.fs.read_dir(&cdir)? {
-            let name = p.file_name().and_then(|n| n.to_str()).unwrap_or_default();
-            let row = EntryId::parse(name)
-                .ok()
-                .and_then(|id| self.index.entries.iter().find(|e| e.id == id));
-            match row {
-                // A torn file (power loss) is as good as none: drop the row and the file.
-                Some(e) if self.fs.len(&p)? != u64::from(e.size) => {
-                    self.fs.remove_file(&p)?;
-                    removed += 1;
-                }
-                Some(e) => {
-                    present.insert(e.id);
-                }
-                None if name.starts_with(TMP_PREFIX) || EntryId::parse(name).is_ok() => {
-                    self.fs.remove_file(&p)?;
-                    removed += 1;
-                }
-                None => {} // not ours: leave it alone
+/// Opening recovery, both ways: unlinks content files without a row (and temp leftovers), and
+/// drops rows whose content is missing or torn (size differs from the row), recommitting.
+fn sweep<F: Fs>(fs: &F, dir: &Path, index: Index) -> Result<Index, StoreError> {
+    let _ = fs.remove_file(&dir.join(index::INDEX_TMP));
+    let cdir = dir.join(CONTENT_DIR);
+    let mut present = HashSet::new();
+    let mut removed = 0usize;
+    for p in fs.read_dir(&cdir)? {
+        let name = p.file_name().and_then(|n| n.to_str()).unwrap_or_default();
+        let row = EntryId::parse(name)
+            .ok()
+            .and_then(|id| index.entries.iter().find(|e| e.id == id));
+        match row {
+            // A torn file (power loss) is as good as none: drop the row and the file.
+            Some(e) if fs.len(&p)? != u64::from(e.size) => {
+                fs.remove_file(&p)?;
+                removed += 1;
             }
+            Some(e) => {
+                present.insert(e.id);
+            }
+            None if name.starts_with(TMP_PREFIX) || EntryId::parse(name).is_ok() => {
+                fs.remove_file(&p)?;
+                removed += 1;
+            }
+            None => {} // not ours: leave it alone
         }
-        if removed > 0 {
-            self.fs.sync_dir(&cdir)?;
-        }
-        let before = self.index.entries.len();
-        let mut next = self.index.clone();
-        next.entries.retain(|e| present.contains(&e.id));
-        let dropped = before - next.entries.len();
-        if dropped > 0 {
-            index::commit(&self.fs, &self.dir, &next)?;
-            self.index = next;
-        }
-        if removed > 0 || dropped > 0 {
-            tracing::warn!(
-                orphan_files = removed,
-                dropped_rows = dropped,
-                "store recovery sweep"
-            );
-        }
-        Ok(())
     }
+    if removed > 0 {
+        fs.sync_dir(&cdir)?;
+    }
+    let mut next = index;
+    let before = next.entries.len();
+    next.entries.retain(|e| present.contains(&e.id));
+    let dropped = before - next.entries.len();
+    if dropped > 0 {
+        index::commit(fs, dir, &next)?;
+    }
+    if removed > 0 || dropped > 0 {
+        tracing::warn!(
+            orphan_files = removed,
+            dropped_rows = dropped,
+            "store recovery sweep"
+        );
+    }
+    Ok(next)
 }
 
 const TMP_PREFIX: &str = ".tmp-";
