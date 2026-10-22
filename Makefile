@@ -67,8 +67,8 @@ test: image ## Unit, property, snapshot and contract tests, offline
 bench: image ## Store benchmarks (std harness); fails if a p95 is over 2x its budget, offline
 	$(RUN) $(OFFLINE) $(IMAGE) cargo bench --locked --offline $(FEATURES) --bench store
 
-test-integration: image ## Session tests (Xvfb, headless sway, bridge mode), offline
-	$(RUN) $(OFFLINE) $(IMAGE) cargo test --locked --offline --features session-tests -- --test-threads=2
+test-integration: image ## Session tests (Xvfb, headless sway/mutter, bridge mode), offline; TEST_ARGS='--test x11_capture' narrows
+	$(RUN) $(OFFLINE) $(IMAGE) cargo test --locked --offline --features session-tests $(TEST_ARGS) -- --test-threads=2
 
 build: image ## Debug build, offline
 	$(RUN) $(OFFLINE) $(IMAGE) cargo build --locked --offline
