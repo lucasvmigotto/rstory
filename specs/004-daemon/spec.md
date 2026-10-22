@@ -86,6 +86,7 @@ Clients can ask for the daemon state and counters, and the daemon expires entrie
 
 ### Edge Cases
 
+- A read-only client (`ls`, `show`, picker in read-only mode) holds the store's shared lock while reading, so `open_exclusive` returns `Locked`. The daemon retries every 100 ms for up to 2 s (clients hold the lock only for a snapshot, per specs 006/007), then exits with code 5 and "a client is reading the store; retry". (Noted 2026-10-22 from spec 001 US3.)
 - A stale socket file from a crashed daemon: if the connection is refused and no lock is held, unlink it and bind.
 - `$XDG_RUNTIME_DIR` unset: fall back to `/run/user/<uid>` if it exists and is owned by the user, otherwise exit with code 5 and a clear message.
 - A client whose uid doesn't match (`SO_PEERCRED`) is disconnected without a response.

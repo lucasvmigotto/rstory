@@ -66,6 +66,7 @@ The picker is usable in plain mode, under `NO_COLOR`, and read-only when the dae
 - History changes while the picker is open (a `subscribe` event): the list refreshes and the selection stays on the same id when it's still present.
 - Very long single-line entries: the list preview is truncated with `…`, and the preview pane wraps.
 - stdout not a TTY: exit 2 with "rstory pick needs a terminal".
+- In read-only mode the picker takes a snapshot (entries plus the content it previews) and drops the store handle immediately. A preview of another entry reopens the store briefly. The picker never holds the shared lock while waiting for input, so a daemon can start (spec 004).
 
 ## Requirements *(mandatory)*
 
