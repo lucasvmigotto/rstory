@@ -83,6 +83,8 @@ tracing-subscriber = { version = "0.3.23", features = ["fmt", "env-filter", "ans
 unicode-segmentation = "1"
 unicode-width = "0.2"
 wayland-client = "0.31.15"
+wayland-protocols = { version = "0.32", default-features = false, features = ["client", "staging"] }
+wayland-protocols-wlr = { version = "0.3", default-features = false, features = ["client"] }
 x11rb = { version = "0.14.0", default-features = false, features = ["xfixes"] }
 
 [dev-dependencies]
