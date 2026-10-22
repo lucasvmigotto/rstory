@@ -83,7 +83,41 @@ impl History {
     /// A history over loaded rows (re-sorted newest first; caps are not re-applied).
     #[must_use]
     pub fn from_entries(limits: Limits, entries: Vec<Entry>) -> Self {
-        unimplemented!("T024")
+        let mut entries = entries;
+        entries.sort_by_key(|e| std::cmp::Reverse(e.last_copied)); // stable
+        Self { limits, entries }
+    }
+
+    fn position(&self, id: &EntryId) -> Result<usize, HistoryError> {
+        self.entries
+            .iter()
+            .position(|e| e.id == *id)
+            .ok_or(HistoryError::NotFound)
+    }
+
+    fn position_by_hash(&self, hash: &super::entry::ContentHash) -> Option<usize> {
+        self.entries.iter().position(|e| e.hash == *hash)
+    }
+
+    fn ttl(&self) -> time::Duration {
+        time::Duration::try_from(self.limits.ttl).unwrap_or(time::Duration::MAX)
+    }
+
+    /// `now`, but never earlier than the newest entry: keeps the order when the clock steps back.
+    fn clamp(&self, now: OffsetDateTime) -> OffsetDateTime {
+        self.entries.first().map_or(now, |e| e.last_copied.max(now))
+    }
+
+    fn drain_where(&mut self, pred: impl Fn(&Entry) -> bool) -> Vec<EntryId> {
+        let mut removed = Vec::new();
+        self.entries.retain(|e| {
+            let gone = pred(e);
+            if gone {
+                removed.push(e.id);
+            }
+            !gone
+        });
+        removed
     }
 
     /// The limits in force.
@@ -115,7 +149,35 @@ impl History {
     /// is over `max_entries`. The time is never earlier than the newest entry's (a clock that
     /// went backwards must not break the ordering).
     pub fn record(&mut self, content: &Content, id: EntryId, now: OffsetDateTime) -> Recorded {
-        unimplemented!("T024")
+        let hash = content.hash();
+        let ts = self.clamp(now);
+        if let Some(pos) = self.position_by_hash(&hash) {
+            let mut e = self.entries.remove(pos);
+            e.last_copied = ts;
+            let id = e.id;
+            self.entries.insert(0, e);
+            return Recorded::Refreshed { id };
+        }
+        self.entries.insert(
+            0,
+            Entry {
+                id,
+                hash,
+                size: content.size(),
+                created: ts,
+                last_copied: ts,
+                pinned: false,
+                preview: content.preview(),
+            },
+        );
+        let mut evicted = Vec::new();
+        while self.entries.len() > self.limits.max_entries as usize {
+            let Some(pos) = self.entries.iter().rposition(|e| !e.pinned) else {
+                break;
+            };
+            evicted.push(self.entries.remove(pos).id);
+        }
+        Recorded::Inserted { id, evicted }
     }
 
     /// Restore: moves the entry to index 0 and refreshes `last_copied`.
@@ -123,7 +185,12 @@ impl History {
     /// # Errors
     /// [`HistoryError::NotFound`].
     pub fn touch(&mut self, id: &EntryId, now: OffsetDateTime) -> Result<(), HistoryError> {
-        unimplemented!("T024")
+        let pos = self.position(id)?;
+        let ts = self.clamp(now);
+        let mut e = self.entries.remove(pos);
+        e.last_copied = ts;
+        self.entries.insert(0, e);
+        Ok(())
     }
 
     /// Pins an entry; `Ok(false)` when it already was (idempotent, even at the cap).
@@ -131,7 +198,16 @@ impl History {
     /// # Errors
     /// [`HistoryError::NotFound`], or [`HistoryError::PinLimit`] when it would exceed the cap.
     pub fn pin(&mut self, id: &EntryId) -> Result<bool, HistoryError> {
-        unimplemented!("T024")
+        let pos = self.position(id)?;
+        if self.entries[pos].pinned {
+            return Ok(false);
+        }
+        let pinned = self.entries.iter().filter(|e| e.pinned).count();
+        if pinned >= self.limits.max_pinned as usize {
+            return Err(HistoryError::PinLimit);
+        }
+        self.entries[pos].pinned = true;
+        Ok(true)
     }
 
     /// Unpins an entry; `Ok(false)` when it was not pinned (idempotent).
@@ -139,7 +215,8 @@ impl History {
     /// # Errors
     /// [`HistoryError::NotFound`].
     pub fn unpin(&mut self, id: &EntryId) -> Result<bool, HistoryError> {
-        unimplemented!("T024")
+        let pos = self.position(id)?;
+        Ok(std::mem::replace(&mut self.entries[pos].pinned, false))
     }
 
     /// Removes one entry, pinned or not.
@@ -147,30 +224,38 @@ impl History {
     /// # Errors
     /// [`HistoryError::NotFound`].
     pub fn remove(&mut self, id: &EntryId) -> Result<(), HistoryError> {
-        unimplemented!("T024")
+        let pos = self.position(id)?;
+        self.entries.remove(pos);
+        Ok(())
     }
 
     /// Removes every unpinned entry; returns their ids.
     pub fn clear(&mut self) -> Vec<EntryId> {
-        unimplemented!("T024")
+        self.drain_where(|e| !e.pinned)
     }
 
     /// Removes every entry, pinned included; returns their ids.
     pub fn clear_all(&mut self) -> Vec<EntryId> {
-        unimplemented!("T024")
+        self.drain_where(|_| true)
     }
 
     /// Removes unpinned entries whose age (`now - last_copied`, never negative: a future
     /// timestamp counts as now) has reached the ttl; returns their ids.
     pub fn expire(&mut self, now: OffsetDateTime) -> Vec<EntryId> {
-        unimplemented!("T024")
+        let ttl = self.ttl();
+        self.drain_where(|e| !e.pinned && (now - e.last_copied).max(time::Duration::ZERO) >= ttl)
     }
 
     /// The instant at which the next unpinned entry expires (`last_copied + ttl`), if any.
     /// `expire(now)` removes it as soon as `now` reaches that instant.
     #[must_use]
     pub fn next_deadline(&self) -> Option<OffsetDateTime> {
-        unimplemented!("T024")
+        let ttl = self.ttl();
+        self.entries
+            .iter()
+            .filter(|e| !e.pinned)
+            .map(|e| e.last_copied + ttl)
+            .min()
     }
 
     /// Resolves an index (0 = newest) or a short-id prefix to exactly one entry.
@@ -178,7 +263,28 @@ impl History {
     /// # Errors
     /// [`ResolveError`].
     pub fn resolve(&self, r: &EntryRef) -> Result<&Entry, ResolveError> {
-        unimplemented!("T024")
+        match r {
+            EntryRef::Index(n) => usize::try_from(*n)
+                .ok()
+                .and_then(|i| self.entries.get(i))
+                .ok_or(ResolveError::NotFound),
+            EntryRef::ShortId(prefix) => {
+                let prefix = prefix.to_ascii_uppercase();
+                let mut hits = self
+                    .entries
+                    .iter()
+                    .filter(|e| e.id.to_string().starts_with(&prefix));
+                match (hits.next(), hits.next()) {
+                    (None, _) => Err(ResolveError::NotFound),
+                    (Some(e), None) => Ok(e),
+                    (Some(a), Some(b)) => {
+                        let mut all = vec![a.id, b.id];
+                        all.extend(hits.map(|e| e.id));
+                        Err(ResolveError::Ambiguous(all))
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -370,7 +476,7 @@ mod tests {
     #[test]
     fn resolve_by_index_and_short_id() {
         let mut h = History::new(limits());
-        let a = vec![id(1), id(2)];
+        let a = [id(1), id(2)];
         h.record(&content(1), a[0], at(0));
         h.record(&content(2), a[1], at(1));
         assert_eq!(h.resolve(&EntryRef::Index(0)).unwrap().id, a[1]);
@@ -383,8 +489,8 @@ mod tests {
                 .id,
             a[0]
         );
-        // ids 1 and 2 share all but the last character: a short prefix is ambiguous.
-        let amb = h.resolve(&EntryRef::ShortId(s[..10].to_string()));
+        // ids 1 and 2 differ only far from the start: a 4-character prefix is ambiguous.
+        let amb = h.resolve(&EntryRef::ShortId(s[..4].to_string()));
         assert_eq!(amb, Err(ResolveError::Ambiguous(vec![a[1], a[0]])));
         assert_eq!(
             h.resolve(&EntryRef::ShortId("ZZZZ".to_string())),

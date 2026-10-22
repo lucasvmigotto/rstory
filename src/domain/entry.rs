@@ -31,7 +31,7 @@ pub enum ContentError {
 
 /// Non-empty clipboard text of at most `max_entry_bytes`. Its `Debug` shows only the size.
 #[derive(Clone, PartialEq, Eq)]
-pub struct Content(Vec<u8>);
+pub struct Content(Vec<u8>, u32);
 
 impl Content {
     /// Validates `bytes` against the size limit.
@@ -42,13 +42,21 @@ impl Content {
         if bytes.is_empty() {
             return Err(ContentError::Empty);
         }
-        if u64::try_from(bytes.len()).map_or(true, |n| n > max_bytes) {
-            return Err(ContentError::TooLarge {
-                size: bytes.len(),
-                max: max_bytes,
-            });
+        let too_large = || ContentError::TooLarge {
+            size: bytes.len(),
+            max: max_bytes,
+        };
+        let size = u32::try_from(bytes.len()).map_err(|_| too_large())?;
+        if u64::from(size) > max_bytes {
+            return Err(too_large());
         }
-        Ok(Self(bytes))
+        Ok(Self(bytes, size))
+    }
+
+    /// Size in bytes as stored in the index (at least 1).
+    #[must_use]
+    pub fn size(&self) -> u32 {
+        self.1
     }
 
     /// The raw bytes.

@@ -168,7 +168,7 @@ impl fmt::Display for ShortId {
     }
 }
 
-/// How a user points at an entry: a 1-based list position or a short id prefix.
+/// How a user points at an entry: a list position (0 = newest) or a short id prefix.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum EntryRef {
     /// A position in the current listing.
