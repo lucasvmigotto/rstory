@@ -24,6 +24,8 @@ fn populate(dir: &Path) {
         let c = Content::new(format!("entry {i}").into_bytes(), 1 << 20).unwrap();
         s.insert(
             &c,
+            // 4_102_444_800 is 2100-01-01: far in the future, so reopening a store never expires its
+            // entries against the wall clock (a future timestamp counts as "now" for expiry).
             OffsetDateTime::from_unix_timestamp(4_102_444_800 + i).unwrap(),
         )
         .unwrap();

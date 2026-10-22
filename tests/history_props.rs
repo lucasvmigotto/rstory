@@ -92,6 +92,8 @@ proptest! {
     #[test]
     fn invariants_hold_after_every_step(l in limits(), cmds in proptest::collection::vec(cmd(), 1..80)) {
         let mut h = History::new(l);
+        // 4_102_444_800 is 2100-01-01: far in the future, so reopening a store never expires its
+        // entries against the wall clock (a future timestamp counts as "now" for expiry).
         let mut now = OffsetDateTime::from_unix_timestamp(4_102_444_800).unwrap();
         let mut counter = 0u128;
         for c in cmds {

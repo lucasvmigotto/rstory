@@ -14,6 +14,8 @@ use rstory::store::{Mutation, Store, StoreError};
 use time::OffsetDateTime;
 
 fn now(n: i64) -> OffsetDateTime {
+    // 4_102_444_800 is 2100-01-01: far in the future, so reopening a store never expires its
+    // entries against the wall clock (a future timestamp counts as "now" for expiry).
     OffsetDateTime::from_unix_timestamp(4_102_444_800 + n).unwrap()
 }
 
@@ -269,4 +271,31 @@ fn ten_pins_with_a_lowered_count_cap_are_kept_and_new_copies_still_recorded() {
     assert!(!dir.join("content").join(a.to_string()).exists());
     assert_eq!(s.entries().len(), 11);
     assert_eq!(s.entries().iter().filter(|e| e.pinned).count(), 10);
+
+    // A restart must not lose the latest copy.
+    drop(s);
+    let s = open_with(&dir, caps(5, 4));
+    assert_eq!(s.entries().len(), 11);
+    assert_eq!(s.entries()[0].id, b);
+    assert_eq!(s.content(&b).unwrap(), b"second new copy");
+}
+
+#[test]
+fn pins_filling_the_cap_still_keep_the_newest_copy_across_restarts() {
+    let t = tempfile::tempdir().unwrap();
+    let dir = t.path().join("s");
+    {
+        let mut s = open(&dir).unwrap();
+        let ids: Vec<_> = (0..5)
+            .map(|i| insert(&mut s, &format!("p{i}"), i))
+            .collect();
+        s.apply(ids.iter().map(|id| Mutation::Pin(*id)).collect(), now(50))
+            .unwrap();
+    }
+    let mut s = open_with(&dir, caps(5, 4));
+    let x = insert(&mut s, "latest copy", 100);
+    drop(s);
+    let s = open_with(&dir, caps(5, 4));
+    assert_eq!(s.entries().len(), 6);
+    assert_eq!(s.content(&x).unwrap(), b"latest copy");
 }

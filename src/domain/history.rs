@@ -636,4 +636,27 @@ mod tests {
             "at the cap: refused"
         );
     }
+
+    #[test]
+    fn the_newest_unpinned_entry_survives_record_and_enforcement_alike() {
+        let lowered = Limits {
+            max_entries: 5,
+            max_pinned: 4,
+            ..limits()
+        };
+        for pins in [5, 10] {
+            let mut h = History::from_entries(lowered, pinned_entries(pins));
+            h.record(&content(99), id(500), at(100));
+            assert!(ids(&h).contains(&id(500)), "kept by record");
+            assert!(
+                h.enforce_limits(at(101)).is_empty(),
+                "and by the next open's enforcement"
+            );
+            assert_eq!(h.len(), pins + 1);
+            // A second copy replaces the first: one unpinned slot, never zero.
+            h.record(&content(98), id(501), at(102));
+            assert_eq!(h.enforce_limits(at(103)), Vec::<EntryId>::new());
+            assert!(!ids(&h).contains(&id(500)) && ids(&h).contains(&id(501)));
+        }
+    }
 }

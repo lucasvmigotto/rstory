@@ -521,3 +521,32 @@ fn take_lock(path: &Path) -> Result<std::fs::File, StoreError> {
         Err(e) => Err(io::Error::from(e).into()),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use fs::RealFs;
+
+    #[test]
+    fn retry_never_unlinks_content_of_a_live_entry() {
+        let t = tempfile::tempdir().unwrap();
+        let dir = t.path().join("s");
+        let mut s = Store::open_exclusive(&dir, Caps::default(), RealFs).unwrap();
+        let now = OffsetDateTime::from_unix_timestamp(4_102_444_800).unwrap();
+        let id = s
+            .insert(&Content::new(b"live".to_vec(), 1 << 20).unwrap(), now)
+            .unwrap();
+        s.pending_unlink.insert(id); // cannot happen through the API: defence in depth
+        assert_eq!(
+            s.retry_pending_unlinks(),
+            0,
+            "the stale pending id is dropped"
+        );
+        assert_eq!(
+            s.content(&id).unwrap(),
+            b"live",
+            "live content is never unlinked"
+        );
+        assert_eq!(s.pending_unlinks(), 0);
+    }
+}

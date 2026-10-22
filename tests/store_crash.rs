@@ -37,6 +37,8 @@ fn workload(dir: &Path, fs: &FaultFs, inserts: usize) -> Vec<(EntryId, Vec<u8>)>
         for i in 0..inserts {
             let bytes = payload(i);
             let content = Content::new(bytes.clone(), caps.max_entry_bytes).unwrap();
+            // 4_102_444_800 is 2100-01-01: far in the future, so reopening a store never expires its
+            // entries against the wall clock (a future timestamp counts as "now" for expiry).
             let now = OffsetDateTime::from_unix_timestamp(4_102_444_800 + i as i64).unwrap();
             match store.insert(&content, now) {
                 Ok(id) => acked.push((id, bytes)),

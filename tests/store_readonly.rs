@@ -18,6 +18,8 @@ use rstory::store::{Store, StoreError};
 use time::OffsetDateTime;
 
 fn at(n: i64) -> OffsetDateTime {
+    // 4_102_444_800 is 2100-01-01: far in the future, so reopening a store never expires its
+    // entries against the wall clock (a future timestamp counts as "now" for expiry).
     OffsetDateTime::from_unix_timestamp(4_102_444_800 + n).unwrap()
 }
 

@@ -17,6 +17,8 @@ fn one_insert_makes_exactly_the_documented_calls() {
     let before = fs.trace().len();
 
     let content = Content::new(b"trace me".to_vec(), 1 << 20).unwrap();
+    // 4_102_444_800 is 2100-01-01: far in the future, so reopening a store never expires its
+    // entries against the wall clock (a future timestamp counts as "now" for expiry).
     let now = OffsetDateTime::from_unix_timestamp(4_102_444_800).unwrap();
     let id = store.insert(&content, now).unwrap();
 
