@@ -5,6 +5,10 @@ ENGINE ?= $(or $(CONTAINER_ENGINE),$(shell command -v podman >/dev/null 2>&1 && 
 IMAGE  := localhost/rstory-tools:dev
 RUST_VERSION := $(shell sed -n 's/^channel *= *"\(.*\)"/\1/p' rust-toolchain.toml)
 
+# Per-worktree build cache, so parallel worktrees don't share one target dir
+# (e.g. make TARGET_VOLUME=rstory-tools-target-x11 test).
+TARGET_VOLUME ?= rstory-tools-target
+
 # Limits: at most about half of an 8-CPU / 8 GiB host (containers.md §7); override per call.
 CPUS   ?= 4
 MEMORY ?= 3g
@@ -21,7 +25,7 @@ RUN := $(ENGINE) run --rm --init $(USERNS) \
 	--cpus $(CPUS) --memory $(MEMORY) --pids-limit 2048 \
 	-v "$(CURDIR)":/src:Z \
 	-v rstory-tools-cargo:/home/dev/.cargo \
-	-v rstory-tools-target:/target \
+	-v $(TARGET_VOLUME):/target \
 	$(RUNDIR) \
 	-e TZ=UTC -e LANG=C.UTF-8 -e RUST_BACKTRACE=1 -e CARGO_TERM_COLOR=always
 OFFLINE := --network=none
@@ -87,4 +91,4 @@ shell: image ## Interactive shell in the tools image (networked)
 	$(RUN) $(TTY) $(IMAGE) bash
 
 clean-cache: ## Remove this project's cache volumes
-	-$(ENGINE) volume rm rstory-tools-cargo rstory-tools-target
+	-$(ENGINE) volume rm rstory-tools-cargo $(TARGET_VOLUME)
