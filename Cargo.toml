@@ -57,6 +57,10 @@ required-features = ["session-tests"]
 name = "bridge_capture"
 required-features = ["session-tests"]
 
+[[test]]
+name = "wayland_probe"
+required-features = ["session-tests"]
+
 [[bench]]
 name = "store"
 harness = false
