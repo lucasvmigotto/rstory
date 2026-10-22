@@ -245,10 +245,18 @@ impl<F: Fs> Store<F> {
 
 const TMP_PREFIX: &str = ".tmp-";
 
+/// Creates `path` when missing and syncs its parent, so the new directory entry is durable.
 fn ensure_dir<F: Fs>(fs: &F, path: &Path) -> io::Result<()> {
     match fs.mode(path) {
         Ok(_) => Ok(()),
-        Err(e) if e.kind() == io::ErrorKind::NotFound => fs.create_dir_all(path, perms::DIR_MODE),
+        Err(e) if e.kind() == io::ErrorKind::NotFound => {
+            fs.create_dir_all(path, perms::DIR_MODE)?;
+            match path.parent() {
+                Some(p) if p.as_os_str().is_empty() => fs.sync_dir(Path::new(".")),
+                Some(parent) => fs.sync_dir(parent),
+                None => Ok(()),
+            }
+        }
         Err(e) => Err(e),
     }
 }
