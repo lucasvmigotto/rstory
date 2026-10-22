@@ -209,4 +209,16 @@ mod tests {
             commit(&RealFs, t.path(), &Index::default()).unwrap();
         }
     }
+
+    #[test]
+    fn stale_temp_does_not_block_commit() {
+        let t = tempfile::tempdir().unwrap();
+        let tmp = t.path().join(INDEX_TMP);
+        let mut f = RealFs.create_new(&tmp, 0o600).unwrap();
+        f.write_all(b"leftover from a failed cleanup").unwrap();
+        drop(f);
+        commit(&RealFs, t.path(), &sample()).unwrap();
+        assert_eq!(load(&RealFs, t.path()).unwrap().unwrap(), sample());
+        assert!(!tmp.exists());
+    }
 }

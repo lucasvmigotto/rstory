@@ -38,6 +38,8 @@ pub trait Fs {
     fn remove_file(&self, path: &Path) -> io::Result<()>;
     /// Lists the entries of a directory as full paths, sorted.
     fn read_dir(&self, path: &Path) -> io::Result<Vec<PathBuf>>;
+    /// Returns the size of a file in bytes.
+    fn len(&self, path: &Path) -> io::Result<u64>;
     /// Returns the permission bits (`mode & 0o7777`) of a path.
     fn mode(&self, path: &Path) -> io::Result<u32>;
     /// Sets the permission bits of a path.
@@ -105,6 +107,10 @@ impl Fs for RealFs {
         Ok(v)
     }
 
+    fn len(&self, path: &Path) -> io::Result<u64> {
+        Ok(fs::metadata(path)?.len())
+    }
+
     fn mode(&self, path: &Path) -> io::Result<u32> {
         Ok(fs::metadata(path)?.mode() & 0o7777)
     }
@@ -122,6 +128,8 @@ pub enum Fault {
     /// Power loss: that call and every later mutation is skipped (and returns an error);
     /// reads keep working so the on-disk state can be inspected and reopened.
     Crash,
+    /// Power loss: like `Crash`, and whatever was not made durable is rolled back.
+    PowerLoss,
 }
 
 #[derive(Debug)]
@@ -149,7 +157,7 @@ impl FaultState {
                 n + 1
             ))),
             Fault::Fail => Ok(()),
-            Fault::Crash => {
+            Fault::Crash | Fault::PowerLoss => {
                 self.crashed.store(true, Ordering::SeqCst);
                 Err(crash_error(what))
             }
@@ -162,6 +170,27 @@ fn crash_error(what: &str) -> io::Error {
         io::ErrorKind::BrokenPipe,
         format!("simulated crash before {what}"),
     )
+}
+
+/// A mutating call, as recorded by [`FaultFs::trace`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Op {
+    /// `create_dir_all`
+    CreateDirAll(PathBuf),
+    /// `create_new`
+    CreateNew(PathBuf),
+    /// `write_all` on the file at this path
+    WriteAll(PathBuf),
+    /// `sync_all` on the file at this path
+    SyncAll(PathBuf),
+    /// `rename(from, to)`
+    Rename(PathBuf, PathBuf),
+    /// `sync_dir`
+    SyncDir(PathBuf),
+    /// `remove_file`
+    RemoveFile(PathBuf),
+    /// `set_mode`
+    SetMode(PathBuf),
 }
 
 /// Wraps [`RealFs`] and injects a fault after the N-th mutating call.
@@ -187,6 +216,23 @@ impl FaultFs {
                 crashed: AtomicBool::new(false),
             }),
         }
+    }
+
+    /// A pass-through that only records: never faults.
+    #[must_use]
+    pub fn recording() -> Self {
+        Self::new(u64::MAX, Fault::Crash)
+    }
+
+    /// The mutating calls that were allowed to run, in order.
+    #[must_use]
+    pub fn trace(&self) -> Vec<Op> {
+        Vec::new()
+    }
+
+    /// Simulates the machine dying now (after the last call).
+    pub fn power_off(&self) {
+        self.state.crashed.store(true, Ordering::SeqCst);
     }
 
     /// Number of mutating calls attempted so far (including the faulted ones).
@@ -259,6 +305,10 @@ impl Fs for FaultFs {
 
     fn read_dir(&self, path: &Path) -> io::Result<Vec<PathBuf>> {
         self.inner.read_dir(path)
+    }
+
+    fn len(&self, path: &Path) -> io::Result<u64> {
+        self.inner.len(path)
     }
 
     fn mode(&self, path: &Path) -> io::Result<u32> {

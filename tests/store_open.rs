@@ -121,3 +121,32 @@ fn reopen_keeps_entries_newest_first() {
     let ids: Vec<_> = s.entries().iter().map(|e| e.id).collect();
     assert_eq!(ids, [b, a]);
 }
+
+#[test]
+fn torn_content_file_drops_its_row_and_is_unlinked() {
+    let t = tempfile::tempdir().unwrap();
+    let dir = t.path().join("s");
+    let (a, b) = {
+        let mut s = open(&dir).unwrap();
+        (
+            insert(&mut s, "one: a longer text", 1),
+            insert(&mut s, "two", 2),
+        )
+    };
+    // A power loss left the first content file shorter than its row says.
+    let f = fs::OpenOptions::new()
+        .write(true)
+        .open(dir.join("content").join(a.to_string()))
+        .unwrap();
+    f.set_len(3).unwrap();
+    drop(f);
+
+    {
+        let s = open(&dir).unwrap();
+        let ids: Vec<_> = s.entries().iter().map(|e| e.id).collect();
+        assert_eq!(ids, [b]);
+    }
+    assert!(!dir.join("content").join(a.to_string()).exists());
+    let raw = fs::read_to_string(dir.join("index.json")).unwrap();
+    assert!(!raw.contains(&a.to_string()));
+}
