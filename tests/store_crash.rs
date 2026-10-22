@@ -128,3 +128,20 @@ proptest! {
         }
     }
 }
+
+#[test]
+fn a_brand_new_store_survives_power_loss_right_after_its_first_insert() {
+    let tmp = tempfile::tempdir().unwrap();
+    let dir = tmp.path().join("store");
+    let fs = FaultFs::new(u64::MAX, Fault::PowerLoss);
+    let acked = workload(&dir, &fs, 1);
+    assert_eq!(acked.len(), 1);
+    fs.power_off();
+    let store = Store::open_exclusive(&dir, Caps::default(), RealFs).unwrap();
+    assert_eq!(
+        store.entries().len(),
+        1,
+        "the store's own directory entry must be durable"
+    );
+    assert_eq!(store.content(&acked[0].0).unwrap(), acked[0].1);
+}

@@ -64,6 +64,9 @@ impl Op {
 /// A directory-entry change that is not durable until the directory is synced.
 #[derive(Debug)]
 enum DirOp {
+    /// A directory was created; undo removes it with everything below it (its own entry was
+    /// never made durable, so neither was anything inside).
+    CreateDir { path: PathBuf },
     /// A file was created; undo removes it.
     Create { path: PathBuf },
     /// A file was renamed over `to`, whose durable content was `replaced`; undo renames back
@@ -83,7 +86,9 @@ enum DirOp {
 impl DirOp {
     fn dir(&self) -> Option<&Path> {
         match self {
-            Self::Create { path } | Self::Remove { path, .. } => path.parent(),
+            Self::CreateDir { path } | Self::Create { path } | Self::Remove { path, .. } => {
+                path.parent()
+            }
             Self::Rename { to, .. } => to.parent(),
         }
     }
@@ -118,6 +123,9 @@ impl Journal {
         }
         while let Some(op) = self.dir_ops.pop() {
             match op {
+                DirOp::CreateDir { path } => {
+                    let _ = fs::remove_dir_all(path);
+                }
                 DirOp::Create { path } => {
                     let _ = fs::remove_file(path);
                 }
@@ -212,12 +220,13 @@ fn crash_error(what: &str) -> io::Error {
 ///
 /// - file data written since the file's last `sync_all` is truncated away (a file never synced
 ///   ends up empty, if its directory entry survives at all);
-/// - directory-entry changes (`create_new`, `rename`, `remove_file`) not followed by `sync_dir`
+/// - directory-entry changes (`create_dir_all` of a new final directory, `create_new`, `rename`,
+///   `remove_file`) not followed by `sync_dir`
 ///   of their directory are reverted: an unsynced create disappears, an unsynced rename goes
 ///   back to the old name and the replaced file reappears with its durable content, an
 ///   unsynced unlink reappears with its durable content.
 ///
-/// Deliberately simple: `create_dir_all` and `set_mode` are treated as durable, a file handle
+/// Deliberately simple: parents created implicitly by `create_dir_all` and `set_mode` are treated as durable, a file handle
 /// is assumed to be dropped before its file is renamed, and renames stay inside one directory.
 /// That is all the store does.
 #[derive(Debug, Clone)]
@@ -306,7 +315,14 @@ impl Fs for FaultFs {
 
     fn create_dir_all(&self, path: &Path, mode: u32) -> io::Result<()> {
         self.state.gate(Op::CreateDirAll(path.to_path_buf()))?;
-        self.inner.create_dir_all(path, mode)
+        let existed = path.exists();
+        self.inner.create_dir_all(path, mode)?;
+        if !existed {
+            self.state.journal().dir_ops.push(DirOp::CreateDir {
+                path: path.to_path_buf(),
+            });
+        }
+        Ok(())
     }
 
     fn create_new(&self, path: &Path, mode: u32) -> io::Result<FaultFile> {
@@ -544,6 +560,23 @@ mod tests {
             !t.path().join("f.tmp").exists(),
             "unsynced create rolled back"
         );
+    }
+
+    #[test]
+    fn power_loss_removes_a_new_directory_whose_parent_was_not_synced() {
+        let t = tempfile::tempdir().unwrap();
+        let fs = FaultFs::new(u64::MAX, Fault::PowerLoss);
+        let (a, b) = (t.path().join("a"), t.path().join("b"));
+        fs.create_dir_all(&a, 0o700).unwrap();
+        fs.create_dir_all(&b, 0o700).unwrap();
+        write_file(&fs, &a.join("f"), b"x", true);
+        fs.sync_dir(&a).unwrap();
+        fs.sync_dir(t.path()).unwrap(); // makes both directory entries durable
+        let c = t.path().join("c");
+        fs.create_dir_all(&c, 0o700).unwrap();
+        fs.power_off();
+        assert!(a.join("f").exists() && b.exists());
+        assert!(!c.exists());
     }
 
     #[test]
