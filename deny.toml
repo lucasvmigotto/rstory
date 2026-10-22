@@ -32,12 +32,17 @@ deny = [
     { crate = "openssl" },
     { crate = "libdbus-sys" },
     { crate = "xcb" },
-    { crate = "wayland-sys" },
     { crate = "reqwest" },
     { crate = "hyper" },
     { crate = "ureq" },
     { crate = "native-tls" },
 ]
+
+# wayland-client's pure-Rust backend still lists wayland-sys as a dependency, but without
+# features it is type definitions only. Any feature that links or dlopen()s libwayland is banned.
+[[bans.features]]
+crate = "wayland-sys"
+deny = ["client", "server", "cursor", "egl", "dlopen"]
 
 [sources]
 unknown-registry = "deny"

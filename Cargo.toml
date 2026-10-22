@@ -22,8 +22,10 @@ path = "src/main.rs"
 default = []
 # Test-only: FaultFs and the power-loss model. Never enabled in release builds.
 fault-injection = []
-# Session tests (headless compositors); no tests yet.
+# Session tests: Xvfb and headless mutter (capture, serve, bridge mode); run by `make test-integration`.
 session-tests = []
+# Test doubles (FakeBackend) for other crates' tests; always on under cfg(test).
+testing = []
 
 # Tests that use FaultFs need the feature; without it they are skipped, not broken.
 [[test]]
@@ -47,17 +49,20 @@ blake3 = { version = "1.8.7", default-features = false, features = ["pure"] }
 crossterm = "0.29"
 rand = "0.10.3"
 ratatui = "0.30"
-rustix = { version = "1.1.5", features = ["fs"] }
+rustix = { version = "1.1.5", features = ["fs", "process"] }
 shell-words = "1.1.0"
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.154"
 thiserror = "2"
 time = { version = "0.3.55", features = ["serde", "serde-well-known", "formatting", "parsing", "macros"] }
+tokio = { version = "1.54.1", features = ["rt", "time", "net", "macros", "sync", "io-util"] }
 toml = "1.1.8"
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["fmt", "env-filter", "ansi"] }
 unicode-segmentation = "1"
 unicode-width = "0.2"
+wayland-client = "0.31.15"
+x11rb = { version = "0.14.0", default-features = false, features = ["xfixes"] }
 
 [dev-dependencies]
 insta = "1"
