@@ -3,7 +3,7 @@
 use std::io;
 
 use serde::Serialize;
-use tokio::io::AsyncRead;
+use tokio::io::{AsyncRead, AsyncReadExt};
 
 use super::protocol::MAX_LINE_BYTES;
 
@@ -53,20 +53,46 @@ impl<R: AsyncRead + Unpin> LineReader<R> {
     /// # Errors
     /// [`CodecError::TooLong`] when a line exceeds the limit, [`CodecError::Io`].
     pub async fn next_line(&mut self) -> Result<Option<Vec<u8>>, CodecError> {
-        let _ = (
-            &mut self.inner,
-            &mut self.buf,
-            self.scanned,
-            self.max,
-            CHUNK,
-        );
-        todo!("next_line")
+        loop {
+            if let Some(offset) = self.buf[self.scanned..].iter().position(|b| *b == b'\n') {
+                let end = self.scanned + offset;
+                let mut line: Vec<u8> = self.buf.drain(..=end).collect();
+                self.scanned = 0;
+                line.pop();
+                if line.last() == Some(&b'\r') {
+                    line.pop();
+                }
+                if line.len() > self.max {
+                    return Err(CodecError::TooLong);
+                }
+                if line.is_empty() {
+                    continue;
+                }
+                return Ok(Some(line));
+            }
+            self.scanned = self.buf.len();
+            if self.buf.len() > self.max {
+                return Err(CodecError::TooLong);
+            }
+            let mut chunk = [0u8; CHUNK];
+            let n = self.inner.read(&mut chunk).await?;
+            if n == 0 {
+                self.scanned = 0;
+                let mut rest = std::mem::take(&mut self.buf);
+                if rest.last() == Some(&b'\r') {
+                    rest.pop();
+                }
+                return Ok((!rest.is_empty()).then_some(rest));
+            }
+            self.buf.extend_from_slice(&chunk[..n]);
+        }
     }
 }
 
 /// Serializes `value` as one line, terminator included.
 #[must_use]
 pub fn encode<T: Serialize>(value: &T) -> Vec<u8> {
-    let _ = serde_json::to_vec(value);
-    todo!("encode")
+    let mut out = serde_json::to_vec(value).unwrap_or_else(|_| b"null".to_vec());
+    out.push(b'\n');
+    out
 }

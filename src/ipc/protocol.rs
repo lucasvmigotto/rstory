@@ -255,7 +255,6 @@ pub struct RequestError {
     pub error: ProtoError,
 }
 
-#[allow(dead_code)]
 fn fail<T>(id: u64, code: ErrorCode, message: &str) -> Result<T, RequestError> {
     Err(RequestError {
         id,
@@ -269,11 +268,39 @@ fn fail<T>(id: u64, code: ErrorCode, message: &str) -> Result<T, RequestError> {
 /// [`RequestError`] with `bad_request` (not JSON, not an object, no readable id, unknown op,
 /// invalid arguments) or `unsupported_version`.
 pub fn parse_request(line: &[u8]) -> Result<ParsedRequest, RequestError> {
-    let _ = line;
-    todo!("parse_request")
+    let Ok(value) = serde_json::from_slice::<Value>(line) else {
+        return fail(0, ErrorCode::BadRequest, "malformed JSON");
+    };
+    let Some(obj) = value.as_object() else {
+        return fail(0, ErrorCode::BadRequest, "a request is a JSON object");
+    };
+    let Some(id) = obj.get("id").and_then(Value::as_u64) else {
+        return fail(
+            0,
+            ErrorCode::BadRequest,
+            "id must be a non-negative integer",
+        );
+    };
+    match obj.get("v") {
+        Some(v) if v.as_u64() == Some(VERSION) => {}
+        Some(_) => return fail(id, ErrorCode::UnsupportedVersion, "only v 1 is supported"),
+        None => return fail(id, ErrorCode::BadRequest, "missing v"),
+    }
+    let Some(op) = obj.get("op").and_then(Value::as_str) else {
+        return fail(id, ErrorCode::BadRequest, "missing op");
+    };
+    let empty = Map::new();
+    let args = match obj.get("args") {
+        None | Some(Value::Null) => &empty,
+        Some(Value::Object(m)) => m,
+        Some(_) => return fail(id, ErrorCode::BadRequest, "args must be an object"),
+    };
+    match command(op, args) {
+        Ok(command) => Ok(ParsedRequest { id, command }),
+        Err(message) => fail(id, ErrorCode::BadRequest, &message),
+    }
 }
 
-#[allow(dead_code)]
 fn command(op: &str, args: &Map<String, Value>) -> Result<Command, String> {
     Ok(match op {
         "list" => Command::List {
@@ -340,7 +367,6 @@ fn command(op: &str, args: &Map<String, Value>) -> Result<Command, String> {
     })
 }
 
-#[allow(dead_code)]
 fn reference(args: &Map<String, Value>) -> Result<EntryRef, String> {
     let text = args
         .get("ref")
@@ -352,8 +378,19 @@ fn reference(args: &Map<String, Value>) -> Result<EntryRef, String> {
 /// Parses `^[0-9]+[smh]$` ("50s", "2m", "1h").
 #[must_use]
 pub fn parse_duration(text: &str) -> Option<Duration> {
-    let _ = text;
-    todo!("parse_duration")
+    let unit = text.chars().last()?;
+    let digits = text.get(..text.len() - 1)?;
+    if digits.is_empty() || !digits.bytes().all(|b| b.is_ascii_digit()) {
+        return None;
+    }
+    let n: u64 = digits.parse().ok()?;
+    let factor = match unit {
+        's' => 1,
+        'm' => 60,
+        'h' => 3600,
+        _ => return None,
+    };
+    n.checked_mul(factor).map(Duration::from_secs)
 }
 
 /// A success response.
