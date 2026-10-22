@@ -1,0 +1,19 @@
+---
+source: src/ui/tests.rs
+expression: out
+---
+# tier=16 width=40 ascii=true
+|Recording
+|Rec
+|Paused
+  ~ 0..6 fg=Yellow
+|Paused
+  ~ 0..6 fg=Yellow
+|Paused - resumes in 1:05
+  ~ 0..24 fg=Yellow
+|Paused
+  ~ 0..6 fg=Yellow
+|Inactive - no clipboard access
+  ~ 0..30 fg=Red
+|Inactive
+  ~ 0..8 fg=Red

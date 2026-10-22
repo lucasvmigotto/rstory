@@ -1,15 +1,66 @@
 //! Serializing styled lines for the CLI.
 
-use ratatui::text::Line;
+use ratatui::{
+    style::{Color, Modifier, Style},
+    text::Line,
+};
 
 /// The line's text with no styling.
-pub fn plain(_line: &Line<'_>) -> String {
-    todo!()
+pub fn plain(line: &Line<'_>) -> String {
+    line.spans.iter().map(|s| s.content.as_ref()).collect()
+}
+
+fn color_code(c: Color) -> Option<String> {
+    Some(match c {
+        Color::Reset => return None,
+        Color::Black => "30".into(),
+        Color::Red => "31".into(),
+        Color::Green => "32".into(),
+        Color::Yellow => "33".into(),
+        Color::Blue => "34".into(),
+        Color::Magenta => "35".into(),
+        Color::Cyan => "36".into(),
+        Color::Gray => "37".into(),
+        Color::DarkGray => "90".into(),
+        Color::LightRed => "91".into(),
+        Color::LightGreen => "92".into(),
+        Color::LightYellow => "93".into(),
+        Color::LightBlue => "94".into(),
+        Color::LightMagenta => "95".into(),
+        Color::LightCyan => "96".into(),
+        Color::White => "97".into(),
+        Color::Indexed(n) => format!("38;5;{n}"),
+        Color::Rgb(r, g, b) => format!("38;2;{r};{g};{b}"),
+    })
+}
+
+fn sgr(style: Style) -> String {
+    let mut codes = Vec::new();
+    codes.extend(style.fg.and_then(color_code));
+    for (m, code) in [
+        (Modifier::BOLD, "1"),
+        (Modifier::UNDERLINED, "4"),
+        (Modifier::REVERSED, "7"),
+    ] {
+        if style.add_modifier.contains(m) {
+            codes.push(code.to_string());
+        }
+    }
+    codes.join(";")
 }
 
 /// The line with SGR escapes. Mono-tier styles hold no colors, so none are emitted.
-pub fn ansi(_line: &Line<'_>) -> String {
-    todo!()
+pub fn ansi(line: &Line<'_>) -> String {
+    let mut out = String::new();
+    for span in &line.spans {
+        let codes = sgr(line.style.patch(span.style));
+        if codes.is_empty() {
+            out.push_str(&span.content);
+        } else {
+            out.push_str(&format!("\x1b[{codes}m{}\x1b[0m", span.content));
+        }
+    }
+    out
 }
 
 #[cfg(test)]

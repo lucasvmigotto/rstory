@@ -1,0 +1,15 @@
+---
+source: src/ui/tests.rs
+expression: out
+---
+# tier=16 width=80 ascii=false
+| > _                                                           14/14  Recording
+  ~ 1..2 fg=Cyan ; 3..4 fg=Cyan ; 63..68 fg=DarkGray
+| > reb_                                                         2/14  Recording
+  ~ 1..2 fg=Cyan ; 6..7 fg=Cyan ; 64..68 fg=DarkGray
+| > zzz_                                          0/14  Paused — resumes in 1:05
+  ~ 1..2 fg=Cyan ; 6..7 fg=Cyan ; 49..53 fg=DarkGray ; 55..79 fg=Yellow
+| > force-with-lease origin feature/a-very-long-branch-name-indeed_ 1/14  Paused
+  ~ 1..2 fg=Cyan ; 65..66 fg=Cyan ; 67..71 fg=DarkGray ; 73..79 fg=Yellow
+| > x_                                       3/3  Inactive — no clipboard access
+  ~ 1..2 fg=Cyan ; 4..5 fg=Cyan ; 44..47 fg=DarkGray ; 49..79 fg=Red

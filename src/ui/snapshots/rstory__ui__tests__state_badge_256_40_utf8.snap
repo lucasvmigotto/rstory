@@ -1,0 +1,19 @@
+---
+source: src/ui/tests.rs
+expression: out
+---
+# tier=256 width=40 ascii=false
+|Recording
+|Rec
+|Paused
+  ~ 0..6 fg=idx178
+|Paused
+  ~ 0..6 fg=idx178
+|Paused — resumes in 1:05
+  ~ 0..24 fg=idx178
+|Paused
+  ~ 0..6 fg=idx178
+|Inactive — no clipboard access
+  ~ 0..30 fg=idx160
+|Inactive
+  ~ 0..8 fg=idx160

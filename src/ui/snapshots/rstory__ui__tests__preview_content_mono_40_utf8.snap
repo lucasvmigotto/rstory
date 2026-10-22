@@ -1,0 +1,14 @@
+---
+source: src/ui/tests.rs
+expression: out
+---
+# tier=mono width=40 ascii=false
+|│ fn main() {
+|│ \tprintln!("hello");
+|│ }
+|│ 日本語のテキストと、とても長い一行が折
+|│ り返されます。
+|│ A long line of plain words that has to
+|│  wrap at the width of the pane.
+|│
+|│ 182 B

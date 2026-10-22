@@ -1,0 +1,15 @@
+---
+source: src/ui/tests.rs
+expression: out
+---
+# tier=16 width=40 ascii=true
+|[0]   a1b2c3       3m  https://github...
+  ~ 6..12 fg=DarkGray ; 13..16 fg=Yellow ; 17..21 fg=DarkGray
+|[1]   d4e5f6 [p]   2h  git reset --so...
+  ~ 6..12 fg=DarkGray ; 13..16 fg=Yellow ; 17..21 fg=DarkGray
+|[12]  0a0b0c       5d  日本語のテキス...
+  ~ 6..12 fg=DarkGray ; 13..16 fg=Yellow ; 17..21 fg=DarkGray
+# piped
+0	a1b2c3		3m	https://github.com/lucasvmigotto/rstory
+1	d4e5f6	pinned	2h	git reset --soft HEAD~1 && git push --force-with-lease origin main
+12	0a0b0c		5d	日本語のテキスト\tand\nmore

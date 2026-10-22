@@ -1,0 +1,17 @@
+---
+source: src/ui/tests.rs
+expression: out
+---
+# tier=256 width=80 ascii=true
+|     3m     https://github.com/lucasvmigotto/rstory
+  ~ 3..7 fg=idx245
+| >  now     cargo test -p rstory --test daemon_restore
+  ~ 0..3 REV ; 3..7 fg=idx245 REV ; 7..80 REV
+|     2h [p] git reset --soft HEAD~1 && git push --force-with-lease
+  ~ 3..7 fg=idx245 ; 8..11 fg=idx178
+|     3m     git rebase -i HEAD~3
+  ~ 3..7 fg=idx245 ; 16..19 fg=idx37 BOLD UL
+| >   5d [p] git rebase -i HEAD~3
+  ~ 0..3 REV ; 3..7 fg=idx245 REV ; 7..8 REV ; 8..11 fg=idx178 REV ; 11..16 REV ; 16..19 fg=idx37 REV BOLD UL ; 19..80 REV
+|     1d     日本語のテキスト\tline\nsecond énd
+  ~ 3..7 fg=idx245 ; 12..13 fg=idx37 BOLD UL

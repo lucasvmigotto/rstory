@@ -1,0 +1,23 @@
+---
+source: src/ui/tests.rs
+expression: out
+---
+# tier=16 width=80 ascii=true
+|| fn main() {
+  ~ 0..1 fg=DarkGray
+|| \tprintln!("hello");
+  ~ 0..1 fg=DarkGray
+|| }
+  ~ 0..1 fg=DarkGray
+|| 日本語のテキストと、とても長い一行が折り返されます。
+  ~ 0..1 fg=DarkGray
+|| A long line of plain words that has to wrap at the width of the pane.
+  ~ 0..1 fg=DarkGray
+||
+  ~ 0..1 fg=DarkGray
+||
+  ~ 0..1 fg=DarkGray
+||
+  ~ 0..1 fg=DarkGray
+|| 182 B
+  ~ 0..1 fg=DarkGray ; 2..7 fg=DarkGray

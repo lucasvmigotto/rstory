@@ -10,24 +10,24 @@ description: "Task list for the terminal & menu design system"
 
 ### Phase 1: Setup
 
-- [ ] T001 [TUI] Add ratatui, crossterm, unicode-width, insta; create `src/ui/mod.rs` — Executor: builder · Reviewer: thinker · Effort: low
+- [x] T001 [TUI] Add ratatui, crossterm, unicode-width, insta; create `src/ui/mod.rs` — Executor: builder · Reviewer: thinker · Effort: low
 
 **Checkpoint**: `cargo build` green.
 
 ### Phase 2: Foundational
 
-- [ ] T002 [P] [TUI] Snapshot test harness rendering a component at (tier, width, ascii) combinations in `src/ui/tests.rs` — Executor: builder · Reviewer: thinker
-- [ ] T003 [TUI] Theme detection (NO_COLOR, TERM=dumb, COLORTERM, config `theme`) + roles × tiers in `src/ui/theme.rs` with unit tests — Executor: builder · Reviewer: thinker
-- [ ] T004 [P] [TUI] Glyphs with ASCII fallback + locale detection in `src/ui/glyphs.rs` — Executor: builder · Reviewer: thinker · Effort: low
-- [ ] T005 [P] [TUI] Copy constants keyed per ux-vision in `src/ui/copy.rs` (a test asserts every ux-vision key exists) — Executor: builder · Reviewer: thinker · Effort: low
+- [x] T002 [P] [TUI] Snapshot test harness rendering a component at (tier, width, ascii) combinations in `src/ui/tests.rs` — Executor: builder · Reviewer: thinker
+- [x] T003 [TUI] Theme detection (NO_COLOR, TERM=dumb, COLORTERM, config `theme`) + roles × tiers in `src/ui/theme.rs` with unit tests — Executor: builder · Reviewer: thinker
+- [x] T004 [P] [TUI] Glyphs with ASCII fallback + locale detection in `src/ui/glyphs.rs` — Executor: builder · Reviewer: thinker · Effort: low
+- [x] T005 [P] [TUI] Copy constants keyed per ux-vision in `src/ui/copy.rs` (a test asserts every ux-vision key exists) — Executor: builder · Reviewer: thinker · Effort: low
 
 **Checkpoint**: theme, glyph and copy tests pass.
 
 ### Phase 3: User Story 1 - Consistent surfaces (P1) 🎯 MVP
 
-- [ ] T006 [P] [US1] [TUI] Snapshots first: QueryLine, EntryRow, PreviewPane, Footer, Banner, StateBadge in every tier and ASCII at 80/40 cols — Executor: builder · Reviewer: thinker
-- [ ] T007 [US1] [TUI] Implement widgets in `src/ui/widgets/*.rs` until the snapshots pass — Executor: builder · Reviewer: thinker
-- [ ] T008 [P] [US1] [CLI] Snapshots first, then `EntryLine` and `CheckLine` renderers in `src/ui/widgets/{entry_line,check_line}.rs` — Executor: builder · Reviewer: thinker
+- [x] T006 [P] [US1] [TUI] Snapshots first: QueryLine, EntryRow, PreviewPane, Footer, Banner, StateBadge in every tier and ASCII at 80/40 cols — Executor: builder · Reviewer: thinker
+- [x] T007 [US1] [TUI] Implement widgets in `src/ui/widgets/*.rs` until the snapshots pass — Executor: builder · Reviewer: thinker
+- [x] T008 [P] [US1] [CLI] Snapshots first, then `EntryLine` and `CheckLine` renderers in `src/ui/widgets/{entry_line,check_line}.rs` — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: SC-001. All component snapshots reviewed (`cargo insta review`).
 

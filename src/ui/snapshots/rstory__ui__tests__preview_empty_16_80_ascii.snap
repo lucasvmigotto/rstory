@@ -1,0 +1,13 @@
+---
+source: src/ui/tests.rs
+expression: out
+---
+# tier=16 width=80 ascii=true
+||
+  ~ 0..1 fg=DarkGray
+||
+  ~ 0..1 fg=DarkGray
+||
+  ~ 0..1 fg=DarkGray
+||
+  ~ 0..1 fg=DarkGray

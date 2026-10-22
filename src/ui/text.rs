@@ -1,6 +1,9 @@
 //! One-line text helpers: escaping, display width and truncation.
 
-use super::glyphs::Glyphs;
+use unicode_segmentation::UnicodeSegmentation;
+use unicode_width::UnicodeWidthStr;
+
+use super::glyphs::{Glyph, Glyphs};
 
 /// A display unit: one grapheme, or the escape sequence of a control character.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -10,34 +13,119 @@ pub struct Seg {
     pub matched: bool,
 }
 
-pub fn display_width(_s: &str) -> usize {
-    todo!()
+pub fn display_width(s: &str) -> usize {
+    UnicodeWidthStr::width(s)
+}
+
+fn escape_char(c: char, glyphs: &Glyphs, out: &mut String) {
+    match c {
+        '\n' => out.push_str(glyphs.get(Glyph::Newline)),
+        '\t' => out.push_str("\\t"),
+        '\r' => out.push_str("\\r"),
+        c if (c as u32) < 0x100 => out.push_str(&format!("\\x{:02x}", c as u32)),
+        c => out.push_str(&format!("\\u{{{:x}}}", c as u32)),
+    }
 }
 
 /// Splits `text` into display units. Control characters are escaped; `matches`
 /// are grapheme indexes into `text` to mark.
-pub fn segments(_text: &str, _glyphs: &Glyphs, _matches: &[usize]) -> Vec<Seg> {
-    todo!()
+pub fn segments(text: &str, glyphs: &Glyphs, matches: &[usize]) -> Vec<Seg> {
+    text.graphemes(true)
+        .enumerate()
+        .map(|(i, g)| {
+            let shown = if g.chars().any(char::is_control) {
+                let mut s = String::new();
+                for c in g.chars() {
+                    if c.is_control() {
+                        escape_char(c, glyphs, &mut s);
+                    } else {
+                        s.push(c);
+                    }
+                }
+                s
+            } else {
+                g.to_string()
+            };
+            Seg {
+                width: display_width(&shown),
+                text: shown,
+                matched: matches.contains(&i),
+            }
+        })
+        .collect()
 }
 
 /// Total display width of the segments.
-pub fn segs_width(_segs: &[Seg]) -> usize {
-    todo!()
+pub fn segs_width(segs: &[Seg]) -> usize {
+    segs.iter().map(|s| s.width).sum()
 }
 
 /// Cuts to `max` cells at a unit boundary, ending in the ellipsis glyph when cut.
-pub fn truncate(_segs: Vec<Seg>, _max: usize, _glyphs: &Glyphs) -> Vec<Seg> {
-    todo!()
+pub fn truncate(segs: Vec<Seg>, max: usize, glyphs: &Glyphs) -> Vec<Seg> {
+    if segs_width(&segs) <= max {
+        return segs;
+    }
+    let ellipsis = glyphs.get(Glyph::Ellipsis);
+    let ew = display_width(ellipsis);
+    let (budget, tail) = if ew <= max {
+        (max - ew, ellipsis.to_string())
+    } else {
+        let mut t = String::new();
+        for c in ellipsis.chars() {
+            if display_width(&t) + display_width(c.encode_utf8(&mut [0; 4])) <= max {
+                t.push(c);
+            }
+        }
+        (0, t)
+    };
+    let mut used = 0;
+    let mut out = Vec::new();
+    if ew <= max {
+        for s in segs {
+            if used + s.width > budget {
+                break;
+            }
+            used += s.width;
+            out.push(s);
+        }
+    }
+    if !tail.is_empty() {
+        out.push(Seg {
+            width: display_width(&tail),
+            text: tail,
+            matched: false,
+        });
+    }
+    out
 }
 
 /// Escapes control characters and truncates to `max` cells.
-pub fn one_line(_text: &str, _max: usize, _glyphs: &Glyphs) -> String {
-    todo!()
+pub fn one_line(text: &str, max: usize, glyphs: &Glyphs) -> String {
+    let segs = truncate(segments(text, glyphs, &[]), max, glyphs);
+    segs.iter().map(|s| s.text.as_str()).collect()
 }
 
 /// Hard-wraps to `width` cells, keeping real newlines as line breaks.
-pub fn wrap(_text: &str, _width: usize, _glyphs: &Glyphs) -> Vec<String> {
-    todo!()
+pub fn wrap(text: &str, width: usize, glyphs: &Glyphs) -> Vec<String> {
+    if width == 0 {
+        return Vec::new();
+    }
+    let text = text.replace("\r\n", "\n");
+    let mut out = Vec::new();
+    for line in text.split('\n') {
+        let mut cur = String::new();
+        let mut w = 0;
+        for seg in segments(line, glyphs, &[]) {
+            if w + seg.width > width && w > 0 {
+                out.push(std::mem::take(&mut cur));
+                w = 0;
+            }
+            cur.push_str(&seg.text);
+            w += seg.width;
+        }
+        out.push(cur);
+    }
+    out
 }
 
 #[cfg(test)]

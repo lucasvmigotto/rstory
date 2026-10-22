@@ -1,0 +1,13 @@
+---
+source: src/ui/tests.rs
+expression: out
+---
+# tier=mono width=40 ascii=false
+|Recording
+|Rec
+|Paused
+|Paused
+|Paused — resumes in 1:05
+|Paused
+|Inactive — no clipboard access
+|Inactive

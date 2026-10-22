@@ -2,7 +2,7 @@
 
 use std::str::FromStr;
 
-use ratatui::style::Style;
+use ratatui::style::{Color, Modifier, Style};
 
 /// How much color the terminal gets.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -18,7 +18,12 @@ impl Tier {
 
     /// Stable name used in snapshot names.
     pub fn name(self) -> &'static str {
-        todo!()
+        match self {
+            Tier::Mono => "mono",
+            Tier::Ansi16 => "16",
+            Tier::Ansi256 => "256",
+            Tier::TrueColor => "truecolor",
+        }
     }
 }
 
@@ -38,8 +43,13 @@ pub struct UnknownTheme;
 impl FromStr for ThemePref {
     type Err = UnknownTheme;
 
-    fn from_str(_s: &str) -> Result<Self, Self::Err> {
-        todo!()
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "terminal" => Ok(Self::Terminal),
+            "rstory" => Ok(Self::Rstory),
+            "mono" => Ok(Self::Mono),
+            _ => Err(UnknownTheme),
+        }
     }
 }
 
@@ -84,17 +94,39 @@ pub struct TermEnv {
 
 impl TermEnv {
     pub fn from_process() -> Self {
-        todo!()
+        Self::from_vars(|k| std::env::var(k).ok())
     }
 
-    pub fn from_vars(_get: impl Fn(&str) -> Option<String>) -> Self {
-        todo!()
+    pub fn from_vars(get: impl Fn(&str) -> Option<String>) -> Self {
+        Self {
+            no_color: get("NO_COLOR").is_some_and(|v| !v.is_empty()),
+            term: get("TERM"),
+            colorterm: get("COLORTERM"),
+        }
     }
 }
 
 /// Picks the tier from the config preference and the environment.
-pub fn detect_tier(_pref: ThemePref, _env: &TermEnv) -> Tier {
-    todo!()
+///
+/// `NO_COLOR`, `TERM=dumb` and `theme = "mono"` give [`Tier::Mono`]. The default
+/// `terminal` theme is the 16-color tier. `rstory` opts in to truecolor when
+/// `COLORTERM` says so, else 256 colors when `TERM` names them.
+pub fn detect_tier(pref: ThemePref, env: &TermEnv) -> Tier {
+    let term = env.term.as_deref().unwrap_or("");
+    if env.no_color || term == "dumb" || pref == ThemePref::Mono {
+        return Tier::Mono;
+    }
+    if pref == ThemePref::Terminal {
+        return Tier::Ansi16;
+    }
+    let colorterm = env.colorterm.as_deref().unwrap_or("").to_ascii_lowercase();
+    if colorterm == "truecolor" || colorterm == "24bit" {
+        Tier::TrueColor
+    } else if term.contains("256color") {
+        Tier::Ansi256
+    } else {
+        Tier::Ansi16
+    }
 }
 
 /// A tier plus a background: everything needed to style a role.
@@ -117,8 +149,36 @@ impl Theme {
         self.tier
     }
 
-    pub fn style(&self, _role: Role) -> Style {
-        todo!()
+    pub fn style(&self, role: Role) -> Style {
+        match role {
+            Role::Selected => return Style::new().add_modifier(Modifier::REVERSED),
+            Role::Accent if self.tier == Tier::Mono => {
+                return Style::new().add_modifier(Modifier::BOLD | Modifier::UNDERLINED);
+            }
+            _ if self.tier == Tier::Mono => return Style::new(),
+            _ => {}
+        }
+        let dark = self.background == Background::Dark;
+        let rgb = |d: (u8, u8, u8), l: (u8, u8, u8)| {
+            let (r, g, b) = if dark { d } else { l };
+            Color::Rgb(r, g, b)
+        };
+        let color = match (role, self.tier) {
+            (Role::Accent, Tier::Ansi16) => Color::Cyan,
+            (Role::Accent, Tier::Ansi256) => Color::Indexed(37),
+            (Role::Accent, _) => rgb((0x2A, 0xA1, 0x98), (0x1F, 0x7A, 0x73)),
+            (Role::Muted, Tier::Ansi16) => Color::DarkGray,
+            (Role::Muted, Tier::Ansi256) => Color::Indexed(245),
+            (Role::Muted, _) => rgb((0x8A, 0x8A, 0x8A), (0x6C, 0x6C, 0x6C)),
+            (Role::Pinned | Role::Warning, Tier::Ansi16) => Color::Yellow,
+            (Role::Pinned | Role::Warning, Tier::Ansi256) => Color::Indexed(178),
+            (Role::Pinned | Role::Warning, _) => rgb((0xD7, 0xAF, 0x00), (0x8A, 0x6D, 0x00)),
+            (Role::Danger, Tier::Ansi16) => Color::Red,
+            (Role::Danger, Tier::Ansi256) => Color::Indexed(160),
+            (Role::Danger, _) => rgb((0xD7, 0x00, 0x00), (0xAF, 0x00, 0x00)),
+            (Role::Selected, _) => unreachable!("handled above"),
+        };
+        Style::new().fg(color)
     }
 }
 

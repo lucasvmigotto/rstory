@@ -1,0 +1,17 @@
+---
+source: src/ui/tests.rs
+expression: out
+---
+# tier=256 width=40 ascii=false
+|     3m    https://github.com/lucasvmig…
+  ~ 3..7 fg=idx245
+| >  now    cargo test -p rstory --test …
+  ~ 0..3 REV ; 3..7 fg=idx245 REV ; 7..40 REV
+|     2h 📌 git reset --soft HEAD~1 && g…
+  ~ 3..7 fg=idx245 ; 8..9 fg=idx178
+|     3m    git rebase -i HEAD~3
+  ~ 3..7 fg=idx245 ; 15..18 fg=idx37 BOLD UL
+| >   5d 📌 git rebase -i HEAD~3
+  ~ 0..3 REV ; 3..7 fg=idx245 REV ; 7..8 REV ; 8..9 fg=idx178 REV ; 10..15 REV ; 15..18 fg=idx37 REV BOLD UL ; 18..40 REV
+|     1d    日本語のテキスト\tline⏎secon…
+  ~ 3..7 fg=idx245 ; 11..12 fg=idx37 BOLD UL

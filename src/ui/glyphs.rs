@@ -2,6 +2,8 @@
 
 use std::borrow::Cow;
 
+use unicode_width::UnicodeWidthStr;
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Glyph {
     Pin,
@@ -43,18 +45,30 @@ pub struct LocaleEnv {
 
 impl LocaleEnv {
     pub fn from_process() -> Self {
-        todo!()
+        let get = |k: &str| std::env::var(k).ok();
+        Self {
+            lc_all: get("LC_ALL"),
+            lc_ctype: get("LC_CTYPE"),
+            lang: get("LANG"),
+        }
     }
 
     /// The first non-empty of `LC_ALL`, `LC_CTYPE`, `LANG` names a UTF-8 charset.
     pub fn is_utf8(&self) -> bool {
-        todo!()
+        let first = [&self.lc_all, &self.lc_ctype, &self.lang]
+            .into_iter()
+            .flatten()
+            .find(|v| !v.is_empty());
+        first.is_some_and(|v| {
+            let v = v.to_ascii_lowercase();
+            v.contains("utf-8") || v.contains("utf8")
+        })
     }
 }
 
 /// ASCII mode: the explicit `--ascii` flag wins, else a non-UTF-8 locale.
-pub fn ascii_mode(_flag: bool, _locale: &LocaleEnv) -> bool {
-    todo!()
+pub fn ascii_mode(flag: bool, locale: &LocaleEnv) -> bool {
+    flag || !locale.is_utf8()
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -71,18 +85,39 @@ impl Glyphs {
         self.ascii
     }
 
-    pub fn get(&self, _glyph: Glyph) -> &'static str {
-        todo!()
+    pub fn get(&self, glyph: Glyph) -> &'static str {
+        let (unicode, ascii) = match glyph {
+            Glyph::Pin => ("📌", "[p]"),
+            Glyph::VBar => ("│", "|"),
+            Glyph::HRule => ("─", "-"),
+            Glyph::Ellipsis => ("…", "..."),
+            Glyph::Newline => ("⏎", "\\n"),
+            Glyph::Ok => ("✓", "ok"),
+            Glyph::Info => ("i", "info"),
+            Glyph::Warn => ("!", "warn"),
+            Glyph::Fail => ("✗", "FAIL"),
+            Glyph::Arrow => ("→", "->"),
+            Glyph::Select => (">", ">"),
+        };
+        if self.ascii { ascii } else { unicode }
     }
 
     /// Display width of a glyph in the current mode.
-    pub fn width(&self, _glyph: Glyph) -> usize {
-        todo!()
+    pub fn width(&self, glyph: Glyph) -> usize {
+        UnicodeWidthStr::width(self.get(glyph))
     }
 
     /// Copy text with its non-ASCII punctuation replaced in ASCII mode.
-    pub fn text<'a>(&self, _s: &'a str) -> Cow<'a, str> {
-        todo!()
+    pub fn text<'a>(&self, s: &'a str) -> Cow<'a, str> {
+        if !self.ascii || s.is_ascii() {
+            return Cow::Borrowed(s);
+        }
+        Cow::Owned(
+            s.replace('…', "...")
+                .replace('—', "-")
+                .replace('×', "x")
+                .replace('→', "->"),
+        )
     }
 }
 

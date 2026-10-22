@@ -1,0 +1,9 @@
+---
+source: src/ui/tests.rs
+expression: out
+---
+# tier=mono width=80 ascii=false
+|│
+|│
+|│
+|│

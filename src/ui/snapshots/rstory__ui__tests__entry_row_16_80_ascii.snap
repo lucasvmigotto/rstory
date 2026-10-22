@@ -1,0 +1,17 @@
+---
+source: src/ui/tests.rs
+expression: out
+---
+# tier=16 width=80 ascii=true
+|     3m     https://github.com/lucasvmigotto/rstory
+  ~ 3..7 fg=DarkGray
+| >  now     cargo test -p rstory --test daemon_restore
+  ~ 0..3 REV ; 3..7 fg=DarkGray REV ; 7..80 REV
+|     2h [p] git reset --soft HEAD~1 && git push --force-with-lease
+  ~ 3..7 fg=DarkGray ; 8..11 fg=Yellow
+|     3m     git rebase -i HEAD~3
+  ~ 3..7 fg=DarkGray ; 16..19 fg=Cyan BOLD UL
+| >   5d [p] git rebase -i HEAD~3
+  ~ 0..3 REV ; 3..7 fg=DarkGray REV ; 7..8 REV ; 8..11 fg=Yellow REV ; 11..16 REV ; 16..19 fg=Cyan REV BOLD UL ; 19..80 REV
+|     1d     日本語のテキスト\tline\nsecond énd
+  ~ 3..7 fg=DarkGray ; 12..13 fg=Cyan BOLD UL
