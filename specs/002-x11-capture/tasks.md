@@ -85,7 +85,7 @@ description: "Task list for Session detection & X11 capture"
 ## Phase 6: Polish & Cross-Cutting
 
 - [ ] T011 Record GNOME 48–51 manual check steps (GUI-app copies, brief Q7) in `docs/release.md` draft — Executor: builder · Reviewer: thinker · Effort: low
-- [ ] T012 Run quickstart.md validation — Executor: scout · Reviewer: thinker · Effort: low
+- [x] T012 Run quickstart.md validation — Executor: scout · Reviewer: thinker · Effort: low
 - [ ] T013 QA tasks — see `## QA` (appended by `qa:strategy`) — Executor: thinker · Reviewer: reviewer · Effort: high
 
 ---
