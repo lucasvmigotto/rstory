@@ -348,7 +348,8 @@ impl Engine {
                 time,
                 targets: TargetsState::None,
             };
-            self.serve.clear();
+            // Serving ends on SelectionClear, not here: this notification may predate our own
+            // SetSelectionOwner (the previous owner exiting just before a restore).
             self.emit(BackendEvent::SelectionCleared);
         } else if owner == self.win {
             if self.serve.active() {
