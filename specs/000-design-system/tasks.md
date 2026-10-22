@@ -33,8 +33,8 @@ description: "Task list for the terminal & menu design system"
 
 ### Phase 4: User Story 2 - Icons (P2)
 
-- [ ] T009 [US2] Draw the symbolic SVGs (recording: clipboard + 3 lines; paused: clipboard + 2 bars; disconnected: clipboard + slash) in `assets/icons/` — Executor: thinker · Reviewer: reviewer · Effort: high
-- [ ] T010 [US2] Render PNGs 16/22/24/32/48 light/dark into `assets/icons/png/`; review checklist at 16 px mono (SC-002) — Executor: builder · Reviewer: thinker · Effort: low
+- [x] T009 [US2] Draw the symbolic SVGs (recording: clipboard + 3 lines; paused: clipboard + 2 bars; disconnected: clipboard + slash) in `assets/icons/` — Executor: thinker · Reviewer: reviewer · Effort: high
+- [x] T010 [US2] Render PNGs 16/22/24/32/48 light/dark into `assets/icons/png/`; review checklist at 16 px mono (SC-002) — Executor: builder · Reviewer: thinker · Effort: low
 
 **Checkpoint**: the icon review checklist is ticked in the PR description.
 
