@@ -17,6 +17,10 @@
 - Q: Do pinned entries count toward the 20-entry cap? → A: Yes, 20 in total. Pins count, but the cap only ever evicts unpinned entries.
 - Q: Can pinned entries be wiped in bulk? → A: Yes. `clear --all` removes pinned entries too, after a confirmation. Plain `clear` keeps them.
 
+### Session 2026-10-22
+
+- Q: What happens when `max_pinned` or `max_entries` is lowered below the pins already stored? → A: Existing pins are kept: they're never evicted, expired or unpinned because caps shrank. New pins are refused while pinned ≥ `max_pinned`. The count cap evicts only unpinned entries, so the history may exceed `max_entries` only by pinned entries. `doctor` and `status` report the over-cap counts. Caps are re-applied to unpinned entries when the store opens.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Recorded entries survive restarts (Priority: P1)
@@ -85,7 +89,8 @@ The history applies de-duplication, the count cap, the pin cap and expiry, so it
 - **FR-004**: The store MUST refuse to open for writing if the directory or any file is accessible by group or others, and report `store_too_open`.
 - **FR-005**: De-duplication MUST use a BLAKE3 hash of the content. A duplicate insert moves the existing entry to index 0 and refreshes `last_copied`.
 - **FR-006**: The count cap (default 20) MUST bound the total number of entries. When it's exceeded, the oldest unpinned entry is deleted. Pinned entries count toward the cap but are never evicted by it (with 10 pins, 10 unpinned slots remain).
-- **FR-007**: The pin cap (default 10) MUST refuse further pins with `pin_limit`. The pin cap MUST be lower than the count cap.
+- **FR-007**: The pin cap (default 10) MUST refuse further pins with `pin_limit`. The pin cap MUST be lower than the count cap. When stored pins already exceed a lowered cap, the existing pins MUST be kept and only new pins refused (owner decision 2026-10-22).
+- **FR-018**: Opening the store MUST re-apply expiry and the count cap to unpinned entries durably, before any other operation. Recording and opening apply the same rule: unpinned entries ≤ max(`max_entries` − pinned, 1), so the newest unpinned entry (the current copy) is always kept, even when pins fill the cap. [DECIDED: 2026-10-22 by the orchestrating thinker, within the owner's pin policy; it keeps the latest copy restorable across restarts.]
 - **FR-008**: Unpinned entries MUST expire 7 days (default) after `last_copied`. The store MUST expose the next expiry instant, so the daemon can arm a single timer.
 - **FR-009**: `clear` MUST delete every unpinned entry from disk. `clear_all` MUST delete every entry, pinned included (the CLI asks for confirmation, spec 006).
 - **FR-010**: `rm <id>` MUST delete one entry (pinned or not) from disk.

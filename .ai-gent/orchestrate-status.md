@@ -1,14 +1,14 @@
 # Orchestration ledger
 
-State: **planned, not started** (2026-10-21). Update as cards run, so the run survives compaction or a crash.
+State: **running** — autonomous run approved 2026-10-22; dev environment landed (PR #2); wave 0 started. Update as cards run, so the run survives compaction or a crash.
 
 | Wave | Feature | Card | Executor | Reviewer | Effort | Tasks | State | Worktree | Pending merge | Notes |
 |---|---|---|---|---|---|---|---|---|---|---|
-| 0 | 001-store | `001-foundation` | builder | thinker | medium | 8 | planned | `.worktrees/feat-store` | — | |
-| 0 | 001-store | `001-us1-core` | builder | reviewer | high | 7 | planned | `.worktrees/feat-store` | — | |
-| 0 | 001-store | `001-us2-core` | builder | reviewer | high | 5 | planned | `.worktrees/feat-store` | — | |
-| 0 | 001-store | `001-us3-core` | builder | thinker | medium | 3 | planned | `.worktrees/feat-store` | — | |
-| 0 | 001-store | `001-polish` | builder | thinker | medium | 3 | planned | `.worktrees/feat-store` | — | |
+| 0 | 001-store | `001-foundation` | builder | thinker | medium | 8 | done (reviewed) | `.worktrees/feat-store` | — | acceptance re-run; F1 proven on injected edge |
+| 0 | 001-store | `001-us1-core` | builder | reviewer | high | 7 | done (reviewed) | `.worktrees/feat-store` | — | fresh review round 2: approve with nits; all sync mutations caught, 4096 cases green |
+| 0 | 001-store | `001-us2-core` | builder | reviewer | high | 5 | done (reviewed) | `.worktrees/feat-store` | — | re-review: approve with nits; unpinned-floor rule unified (FR-018), nits queued after polish |
+| 0 | 001-store | `001-us3-core` | builder | thinker | medium | 3 | done (reviewed) | `.worktrees/feat-store` | — | thinker review: green; read lock blocks daemon start → specs 004/006/007 updated |
+| 0 | 001-store | `001-polish` | builder | thinker | medium | 3 | done (reviewed) | `.worktrees/feat-store` | — | benches green; batch sync tuned, crash suites re-run at 2048 |
 | 1 | 000-design-system | `000-foundation` | builder | thinker | medium | 5 | planned | `.worktrees/feat-design-system` | — | |
 | 1 | 000-design-system | `000-us1-frontend` | builder | thinker | medium | 3 | planned | `.worktrees/feat-design-system` | — | |
 | 1 | 000-design-system | `000-us2-frontend` | thinker | reviewer | high | 2 | planned | `.worktrees/feat-design-system` | — | |

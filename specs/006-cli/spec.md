@@ -87,6 +87,7 @@ The user pins, unpins, removes and clears entries, and pauses or resumes recordi
 - A preview containing control characters prints them escaped (`\n`, `\t`, `\x1b`).
 - A narrow terminal (< 40 cols): previews are truncated, and index and short id are always shown.
 - `show` of a non-UTF-8-safe entry writes the raw bytes as stored.
+- The read-only fallback (`ls`, `show`) opens the store, reads what it needs, and drops the handle before printing, so its shared lock never blocks a daemon starting (spec 004).
 
 ## Requirements *(mandatory)*
 
