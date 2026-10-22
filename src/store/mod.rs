@@ -15,7 +15,8 @@ use thiserror::Error;
 use time::OffsetDateTime;
 
 use crate::config::Caps;
-use crate::domain::entry::{Content, Entry};
+use crate::domain::entry::{Content, Entry, PauseState};
+use crate::domain::history::{HistoryError, Recorded};
 use crate::domain::ids::EntryId;
 use fs::{Fs, FsFile};
 use index::{Index, IndexError};
@@ -56,9 +57,56 @@ pub enum StoreError {
         /// 1-based column.
         column: usize,
     },
+    /// A history command was refused (not found, pin limit).
+    #[error(transparent)]
+    History(#[from] HistoryError),
     /// An I/O error.
     #[error("i/o error: {0}")]
     Io(#[from] io::Error),
+}
+
+/// One change to the store; a batch of them is one transaction (one index commit).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Mutation {
+    /// A clipboard copy: new entry, or refresh of a known one.
+    RecordCopy(Content),
+    /// Restore: move to the top.
+    Touch(EntryId),
+    /// Pin (idempotent).
+    Pin(EntryId),
+    /// Unpin (idempotent).
+    Unpin(EntryId),
+    /// Delete one entry.
+    Remove(EntryId),
+    /// Delete every unpinned entry.
+    Clear,
+    /// Delete every entry.
+    ClearAll,
+    /// Delete the unpinned entries past their ttl.
+    Expire,
+    /// Change the persisted pause state.
+    SetPause(PauseState),
+}
+
+/// What one [`Mutation`] did, in batch order. Ids only.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Outcome {
+    /// See [`Recorded`].
+    Recorded(Recorded),
+    /// The entry moved to the top.
+    Touched,
+    /// Whether the pin changed anything.
+    Pinned(bool),
+    /// Whether the unpin changed anything.
+    Unpinned(bool),
+    /// The entry was deleted.
+    Removed,
+    /// Ids deleted by `Clear`.
+    Cleared(Vec<EntryId>),
+    /// Ids deleted by `Expire`.
+    Expired(Vec<EntryId>),
+    /// The pause state was stored.
+    PauseSet,
 }
 
 impl From<IndexError> for StoreError {
@@ -122,6 +170,18 @@ impl<F: Fs> Store<F> {
     /// [`StoreError::Io`] (not found when absent).
     pub fn content(&self, id: &EntryId) -> Result<Vec<u8>, StoreError> {
         Ok(self.fs.read(&self.content_path(id))?)
+    }
+
+    /// Applies a batch as one transaction. NOT YET IMPLEMENTED (T025).
+    ///
+    /// # Errors
+    /// [`StoreError`].
+    pub fn apply(
+        &mut self,
+        batch: Vec<Mutation>,
+        now: OffsetDateTime,
+    ) -> Result<Vec<Outcome>, StoreError> {
+        unimplemented!("T025")
     }
 
     /// MINIMAL, TEMPORARY (T022): writes the content file, then commits the index with the new

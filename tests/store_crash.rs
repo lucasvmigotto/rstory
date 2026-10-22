@@ -10,8 +10,8 @@ use proptest::prelude::*;
 use rstory::config::Caps;
 use rstory::domain::entry::{Content, ContentHash};
 use rstory::domain::ids::EntryId;
-use rstory::store::Store;
 use rstory::store::fs::{Fault, FaultFs, RealFs};
+use rstory::store::{Mutation, Store};
 use time::OffsetDateTime;
 
 fn payload(i: usize) -> Vec<u8> {
@@ -174,4 +174,108 @@ fn a_brand_new_store_survives_power_loss_right_after_its_first_insert() {
         "the store's own directory entry must be durable"
     );
     assert_eq!(store.content(&acked[0].0).unwrap(), acked[0].1);
+}
+
+// ---- batches with evictions: index commit first, unlinks after ----
+
+fn small_caps() -> Caps {
+    Caps {
+        max_entries: 3,
+        max_pinned: 2,
+        ..Caps::default()
+    }
+}
+
+/// Applies each round as one batch; returns the contents (newest first) after the last
+/// acknowledged batch and whether a batch failed in flight.
+fn batch_workload(dir: &Path, fs: &FaultFs, rounds: &[Vec<usize>]) -> (Vec<Vec<u8>>, bool) {
+    let caps = small_caps();
+    let mut snapshot = Vec::new();
+    let Ok(mut store) = Store::open_exclusive(dir, caps, fs.clone()) else {
+        return (snapshot, true);
+    };
+    for (r, round) in rounds.iter().enumerate() {
+        let batch = round
+            .iter()
+            .map(|&i| Mutation::RecordCopy(Content::new(payload(i), caps.max_entry_bytes).unwrap()))
+            .collect();
+        let now = OffsetDateTime::from_unix_timestamp(1_800_000_000 + 10 * r as i64).unwrap();
+        if store.apply(batch, now).is_err() {
+            return (snapshot, true);
+        }
+        snapshot = store
+            .entries()
+            .iter()
+            .map(|e| store.content(&e.id).unwrap())
+            .collect();
+    }
+    (snapshot, false)
+}
+
+fn batch_total_mutations(rounds: &[Vec<usize>]) -> u64 {
+    let tmp = tempfile::tempdir().unwrap();
+    let fs = FaultFs::recording();
+    let (_, inflight) = batch_workload(&tmp.path().join("store"), &fs, rounds);
+    assert!(!inflight);
+    fs.mutations()
+}
+
+fn batch_check(dir: &Path, snapshot: &[Vec<u8>], inflight: bool) -> Result<(), TestCaseError> {
+    let store = Store::open_exclusive(dir, small_caps(), RealFs).expect("store reopens");
+    let attempted: BTreeSet<Vec<u8>> = (0..8).map(payload).collect();
+    prop_assert!(store.entries().len() <= 3, "count cap");
+    let mut contents = Vec::new();
+    for e in store.entries() {
+        let bytes = store.content(&e.id).unwrap();
+        prop_assert!(attempted.contains(&bytes));
+        prop_assert_eq!(e.hash, ContentHash::of(&bytes));
+        contents.push(bytes);
+    }
+    let distinct: BTreeSet<_> = contents.iter().collect();
+    prop_assert_eq!(distinct.len(), contents.len(), "de-dup");
+    if !inflight {
+        prop_assert_eq!(
+            &contents,
+            snapshot,
+            "an acknowledged batch is fully visible"
+        );
+    }
+    // Evicted entries' files are gone: orphans left by a crash between commit and unlink were swept.
+    let on_disk: BTreeSet<String> = fs::read_dir(dir.join("content"))
+        .unwrap()
+        .map(|e| e.unwrap().file_name().into_string().unwrap())
+        .collect();
+    let ids: BTreeSet<String> = store.entries().iter().map(|e| e.id.to_string()).collect();
+    prop_assert_eq!(on_disk, ids);
+    Ok(())
+}
+
+proptest! {
+    #![proptest_config(config())]
+
+    #[test]
+    fn batches_with_evictions_survive(
+        (rounds, crash_at, recovery_raw) in proptest::collection::vec(proptest::collection::vec(0usize..8, 1..4), 1..5)
+            .prop_flat_map(|r| {
+                let total = batch_total_mutations(&r);
+                (Just(r), 0..=total, 0u64..1000)
+            }),
+    ) {
+        for fault in [Fault::Crash, Fault::PowerLoss] {
+            for recovery in [None, Some(recovery_raw)] {
+                let tmp = tempfile::tempdir().unwrap();
+                let dir = tmp.path().join("store");
+                let faulty = FaultFs::new(crash_at, fault);
+                let (snapshot, inflight) = batch_workload(&dir, &faulty, &rounds);
+                faulty.power_off();
+                if let Some(raw) = recovery {
+                    let at = raw % (recovery_mutations(&dir) + 1);
+                    let again = FaultFs::new(at, fault);
+                    drop(Store::open_exclusive(&dir, small_caps(), again.clone()));
+                    again.power_off();
+                }
+                batch_check(&dir, &snapshot, inflight)?;
+            }
+        }
+    }
 }
