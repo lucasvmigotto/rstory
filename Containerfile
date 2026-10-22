@@ -20,7 +20,7 @@ FROM base AS deps
 # Test-time session stack only (the product itself has no runtime dependencies):
 # Xvfb + headless sway with XWayland for capture/restore integration tests,
 # a session D-Bus for the tray tests, reference clipboard clients, gjs + eslint
-# for the GNOME extension.
+# for the GNOME extension, rsvg-convert to render the icon PNGs from their SVG sources.
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
     rm -f /etc/apt/apt.conf.d/docker-clean \
@@ -29,7 +29,8 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         xvfb sway mutter xwayland dbus-daemon dbus-x11 \
         wl-clipboard xclip x11-utils \
         gjs eslint \
-        jq socat file procps
+        jq socat file procps \
+        librsvg2-bin
 ARG UID=1000
 RUN useradd --uid "${UID}" --create-home --home-dir /home/dev --shell /bin/bash dev \
     && install -d -o dev -g dev /home/dev/.cargo /target /run/user/1000 \

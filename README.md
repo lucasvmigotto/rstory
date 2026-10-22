@@ -26,14 +26,14 @@ make doctor             # tool versions per layer; fails on drift from rust-tool
 make shell              # interactive shell in the tools image
 ```
 
-CI runs the same recipes, so a green run locally means the same as a green run in CI.
+CI runs the same recipes, so a green run locally means the same as a green run in CI. Parallel worktrees pass their own build cache: `make TARGET_VOLUME=rstory-tools-target-<name> test`.
 
 ### Moving parts
 
 | Layer | What | Where |
 |---|---|---|
 | Version source | the Rust toolchain, components and musl targets | `rust-toolchain.toml` |
-| `tools` image | the reference environment for people, agents and CI: Rust + Xvfb, sway, mutter, XWayland, D-Bus, gjs, eslint | `Containerfile` (`base → deps → tools → build → runtime`), `make image` |
+| `tools` image | the reference environment for people, agents and CI: Rust + Xvfb, sway, mutter, XWayland, D-Bus, gjs, eslint, rsvg-convert | `Containerfile` (`base → deps → tools → build → runtime`), `make image` |
 | Recipes | one entry point per task, run with limits (`CPUS=4`, `MEMORY=3g`, overridable) and `--network=none` after `make fetch` | `Makefile` |
 | Human devcontainer | your editor's environment: `devenv:debian-trixie` + the Rust feature at the same version, rust-analyzer running clippy | `.devcontainer/devcontainer.json` |
 
