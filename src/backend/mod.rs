@@ -25,6 +25,18 @@ pub enum BackendKind {
     None,
 }
 
+impl BackendKind {
+    /// Stable name for `status` and `doctor`.
+    #[must_use]
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Wayland => "wayland",
+            Self::X11 => "x11",
+            Self::None => "none",
+        }
+    }
+}
+
 /// How the backend reaches the clipboard.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Mode {
@@ -34,6 +46,18 @@ pub enum Mode {
     XwaylandBridge,
     /// Not applicable (`BackendKind::None`).
     None,
+}
+
+impl Mode {
+    /// Stable name for `status` and `doctor`.
+    #[must_use]
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Native => "native",
+            Self::XwaylandBridge => "xwayland_bridge",
+            Self::None => "none",
+        }
+    }
 }
 
 /// What a backend reports to the daemon.

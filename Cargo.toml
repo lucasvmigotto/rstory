@@ -53,6 +53,10 @@ required-features = ["session-tests"]
 name = "x11_serve"
 required-features = ["session-tests"]
 
+[[test]]
+name = "bridge_capture"
+required-features = ["session-tests"]
+
 [[bench]]
 name = "store"
 harness = false
