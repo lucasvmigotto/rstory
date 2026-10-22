@@ -170,6 +170,17 @@ impl<F: Fs> Store<F> {
         self.pause
     }
 
+    /// Number of content files whose unlink failed and is waiting for a retry.
+    #[must_use]
+    pub fn pending_unlinks(&self) -> usize {
+        0
+    }
+
+    /// Retries the unlinks that failed earlier; returns how many are still pending.
+    pub fn retry_pending_unlinks(&mut self) -> usize {
+        0
+    }
+
     /// The history aggregate (read-only view).
     #[must_use]
     pub fn history(&self) -> &History {

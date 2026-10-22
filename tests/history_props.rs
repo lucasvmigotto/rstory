@@ -18,7 +18,7 @@ enum Cmd {
     Clear,
     ClearAll,
     Expire,
-    Tick(u32),
+    Tick(i32),
 }
 
 fn cmd() -> impl Strategy<Value = Cmd> {
@@ -31,7 +31,7 @@ fn cmd() -> impl Strategy<Value = Cmd> {
         1 => Just(Cmd::Clear),
         1 => Just(Cmd::ClearAll),
         2 => Just(Cmd::Expire),
-        4 => (0u32..7_200).prop_map(Cmd::Tick),
+        4 => (-3_600i32..7_200).prop_map(Cmd::Tick),
     ]
 }
 
@@ -92,7 +92,7 @@ proptest! {
     #[test]
     fn invariants_hold_after_every_step(l in limits(), cmds in proptest::collection::vec(cmd(), 1..80)) {
         let mut h = History::new(l);
-        let mut now = OffsetDateTime::from_unix_timestamp(1_800_000_000).unwrap();
+        let mut now = OffsetDateTime::from_unix_timestamp(4_102_444_800).unwrap();
         let mut counter = 0u128;
         for c in cmds {
             let before = ids(&h);

@@ -37,7 +37,7 @@ fn workload(dir: &Path, fs: &FaultFs, inserts: usize) -> Vec<(EntryId, Vec<u8>)>
         for i in 0..inserts {
             let bytes = payload(i);
             let content = Content::new(bytes.clone(), caps.max_entry_bytes).unwrap();
-            let now = OffsetDateTime::from_unix_timestamp(1_800_000_000 + i as i64).unwrap();
+            let now = OffsetDateTime::from_unix_timestamp(4_102_444_800 + i as i64).unwrap();
             match store.insert(&content, now) {
                 Ok(id) => acked.push((id, bytes)),
                 Err(_) => break,
@@ -186,24 +186,45 @@ fn small_caps() -> Caps {
     }
 }
 
+/// One round of the batch workload: a batch of copies, or a single removal.
+#[derive(Debug, Clone)]
+enum Round {
+    Records(Vec<usize>),
+    RemoveAt(usize),
+    Clear,
+}
+
+fn round_strategy() -> impl Strategy<Value = Round> {
+    prop_oneof![
+        4 => proptest::collection::vec(0usize..8, 1..4).prop_map(Round::Records),
+        1 => any::<usize>().prop_map(Round::RemoveAt),
+        1 => Just(Round::Clear),
+    ]
+}
+
 /// Applies each round as one batch; returns the contents (newest first) after the last
 /// acknowledged batch and the round that failed in flight, if any.
-fn batch_workload(
-    dir: &Path,
-    fs: &FaultFs,
-    rounds: &[Vec<usize>],
-) -> (Vec<Vec<u8>>, Option<Vec<usize>>) {
+fn batch_workload(dir: &Path, fs: &FaultFs, rounds: &[Round]) -> (Vec<Vec<u8>>, Option<Round>) {
     let caps = small_caps();
     let mut snapshot = Vec::new();
     let Ok(mut store) = Store::open_exclusive(dir, caps, fs.clone()) else {
         return (snapshot, None);
     };
     for (r, round) in rounds.iter().enumerate() {
-        let batch = round
-            .iter()
-            .map(|&i| Mutation::RecordCopy(Content::new(payload(i), caps.max_entry_bytes).unwrap()))
-            .collect();
-        let now = OffsetDateTime::from_unix_timestamp(1_800_000_000 + 10 * r as i64).unwrap();
+        let batch = match round {
+            Round::Records(items) => items
+                .iter()
+                .map(|&i| {
+                    Mutation::RecordCopy(Content::new(payload(i), caps.max_entry_bytes).unwrap())
+                })
+                .collect(),
+            Round::RemoveAt(k) => match store.entries().len() {
+                0 => continue,
+                n => vec![Mutation::Remove(store.entries()[k % n].id)],
+            },
+            Round::Clear => vec![Mutation::Clear],
+        };
+        let now = OffsetDateTime::from_unix_timestamp(4_102_444_800 + 10 * r as i64).unwrap();
         if store.apply(batch, now).is_err() {
             return (snapshot, Some(round.clone()));
         }
@@ -216,7 +237,7 @@ fn batch_workload(
     (snapshot, None)
 }
 
-fn batch_total_mutations(rounds: &[Vec<usize>]) -> u64 {
+fn batch_total_mutations(rounds: &[Round]) -> u64 {
     let tmp = tempfile::tempdir().unwrap();
     let fs = FaultFs::recording();
     let (_, inflight) = batch_workload(&tmp.path().join("store"), &fs, rounds);
@@ -224,15 +245,25 @@ fn batch_total_mutations(rounds: &[Vec<usize>]) -> u64 {
     fs.mutations()
 }
 
-/// The contents after recording `round` on `before` (no pins): de-dup moves to the front, the
-/// cap of 3 evicts the oldest.
-fn model_apply(before: &[Vec<u8>], round: &[usize]) -> Vec<Vec<u8>> {
+/// The contents after `round` on `before` (no pins): de-dup moves to the front, the cap of 3
+/// evicts the oldest, removal and clear delete.
+fn model_apply(before: &[Vec<u8>], round: &Round) -> Vec<Vec<u8>> {
     let mut v = before.to_vec();
-    for &i in round {
-        let p = payload(i);
-        v.retain(|c| *c != p);
-        v.insert(0, p);
-        v.truncate(3);
+    match round {
+        Round::Records(items) => {
+            for &i in items {
+                let p = payload(i);
+                v.retain(|c| *c != p);
+                v.insert(0, p);
+                v.truncate(3);
+            }
+        }
+        Round::RemoveAt(k) => {
+            if !v.is_empty() {
+                v.remove(k % v.len());
+            }
+        }
+        Round::Clear => v.clear(),
     }
     v
 }
@@ -240,7 +271,7 @@ fn model_apply(before: &[Vec<u8>], round: &[usize]) -> Vec<Vec<u8>> {
 fn batch_check(
     dir: &Path,
     snapshot: &[Vec<u8>],
-    inflight: &Option<Vec<usize>>,
+    inflight: &Option<Round>,
 ) -> Result<(), TestCaseError> {
     let store = Store::open_exclusive(dir, small_caps(), RealFs).expect("store reopens");
     let attempted: BTreeSet<Vec<u8>> = (0..8).map(payload).collect();
@@ -278,7 +309,7 @@ proptest! {
 
     #[test]
     fn batches_with_evictions_survive(
-        (rounds, crash_at, recovery_raw) in proptest::collection::vec(proptest::collection::vec(0usize..8, 1..4), 1..5)
+        (rounds, crash_at, recovery_raw) in proptest::collection::vec(round_strategy(), 1..6)
             .prop_flat_map(|r| {
                 let total = batch_total_mutations(&r);
                 (Just(r), 0..=total, 0u64..1000)
@@ -301,4 +332,20 @@ proptest! {
             }
         }
     }
+}
+
+#[test]
+fn a_store_in_new_nested_directories_survives_power_loss() {
+    let tmp = tempfile::tempdir().unwrap();
+    let dir = tmp.path().join("state").join("rstory").join("store");
+    let fs = FaultFs::new(u64::MAX, Fault::PowerLoss);
+    let acked = workload(&dir, &fs, 1);
+    assert_eq!(acked.len(), 1);
+    fs.power_off();
+    let store = Store::open_exclusive(&dir, Caps::default(), RealFs).unwrap();
+    assert_eq!(
+        store.entries().len(),
+        1,
+        "every directory created on the way must be durable"
+    );
 }

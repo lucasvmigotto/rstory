@@ -7,13 +7,14 @@ use std::path::Path;
 
 use rstory::config::Caps;
 use rstory::domain::entry::Content;
+use rstory::domain::history::HistoryError;
 use rstory::domain::ids::EntryId;
 use rstory::store::fs::RealFs;
-use rstory::store::{Store, StoreError};
+use rstory::store::{Mutation, Store, StoreError};
 use time::OffsetDateTime;
 
 fn now(n: i64) -> OffsetDateTime {
-    OffsetDateTime::from_unix_timestamp(1_800_000_000 + n).unwrap()
+    OffsetDateTime::from_unix_timestamp(4_102_444_800 + n).unwrap()
 }
 
 /// Like `fs::write`, but 0600 so the store accepts the file.
@@ -149,4 +150,123 @@ fn torn_content_file_drops_its_row_and_is_unlinked() {
     assert!(!dir.join("content").join(a.to_string()).exists());
     let raw = fs::read_to_string(dir.join("index.json")).unwrap();
     assert!(!raw.contains(&a.to_string()));
+}
+
+fn open_with(dir: &Path, caps: Caps) -> Store<RealFs> {
+    Store::open_exclusive(dir, caps, RealFs).unwrap()
+}
+
+fn caps(max_entries: u32, max_pinned: u32) -> Caps {
+    Caps {
+        max_entries,
+        max_pinned,
+        ..Caps::default()
+    }
+}
+
+fn content_names(dir: &Path) -> std::collections::BTreeSet<String> {
+    fs::read_dir(dir.join("content"))
+        .unwrap()
+        .map(|e| e.unwrap().file_name().into_string().unwrap())
+        .collect()
+}
+
+#[test]
+fn reopening_with_a_lower_count_cap_evicts_immediately() {
+    let t = tempfile::tempdir().unwrap();
+    let dir = t.path().join("s");
+    {
+        let mut s = open(&dir).unwrap();
+        for i in 0..20 {
+            insert(&mut s, &format!("entry {i}"), i);
+        }
+    }
+    let s = open_with(&dir, caps(5, 4));
+    let ids: std::collections::BTreeSet<String> =
+        s.entries().iter().map(|e| e.id.to_string()).collect();
+    assert_eq!(ids.len(), 5);
+    assert_eq!(
+        content_names(&dir),
+        ids,
+        "evicted files are gone before any further call"
+    );
+    let raw: serde_json::Value =
+        serde_json::from_slice(&fs::read(dir.join("index.json")).unwrap()).unwrap();
+    assert_eq!(
+        raw["entries"].as_array().unwrap().len(),
+        5,
+        "and so are their rows"
+    );
+}
+
+#[test]
+fn pins_above_a_lowered_pin_cap_are_kept_and_new_pins_blocked() {
+    let t = tempfile::tempdir().unwrap();
+    let dir = t.path().join("s");
+    let ids: Vec<EntryId> = {
+        let mut s = open_with(&dir, caps(20, 15));
+        let ids: Vec<_> = (0..14)
+            .map(|i| insert(&mut s, &format!("e{i}"), i))
+            .collect();
+        let pins = ids[..12].iter().map(|id| Mutation::Pin(*id)).collect();
+        s.apply(pins, now(100)).unwrap();
+        ids
+    };
+    let mut s = open_with(&dir, caps(20, 10));
+    assert_eq!(s.entries().len(), 14);
+    assert_eq!(
+        s.entries().iter().filter(|e| e.pinned).count(),
+        12,
+        "no pin is dropped"
+    );
+    assert_eq!(s.history().pins_over_cap(), Some((12, 10)));
+
+    let refused = |s: &mut Store<RealFs>, id| {
+        matches!(
+            s.apply(vec![Mutation::Pin(id)], now(200)),
+            Err(StoreError::History(HistoryError::PinLimit))
+        )
+    };
+    assert!(refused(&mut s, ids[12]), "13th pin refused");
+    s.apply(vec![Mutation::Unpin(ids[0])], now(201)).unwrap(); // 11 pinned
+    assert!(refused(&mut s, ids[12]));
+    s.apply(vec![Mutation::Unpin(ids[1])], now(202)).unwrap(); // 10 pinned
+    assert!(refused(&mut s, ids[12]), "at the cap is still refused");
+    s.apply(vec![Mutation::Unpin(ids[2])], now(203)).unwrap(); // 9 pinned
+    s.apply(vec![Mutation::Pin(ids[12])], now(204)).unwrap();
+}
+
+#[test]
+fn ten_pins_with_a_lowered_count_cap_are_kept_and_new_copies_still_recorded() {
+    let t = tempfile::tempdir().unwrap();
+    let dir = t.path().join("s");
+    {
+        let mut s = open(&dir).unwrap();
+        let ids: Vec<_> = (0..10)
+            .map(|i| insert(&mut s, &format!("p{i}"), i))
+            .collect();
+        s.apply(ids.iter().map(|id| Mutation::Pin(*id)).collect(), now(50))
+            .unwrap();
+    }
+    let mut s = open_with(&dir, caps(5, 4));
+    assert_eq!(s.entries().len(), 10, "all pins kept");
+    assert!(s.entries().iter().all(|e| e.pinned));
+
+    let a = insert(&mut s, "first new copy", 100);
+    assert_eq!(
+        s.content(&a).unwrap(),
+        b"first new copy",
+        "recorded despite the full cap"
+    );
+    assert_eq!(s.entries().len(), 11);
+
+    let b = insert(&mut s, "second new copy", 101);
+    assert_eq!(s.content(&b).unwrap(), b"second new copy");
+    assert!(
+        s.entries().iter().all(|e| e.id != a),
+        "the oldest unpinned was evicted"
+    );
+    assert!(!dir.join("content").join(a.to_string()).exists());
+    assert_eq!(s.entries().len(), 11);
+    assert_eq!(s.entries().iter().filter(|e| e.pinned).count(), 10);
 }

@@ -220,13 +220,13 @@ fn crash_error(what: &str) -> io::Error {
 ///
 /// - file data written since the file's last `sync_all` is truncated away (a file never synced
 ///   ends up empty, if its directory entry survives at all);
-/// - directory-entry changes (`create_dir_all` of a new final directory, `create_new`, `rename`,
+/// - directory-entry changes (`create_dir_all`, for every directory it creates, `create_new`, `rename`,
 ///   `remove_file`) not followed by `sync_dir`
 ///   of their directory are reverted: an unsynced create disappears, an unsynced rename goes
 ///   back to the old name and the replaced file reappears with its durable content, an
 ///   unsynced unlink reappears with its durable content.
 ///
-/// Deliberately simple: parents created implicitly by `create_dir_all` and `set_mode` are treated as durable, a file handle
+/// Deliberately simple: `set_mode` is treated as durable, a file handle
 /// is assumed to be dropped before its file is renamed, and renames stay inside one directory.
 /// That is all the store does.
 #[derive(Debug, Clone)]
@@ -315,13 +315,17 @@ impl Fs for FaultFs {
 
     fn create_dir_all(&self, path: &Path, mode: u32) -> io::Result<()> {
         self.state.gate(Op::CreateDirAll(path.to_path_buf()))?;
-        let existed = path.exists();
+        // Every missing ancestor is a new directory entry, durable only once its parent is synced.
+        let mut missing: Vec<PathBuf> = path
+            .ancestors()
+            .take_while(|p| !p.exists())
+            .map(Path::to_path_buf)
+            .collect();
         self.inner.create_dir_all(path, mode)?;
-        if !existed {
-            self.state.journal().dir_ops.push(DirOp::CreateDir {
-                path: path.to_path_buf(),
-            });
-        }
+        missing.reverse(); // topmost first, so rolling back (last first) removes deepest first
+        let mut j = self.state.journal();
+        j.dir_ops
+            .extend(missing.into_iter().map(|path| DirOp::CreateDir { path }));
         Ok(())
     }
 

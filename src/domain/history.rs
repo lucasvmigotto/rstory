@@ -246,6 +246,20 @@ impl History {
         self.drain_where(|e| !e.pinned && (now - e.last_copied).max(time::Duration::ZERO) >= ttl)
     }
 
+    /// Pins above the pin cap (only possible after the caps were lowered): `(pinned, max_pinned)`.
+    /// Owner decision 2026-10-22: existing pins are kept and new pins are refused until the
+    /// count is below the cap again; this only reports the fact (for doctor and status).
+    #[must_use]
+    pub fn pins_over_cap(&self) -> Option<(usize, usize)> {
+        None
+    }
+
+    /// Brings a loaded history within its limits: expires, then evicts the oldest unpinned
+    /// entries while over `max_entries`. Pins are never touched. Returns every removed id.
+    pub fn enforce_limits(&mut self, now: OffsetDateTime) -> Vec<EntryId> {
+        unimplemented!("enforce_limits")
+    }
+
     /// The instant at which the next unpinned entry expires (`last_copied + ttl`), if any.
     /// `expire(now)` removes it as soon as `now` reaches that instant.
     #[must_use]
@@ -495,6 +509,108 @@ mod tests {
         assert_eq!(
             h.resolve(&EntryRef::ShortId("ZZZZ".to_string())),
             Err(ResolveError::NotFound)
+        );
+    }
+
+    fn pinned_entries(n: usize) -> Vec<Entry> {
+        let mut h = History::new(limits());
+        fill(&mut h, 0, n);
+        for e in h.entries().to_vec() {
+            h.pin(&e.id).unwrap();
+        }
+        h.entries().to_vec()
+    }
+
+    #[test]
+    fn enforce_limits_evicts_the_oldest_unpinned_down_to_the_cap() {
+        let mut h = History::new(limits());
+        let a = fill(&mut h, 0, 8);
+        h.pin(&a[0]).unwrap(); // the oldest, but pinned
+        let lowered = Limits {
+            max_entries: 5,
+            max_pinned: 4,
+            ..limits()
+        };
+        let mut h = History::from_entries(lowered, h.entries().to_vec());
+        assert_eq!(h.enforce_limits(at(10)), vec![a[1], a[2], a[3]]);
+        assert_eq!(h.len(), 5);
+        assert!(ids(&h).contains(&a[0]));
+    }
+
+    #[test]
+    fn enforce_limits_expires_first() {
+        let mut h = History::new(Limits {
+            ttl: Duration::from_secs(3600),
+            ..limits()
+        });
+        let a = fill(&mut h, 0, 3); // at(0), at(1), at(2)
+        let mut gone = h.enforce_limits(at(3601));
+        gone.sort();
+        assert_eq!(gone, vec![a[0], a[1]]);
+        assert_eq!(ids(&h), [a[2]]);
+    }
+
+    #[test]
+    fn enforce_limits_never_touches_pins_even_over_the_lowered_caps() {
+        let pins = pinned_entries(6);
+        let lowered = Limits {
+            max_entries: 3,
+            max_pinned: 2,
+            ..limits()
+        };
+        let mut h = History::from_entries(lowered, pins);
+        assert!(h.enforce_limits(at(10)).is_empty());
+        assert_eq!(h.len(), 6);
+        assert!(h.entries().iter().all(|e| e.pinned));
+    }
+
+    #[test]
+    fn record_never_evicts_the_entry_it_just_inserted() {
+        let pins = pinned_entries(10);
+        let lowered = Limits {
+            max_entries: 5,
+            max_pinned: 4,
+            ..limits()
+        };
+        let mut h = History::from_entries(lowered, pins);
+        let r = h.record(&content(99), id(500), at(100));
+        assert_eq!(
+            r,
+            Recorded::Inserted {
+                id: id(500),
+                evicted: vec![]
+            }
+        );
+        assert_eq!(h.entries()[0].id, id(500));
+        assert_eq!(
+            h.len(),
+            11,
+            "temporarily over the cap: only pins could be evicted"
+        );
+    }
+
+    #[test]
+    fn pins_over_cap_reports_counts_only() {
+        let lowered = Limits {
+            max_entries: 20,
+            max_pinned: 10,
+            ..limits()
+        };
+        let h = History::from_entries(lowered, pinned_entries(12));
+        assert_eq!(h.pins_over_cap(), Some((12, 10)));
+        let mut h = h;
+        let first = h.entries()[0].id;
+        h.unpin(&first).unwrap();
+        h.unpin(&h.entries()[1].id.clone()).unwrap();
+        assert_eq!(
+            h.pins_over_cap(),
+            None,
+            "10 pins at a cap of 10 is not over"
+        );
+        assert_eq!(
+            h.pin(&first),
+            Err(HistoryError::PinLimit),
+            "at the cap: refused"
         );
     }
 }
