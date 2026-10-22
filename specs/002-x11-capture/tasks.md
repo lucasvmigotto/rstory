@@ -39,11 +39,11 @@ description: "Task list for Session detection & X11 capture"
 
 ### Tests for User Story 1 ⚠️
 
-- [ ] T004 [P] [US1] Xvfb capture tests (UTF8_STRING, STRING→UTF-8, INCR 900 KiB, owner exit → cleared) in `tests/x11_capture.rs` (SC-001) — Executor: builder · Reviewer: thinker
+- [x] T004 [P] [US1] Xvfb capture tests (UTF8_STRING, STRING→UTF-8, INCR 900 KiB, owner exit → cleared) in `tests/x11_capture.rs` (SC-001) — Executor: builder · Reviewer: thinker
 
 ### Implementation for User Story 1
 
-- [ ] T005 [US1] Backend implementation — see `## Backend` (appended by `backend:spec`) — Executor: builder · Reviewer: thinker
+- [x] T005 [US1] Backend implementation — see `## Backend` (appended by `backend:spec`) — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: User Story 1 passes its tests independently.
 
@@ -115,8 +115,8 @@ Appended by `backend:spec`. Built by `backend:build` (ticks only this section). 
 
 ### Backend US1 — Capture on X11
 
-- [ ] T015 [US1] X11 connection, XFIXES subscription, TARGETS-first read with limit and timeout in `src/backend/x11/{mod,read}.rs` — Executor: builder · Reviewer: reviewer · Effort: high
-- [ ] T016 [US1] INCR receive in `src/backend/x11/incr.rs` — Executor: builder · Reviewer: reviewer · Effort: high
+- [x] T015 [US1] X11 connection, XFIXES subscription, TARGETS-first read with limit and timeout in `src/backend/x11/{mod,read}.rs` — Executor: builder · Reviewer: reviewer · Effort: high
+- [x] T016 [US1] INCR receive in `src/backend/x11/incr.rs` — Executor: builder · Reviewer: reviewer · Effort: high
 
 **Checkpoint**: the US1 tests in this file's story phase pass (`cargo test`), plus the contract tests where they apply.
 
