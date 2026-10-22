@@ -1,5 +1,7 @@
 //! Persistence of domain state: atomic writes, recovery, permissions.
 
+#[cfg(any(test, feature = "fault-injection"))]
+pub mod fault;
 pub mod fs;
 pub mod index;
 pub mod perms;

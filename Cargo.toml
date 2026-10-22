@@ -18,6 +18,11 @@ path = "src/lib.rs"
 name = "rstory"
 path = "src/main.rs"
 
+[features]
+default = []
+# Test-only: FaultFs and the power-loss model. Never enabled in release builds.
+fault-injection = []
+
 [dependencies]
 blake3 = { version = "1.8.7", default-features = false, features = ["pure"] }
 rand = "0.10.3"

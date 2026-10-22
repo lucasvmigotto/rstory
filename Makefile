@@ -25,6 +25,8 @@ RUN := $(ENGINE) run --rm --init $(USERNS) \
 	$(RUNDIR) \
 	-e TZ=UTC -e LANG=C.UTF-8 -e RUST_BACKTRACE=1 -e CARGO_TERM_COLOR=always
 OFFLINE := --network=none
+# Test-only feature: FaultFs for the crash and power-loss suites (never in release builds).
+FEATURES := --features fault-injection
 TTY := $(shell [ -t 0 ] && echo -it)
 
 .PHONY: help image fetch fmt fmt-check lint check test test-integration build build-static ext-lint ext-test doctor shell clean-cache
@@ -45,13 +47,13 @@ fmt-check: image ## Check formatting (CI)
 	$(RUN) $(OFFLINE) $(IMAGE) cargo fmt --all -- --check
 
 lint: image ## Clippy with warnings as errors, offline
-	$(RUN) $(OFFLINE) $(IMAGE) cargo clippy --locked --offline --all-targets -- -D warnings
+	$(RUN) $(OFFLINE) $(IMAGE) cargo clippy --locked --offline $(FEATURES) --all-targets -- -D warnings
 
 check: image ## Type-check, offline
-	$(RUN) $(OFFLINE) $(IMAGE) cargo check --locked --offline --all-targets
+	$(RUN) $(OFFLINE) $(IMAGE) cargo check --locked --offline $(FEATURES) --all-targets
 
 test: image ## Unit, property, snapshot and contract tests, offline
-	$(RUN) $(OFFLINE) $(IMAGE) cargo test --locked --offline
+	$(RUN) $(OFFLINE) $(IMAGE) cargo test --locked --offline $(FEATURES)
 
 test-integration: image ## Session tests (Xvfb, headless sway, bridge mode), offline
 	$(RUN) $(OFFLINE) $(IMAGE) cargo test --locked --offline --features session-tests -- --test-threads=2
