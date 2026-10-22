@@ -3,6 +3,8 @@
 #![allow(dead_code)]
 
 pub mod mutter;
+pub mod sway;
+pub mod wl_client;
 pub mod x11;
 
 use std::time::{Duration, Instant};
