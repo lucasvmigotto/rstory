@@ -308,6 +308,14 @@ impl<F: Fs> Store<F> {
                 return Err(e.into());
             }
         }
+        // One directory sync for the whole batch: every file is durable and named before the
+        // index commit makes any of them reachable.
+        if !written.is_empty()
+            && let Err(e) = self.fs.sync_dir(&self.dir.join(CONTENT_DIR))
+        {
+            self.discard(&written);
+            return Err(e.into());
+        }
 
         self.persist(history, pause, &written)?;
         tracing::debug!(
@@ -403,7 +411,8 @@ impl<F: Fs> Store<F> {
         content_file(&self.dir, id)
     }
 
-    /// Content files are written once: temp, fsync, rename, fsync of the directory.
+    /// Content files are written once: temp, fsync, rename. The caller syncs the directory once
+    /// per batch.
     fn write_content(&self, id: &EntryId, bytes: &[u8]) -> io::Result<()> {
         let cdir = self.dir.join(CONTENT_DIR);
         let tmp = cdir.join(format!("{TMP_PREFIX}{id}"));
@@ -412,8 +421,7 @@ impl<F: Fs> Store<F> {
             f.write_all(bytes)?;
             f.sync_all()?;
             drop(f);
-            self.fs.rename(&tmp, &self.content_path(id))?;
-            self.fs.sync_dir(&cdir)
+            self.fs.rename(&tmp, &self.content_path(id))
         })();
         if result.is_err() {
             let _ = self.fs.remove_file(&tmp);
