@@ -27,7 +27,7 @@ description: "Task list for Session detection & X11 capture"
 
 **⚠️ CRITICAL**: blocks every story in this feature.
 
-- [ ] T003 Define `Backend` trait, `BackendEvent`, errors and a `FakeBackend` in `src/backend/mod.rs`, `src/backend/fake.rs` per `contracts/backend.md` — Executor: thinker · Reviewer: reviewer · Effort: high
+- [x] T003 Define `Backend` trait, `BackendEvent`, errors and a `FakeBackend` in `src/backend/mod.rs`, `src/backend/fake.rs` per `contracts/backend.md` — Executor: thinker · Reviewer: reviewer · Effort: high
 
 **Checkpoint**: foundation ready.
 
@@ -109,7 +109,7 @@ Appended by `backend:spec`. Built by `backend:build` (ticks only this section). 
 
 ### Backend Foundational
 
-- [ ] T014 Backend trait + `FakeBackend` (scriptable events, recorded serves) in `src/backend/{mod,fake}.rs` — Executor: thinker · Reviewer: reviewer · Effort: high
+- [x] T014 Backend trait + `FakeBackend` (scriptable events, recorded serves) in `src/backend/{mod,fake}.rs` — Executor: thinker · Reviewer: reviewer · Effort: high
 
 **Checkpoint**: `cargo build` and `cargo test` green; foundational pieces covered by unit tests.
 
