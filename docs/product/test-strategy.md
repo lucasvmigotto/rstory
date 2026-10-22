@@ -53,7 +53,7 @@ every layer, plus an exploratory charter.
 | Unit | pure domain (History H1–H10, RecordingState, filter, selection table, picker `update`, menu model, launch table) | build stages | `cargo test` | `src/**/tests` |
 | Property | store and filter invariants, crash injection | build stages (001, 005) | `proptest` | `tests/*_props.rs`, `tests/store_crash.rs` |
 | Component / snapshot | design-system widgets, picker states, CLI output, doctor output, menus | `frontend:tui` | `insta` + ratatui `TestBackend` | `src/ui`, `src/picker`, `tests/cli_*` |
-| Integration | backends against real display servers, daemon with the fake backend, D-Bus tray | `backend:build` | Xvfb, headless sway (`WLR_BACKENDS=headless`) + XWayland, `dbus-daemon --session` | `tests/{x11,wayland,bridge,daemon,tray}_*.rs` |
+| Integration | backends against real display servers, daemon with the fake backend, D-Bus tray | `backend:build` | Xvfb, headless sway (`WLR_BACKENDS=headless`) + XWayland, headless mutter (bridge mode; `--no-x11` for no capture path), `dbus-daemon --session` | `tests/{x11,wayland,bridge,daemon,tray}_*.rs` |
 | Contract | protocol v1 messages, CLI `--json` shapes, shared fixtures with the JS client | `backend:build`, `frontend:tui`, 010 | a JSON Schema validator (dev-dep), gjs for the JS side | `tests/contract/`, `tests/fixtures/protocol/`, `extension/tests/` |
 | **E2E journeys** | brief journeys K1–K7 with the real binary in headless sessions, driven through a pty | **`qa:e2e`** | `expectrl` (pty, dev-dep) + the session launchers from `tests/support/` | `tests/e2e/` |
 | Accessibility | no color-only state (mono snapshots), `--plain` mode, keyboard-only journeys, menu text labels | `frontend:tui` (snapshots) + `qa:e2e` (keyboard journey) | insta mono/ASCII snapshots | as above |
@@ -87,7 +87,7 @@ every layer, plus an exploratory charter.
 
 | Environment | What runs | Limits |
 |---|---|---|
-| Local tools container (`devcontainer:setup`) | everything except GNOME and KDE | perf numbers relative to the host |
+| Local tools container (`devcontainer:setup`, `make` recipes) | everything except GNOME/KDE GUI checks and cross-protocol copies on Mutter (headless mutter has no keyboard seat) | perf numbers relative to the host |
 | CI x86_64 + arm64 (GitHub, ubuntu-24.04[-arm]) | unit, property, snapshots, contract, integration (Xvfb, sway, bridge), e2e, fitness, perf smoke, security | shared runners: perf thresholds have 2× headroom in CI; exact budgets on the release checklist |
 | Owner's GNOME 48 machine + GNOME OS VMs (49–51) | manual matrix, UAT | manual |
 | KDE Plasma VM, sway + waybar | manual matrix | manual |

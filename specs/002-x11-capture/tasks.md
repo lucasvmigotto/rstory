@@ -19,7 +19,7 @@ description: "Task list for Session detection & X11 capture"
 ## Phase 1: Setup
 
 - [ ] T001 [P] Add test fixtures: Xvfb launcher helper and a minimal X11 test client in `tests/support/x11.rs` — Executor: builder · Reviewer: thinker · Effort: low
-- [ ] T002 [P] Add headless-sway-with-XWayland launcher (data-control disabled) in `tests/support/sway.rs` + `tests/fixtures/sway-bridge.conf` — Executor: builder · Reviewer: thinker
+- [ ] T002 [P] Add a headless-mutter launcher (`mutter --headless --wayland --virtual-monitor`, private D-Bus, Xauthority from `$XDG_RUNTIME_DIR/.mutter-Xwaylandauth.*`) in `tests/support/mutter.rs` — Executor: builder · Reviewer: thinker
 
 ---
 
@@ -67,12 +67,12 @@ description: "Task list for Session detection & X11 capture"
 
 ## Phase 5: User Story 3 - Automatic backend selection incl. XWayland bridge (Priority: P1)
 
-**Independent Test**: Table-driven selection + bridge-mode capture under headless sway
+**Independent Test**: Table-driven selection + bridge-mode selection and X11-side capture under headless mutter
 
 ### Tests for User Story 3 ⚠️
 
 - [ ] T008 [P] [US3] selection table tests (≥ 8 rows incl. override, no_session, no_data_control_no_xwayland) in `src/session/tests.rs` (SC-003) — Executor: builder · Reviewer: thinker
-- [ ] T009 [P] [US3] bridge-mode capture/restore test in `tests/bridge_capture.rs` — Executor: builder · Reviewer: thinker
+- [ ] T009 [P] [US3] bridge-mode test on headless mutter: selection = x11/xwayland_bridge, and capture/restore between X11 clients on Mutter's XWayland, in `tests/bridge_capture.rs` (cross-protocol copies: manual GNOME matrix) — Executor: builder · Reviewer: thinker
 
 ### Implementation for User Story 3
 
@@ -146,7 +146,7 @@ Appended by `backend:spec`. Built by `backend:build` (ticks only this section). 
 
 Appended by `qa:strategy`. Executed by `qa:e2e` / `qa:load` after the builds (ticks only this section).
 
-- [ ] T022 Bridge-mode CI environment (sway headless, data-control disabled, XWayland) in `tests/support/sway.rs` validated by `qa:e2e` — Executor: builder · Reviewer: thinker
+- [ ] T022 Bridge-mode CI environment (headless mutter) in `tests/support/mutter.rs` validated by `qa:e2e` — Executor: builder · Reviewer: thinker
 - [ ] T023 GNOME 48–51 manual matrix rows in `docs/release.md` (GUI-app copies, restore into Wayland apps) — Executor: builder · Reviewer: thinker
 - [ ] T024 Charter session → `docs/product/qa/charters/002.md` — Executor: thinker · Reviewer: reviewer · Effort: high
 

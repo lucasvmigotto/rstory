@@ -16,7 +16,7 @@ Layer added by `qa:strategy` (2026-10-21). See `docs/product/test-strategy.md`.
 | Id | Journey | Personas | Environment | Steps | Expected (incl. negative) |
 |---|---|---|---|---|---|
 | E2E-K1 | First run | owner | fresh XDG dirs, Xvfb | `install-autostart` → file written; start `rstory daemon`; `rstory doctor --json` → session/backend/store/daemon ok | doctor exit 0; desktop entry matches template |
-| E2E-K4 | No capture path | owner | sway with data-control disabled and no XWayland | start daemon; `status --json`; `copy 0` on a prepared store | state inactive with reason `no_data_control_no_xwayland`; `copy` exits 7 |
+| E2E-K4 | No capture path | owner | headless mutter with `--no-x11` (no data-control, no XWayland) | start daemon; `status --json`; `copy 0` on a prepared store | state inactive with reason `no_data_control_no_xwayland`; `copy` exits 7 |
 
 The journeys live in `tests/e2e/<id>.rs`. They're owned by `qa:e2e` and shared across the features that list them.
 
