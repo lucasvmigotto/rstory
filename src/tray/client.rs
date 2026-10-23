@@ -119,12 +119,11 @@ pub async fn bridge(socket: &Path) -> io::Result<(Link, JoinHandle<()>)> {
                     let Ok(value) = serde_json::from_slice::<Value>(&raw) else { continue };
                     if let Some(ev) = event_of(&value) {
                         publish.publish(ev);
-                    } else if let Some(id) = value.get("id").and_then(Value::as_u64) {
-                        if matches!(&waiting, Some((w, _)) if *w == id) {
-                            if let Some((_, call)) = waiting.take() {
-                                let _ = call.reply.send(answer_of(&value));
-                            }
-                        }
+                    } else if let Some(id) = value.get("id").and_then(Value::as_u64)
+                        && waiting.as_ref().is_some_and(|(w, _)| *w == id)
+                        && let Some((_, call)) = waiting.take()
+                    {
+                        let _ = call.reply.send(answer_of(&value));
                     }
                 }
             }

@@ -84,7 +84,7 @@ description: "Task list for SNI tray"
 ## Phase 6: Polish & Cross-Cutting
 
 - [x] T010 Manual KDE + waybar check entry in `docs/release.md` (SC-001) — Executor: builder · Reviewer: thinker · Effort: low
-- [ ] T011 Run quickstart.md validation — Executor: scout · Reviewer: thinker · Effort: low
+- [x] T011 Run quickstart.md validation — Executor: scout · Reviewer: thinker · Effort: low
 - [ ] T012 QA tasks — see `## QA` (appended by `qa:strategy`) — Executor: thinker · Reviewer: reviewer · Effort: high
 
 ---

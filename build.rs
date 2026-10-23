@@ -48,17 +48,17 @@ fn decode(path: &std::path::Path, size: u32) -> Vec<u8> {
     let mut out = Vec::with_capacity((size * size * 4) as usize);
     match info.color_type {
         png::ColorType::Rgba => {
-            for p in data.chunks_exact(4) {
+            for p in data.as_chunks::<4>().0 {
                 out.extend_from_slice(&[p[3], p[0], p[1], p[2]]);
             }
         }
         png::ColorType::Rgb => {
-            for p in data.chunks_exact(3) {
+            for p in data.as_chunks::<3>().0 {
                 out.extend_from_slice(&[255, p[0], p[1], p[2]]);
             }
         }
         png::ColorType::GrayscaleAlpha => {
-            for p in data.chunks_exact(2) {
+            for p in data.as_chunks::<2>().0 {
                 out.extend_from_slice(&[p[1], p[0], p[0], p[0]]);
             }
         }

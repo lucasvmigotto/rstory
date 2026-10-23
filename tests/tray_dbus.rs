@@ -240,6 +240,9 @@ async fn until<T>(what: &str, mut f: impl AsyncFnMut() -> Option<T>) -> T {
 
 // ---- dbusmenu / SNI reads
 
+/// `(id, properties, children)` as dbusmenu sends a node.
+type RawNode = (i32, HashMap<String, OwnedValue>, Vec<OwnedValue>);
+
 #[derive(Debug, Clone)]
 struct Node {
     id: i32,
@@ -296,8 +299,7 @@ async fn layout(conn: &zbus::Connection, dest: &str) -> Node {
         .await
         .unwrap();
     let body = m.body();
-    let (_rev, (id, props, kids)): (u32, (i32, HashMap<String, OwnedValue>, Vec<OwnedValue>)) =
-        body.deserialize().unwrap();
+    let (_rev, (id, props, kids)): (u32, RawNode) = body.deserialize().unwrap();
     Node {
         id,
         label: s_prop(&props, "label"),
