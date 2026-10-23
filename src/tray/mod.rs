@@ -4,6 +4,7 @@
 //! control socket uses, so it is a client and never writes the store. Nothing here logs or
 //! formats clipboard content (Constitution III).
 
+pub mod client;
 pub mod icons;
 pub mod menu;
 
