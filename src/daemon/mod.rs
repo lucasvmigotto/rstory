@@ -3,8 +3,6 @@
 //! One current-thread task owns the store and the backend. Socket requests, backend events
 //! and the one deadline timer are serialized in `Daemon::run`, so there are no lost updates.
 
-#![allow(dead_code, unused_variables, unused_mut, unused_imports)]
-
 pub mod handlers;
 pub mod log;
 pub mod pipeline;
@@ -173,7 +171,55 @@ impl<B: Backend, F: Fs> Daemon<B, F> {
 
     /// Runs until `shutdown` turns true. Returns the store so the caller releases the lock last.
     pub async fn run(mut self, mut shutdown: watch::Receiver<bool>) -> Store<F> {
-        todo!("daemon loop")
+        let Some(mut calls) = self.calls.take() else {
+            return self.store;
+        };
+        loop {
+            let at = self.deadline().map(|t| self.clock.instant_at(t));
+            let woke = {
+                let backend = &mut self.backend;
+                tokio::select! {
+                    biased;
+                    _ = shutdown.changed() => Woke::Shutdown,
+                    call = calls.recv() => Woke::Call(call),
+                    ev = async {
+                        match backend {
+                            Some(b) => b.events().next().await,
+                            None => std::future::pending().await,
+                        }
+                    } => Woke::Event(ev),
+                    () = async {
+                        match at {
+                            Some(t) => tokio::time::sleep_until(t).await,
+                            None => std::future::pending().await,
+                        }
+                    } => Woke::Timer,
+                }
+            };
+            self.probe.wakeups.fetch_add(1, Ordering::Relaxed);
+            match woke {
+                Woke::Shutdown => break,
+                Woke::Call(None) => break,
+                Woke::Call(Some(call)) => {
+                    self.housekeeping();
+                    let result = self.handle(call.command).await;
+                    let _ = call.reply.send(result);
+                }
+                Woke::Event(ev) => {
+                    self.housekeeping();
+                    self.on_backend_event(ev).await;
+                }
+                Woke::Timer => {
+                    self.housekeeping();
+                    self.maybe_reconnect().await;
+                }
+            }
+        }
+        if let Some(b) = self.backend.as_mut() {
+            b.stop_serving();
+        }
+        tracing::info!("daemon.stop");
+        self.store
     }
 
     /// Ends a due timed pause and expires due entries, in one store commit.

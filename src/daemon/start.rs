@@ -76,7 +76,34 @@ pub async fn open_store(
     retry: Duration,
     clock: &Clock,
 ) -> Result<Store<RealFs>, StartError> {
-    todo!("open_store")
+    let end = tokio::time::Instant::now() + retry;
+    loop {
+        match Store::open_exclusive_at(dir, caps, RealFs, clock.now()) {
+            Ok(s) => return Ok(s),
+            Err(StoreError::Locked) => {
+                if let Ok(stream) = UnixStream::connect(server::socket_path(runtime_dir)).await {
+                    return Err(StartError::AlreadyRunning(
+                        peer_cred(&stream).ok().map(|c| c.pid),
+                    ));
+                }
+                if tokio::time::Instant::now() >= end {
+                    return Err(StartError::Environment(
+                        "a client is reading the store; retry".to_string(),
+                    ));
+                }
+                tokio::time::sleep(LOCK_POLL).await;
+            }
+            Err(e @ StoreError::StoreTooOpen { .. }) => {
+                return Err(StartError::Environment(e.to_string()));
+            }
+            Err(e) => {
+                return Err(StartError::Unexpected(format!(
+                    "could not open the store ({})",
+                    error_kind(&e)
+                )));
+            }
+        }
+    }
 }
 
 /// What a backend provider hands the daemon.
@@ -104,7 +131,41 @@ where
     P: FnOnce() -> Fut,
     Fut: Future<Output = Provided<B>>,
 {
-    todo!("serve_process")
+    let clock = Clock::system();
+    let store = open_store(
+        &rt.store_dir,
+        rt.caps,
+        &rt.runtime_dir,
+        rt.lock_retry,
+        &clock,
+    )
+    .await?;
+    let listener = server::bind(&rt.runtime_dir).map_err(|e| {
+        StartError::Environment(format!("could not bind the control socket: {}", e.kind()))
+    })?;
+    let provided = provide().await;
+    tracing::info!(
+        backend = provided.info.kind.as_str(),
+        mode = provided.info.mode.as_str(),
+        version = env!("CARGO_PKG_VERSION"),
+        "daemon.start"
+    );
+    let mut daemon = Daemon::new(
+        store,
+        provided.backend,
+        provided.info,
+        rt.caps,
+        clock,
+        rt.launch,
+    )
+    .map_err(|e| StartError::Unexpected(format!("could not start ({})", error_kind(&e))))?;
+    if let Some(c) = provided.connector {
+        daemon.set_connector(c);
+    }
+    let store = run_with_listener(daemon, listener, shutdown).await;
+    let _ = std::fs::remove_file(server::socket_path(&rt.runtime_dir));
+    drop(store);
+    Ok(())
 }
 
 /// Command-line options of `rstory daemon`.
