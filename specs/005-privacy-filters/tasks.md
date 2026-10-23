@@ -26,7 +26,7 @@ No feature-specific setup (crate skeleton comes from 001).
 
 **⚠️ CRITICAL**: blocks every story in this feature.
 
-- [ ] T001 Define `FilterDecision` and `SENSITIVE_HINTS` in `src/domain/filter.rs` — Executor: builder · Reviewer: thinker · Effort: low
+- [x] T001 Define `FilterDecision` and `SENSITIVE_HINTS` in `src/domain/filter.rs` — Executor: builder · Reviewer: thinker · Effort: low
 
 **Checkpoint**: foundation ready.
 
