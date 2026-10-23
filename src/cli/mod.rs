@@ -82,6 +82,10 @@ pub fn run(args: &[String]) -> u8 {
             return u8::try_from(code).unwrap_or(2);
         }
     };
+    // Owned by spec 012: it prints its own lines and picks its own exit code.
+    if let args::Command::InstallAutostart { args } = &cli.command {
+        return crate::install::autostart::run(args);
+    }
     let env = env::Env::process();
     let term = render::Term::detect();
     let (mut out, mut err) = (std::io::stdout().lock(), std::io::stderr().lock());
@@ -123,7 +127,7 @@ fn dispatch(command: args::Command, io: &mut commands::Io<'_>) -> Result<(), err
         Command::Daemon { .. } => Err(unavailable("daemon")),
         Command::Pick { .. } => Err(unavailable("pick")),
         Command::Doctor { .. } => Err(unavailable("doctor")),
-        Command::InstallAutostart { .. } => Err(unavailable("install-autostart")),
+        Command::InstallAutostart { .. } => unreachable!("handled in `run`"),
         Command::InstallGnomeExtension { .. } => Err(unavailable("install-gnome-extension")),
     }
 }

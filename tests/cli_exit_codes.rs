@@ -150,3 +150,19 @@ async fn exit_7_inactive() {
     );
     rig.stop().await;
 }
+
+#[test]
+fn install_autostart_is_dispatched_to_the_installer() {
+    // A bad flag is rejected by the installer itself (exit 2) before anything is written.
+    let out = assert_cmd::Command::cargo_bin("rstory")
+        .unwrap()
+        .args(["install-autostart", "--no-such-flag"])
+        .env("XDG_CONFIG_HOME", "/nonexistent/rstory-test-config")
+        .env("HOME", "/nonexistent/rstory-test-home")
+        .output()
+        .unwrap();
+    assert_eq!(out.status.code(), Some(2));
+    let err = String::from_utf8_lossy(&out.stderr);
+    assert!(err.contains("usage: rstory install-autostart"), "{err}");
+    assert!(!err.contains("not available in this build"), "{err}");
+}
