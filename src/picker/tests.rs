@@ -605,3 +605,149 @@ fn snapshot_pinned_after_ctrl_t() {
     let line = out.lines().find(|l| l.contains("git rebase")).unwrap();
     assert!(line.contains('📌'), "{line}");
 }
+
+// ---------------------------------------------------------------- US3 (T008)
+
+pub(crate) const MONO: Look = Look {
+    tier: Tier::Mono,
+    ascii: false,
+};
+
+pub(crate) const ASCII_MONO: Look = Look {
+    tier: Tier::Mono,
+    ascii: true,
+};
+
+/// Renders `state` with the `--plain` renderer at its own size.
+pub(crate) fn plain(state: &PickerState) -> String {
+    let (w, h) = state.size();
+    let theme = Theme::new(Tier::Mono, Background::Dark);
+    let glyphs = Glyphs::new(true);
+    let area = Rect::new(0, 0, w, view::plain_height(h));
+    let mut buf = Buffer::empty(area);
+    view::render_plain(state, area, &mut buf, Ctx::new(&theme, &glyphs));
+    format!("# plain {w}x{h}\n{}", dump(&buf))
+}
+
+#[test]
+fn snapshot_plain() {
+    for size in SIZES {
+        let s = loaded(rich(), false, size, vec![]);
+        insta::assert_snapshot!(format!("plain_{}x{}", size.0, size.1), plain(&s));
+        let s = loaded(rich(), false, size, typed("git"));
+        insta::assert_snapshot!(format!("plain_filtered_{}x{}", size.0, size.1), plain(&s));
+    }
+}
+
+#[test]
+fn plain_marks_selection_and_pins_in_words_without_box_drawing() {
+    let s = loaded(rich(), false, (80, 24), vec![key(Key::Down)]);
+    let out = plain(&s);
+    let lines: Vec<&str> = out.lines().filter(|l| l.starts_with('|')).collect();
+    assert_eq!(lines[0], "|query: _");
+    assert!(lines[1].starts_with("|  [0] 3m  git rebase"), "{}", lines[1]);
+    assert!(lines[2].starts_with("|> [1] 2h  [pinned] git reset"), "{}", lines[2]);
+    assert!(out.contains("6 of 6 shown. Enter restores, Esc quits."), "{out}");
+    for bad in ['│', '─', '┬', '📌', '…'] {
+        assert!(!out.contains(bad), "{bad} in {out}");
+    }
+}
+
+#[test]
+fn plain_shows_the_confirm_and_status_lines() {
+    let s = loaded(rich(), false, (80, 24), vec![key(Key::Ctrl('d'))]);
+    assert!(plain(&s).contains("Delete this entry? y/n"));
+    let s = loaded(rich(), true, (80, 24), vec![]);
+    assert!(plain(&s).contains("Read-only: daemon not running"));
+}
+
+#[test]
+fn snapshot_no_color() {
+    for size in SIZES {
+        let s = loaded(rich(), false, size, typed("git"));
+        let out = screen(&s, MONO);
+        assert!(!out.contains("fg="), "NO_COLOR draws no colors:\n{out}");
+        insta::assert_snapshot!(format!("no_color_{}x{}", size.0, size.1), out);
+    }
+}
+
+#[test]
+fn snapshot_ascii() {
+    for size in SIZES {
+        let s = loaded(rich(), false, size, vec![]);
+        let out = screen(&s, ASCII_MONO);
+        assert!(out.lines().all(|l| l.is_ascii()), "{out}");
+        insta::assert_snapshot!(format!("ascii_{}x{}", size.0, size.1), out);
+    }
+}
+
+#[test]
+fn snapshot_read_only() {
+    for size in SIZES {
+        let mut snap = rich();
+        snap.rec = None;
+        let s = loaded(snap, true, size, vec![]);
+        let out = screen(&s, COLOR);
+        assert!(out.contains("Read-only: daemon not running"), "{out}");
+        assert!(!out.contains("Ctrl-T"), "read-only hints drop Ctrl-T/Ctrl-D:\n{out}");
+        insta::assert_snapshot!(format!("read_only_{}x{}", size.0, size.1), out);
+    }
+}
+
+#[test]
+fn snapshot_empty() {
+    for size in SIZES {
+        let s = loaded(snapshot(vec![]), false, size, vec![]);
+        let out = screen(&s, COLOR);
+        assert!(out.contains("0/0"), "{out}");
+        insta::assert_snapshot!(format!("empty_{}x{}", size.0, size.1), out);
+        assert!(plain(&s).contains("No entries yet"));
+    }
+}
+
+#[test]
+fn snapshot_too_small() {
+    for size in [(19, 10), (40, 4)] {
+        let s = loaded(rich(), false, size, vec![]);
+        let out = screen(&s, COLOR);
+        assert!(out.contains("Terminal too small (need 20×5)."), "{out}");
+        insta::assert_snapshot!(format!("too_small_{}x{}", size.0, size.1), out);
+    }
+}
+
+#[test]
+fn resizing_never_panics() {
+    let mut s = loaded(rich(), false, (80, 24), vec![key(Key::Down)]);
+    for w in [0u16, 1, 5, 19, 20, 21, 39, 40, 59, 60, 79, 80, 99, 100, 200] {
+        for h in [0u16, 1, 4, 5, 6, 7, 8, 24, 60] {
+            update(&mut s, Msg::Resize { width: w, height: h });
+            let _ = screen(&s, COLOR);
+            let _ = plain(&s);
+        }
+    }
+}
+
+#[test]
+fn read_only_enter_shows_the_hint_and_exits_3_without_a_restore() {
+    let mut snap = b_and_a();
+    snap.rec = None;
+    let mut fake = Fake::new(snap.clone());
+    fake.read_only = true;
+    let mut s = PickerState::new(snap, true, (80, 24));
+    let exit = drive(&mut s, &mut fake, vec![key(Key::Enter)]).unwrap();
+    assert_eq!(exit.code, EXIT_DAEMON_DOWN);
+    assert_eq!(exit.message.as_deref(), Some(crate::ui::copy::PICKER_READONLY_RESTORE));
+    assert!(fake.calls.is_empty(), "the clipboard is not touched");
+}
+
+#[test]
+fn read_only_ignores_pin_and_delete() {
+    let mut snap = b_and_a();
+    snap.rec = None;
+    let mut fake = Fake::new(snap.clone());
+    fake.read_only = true;
+    let mut s = PickerState::new(snap, true, (80, 24));
+    drive(&mut s, &mut fake, vec![key(Key::Ctrl('t')), key(Key::Ctrl('d'))]);
+    assert_eq!(s.mode(), &Mode::Normal);
+    assert!(fake.calls.is_empty());
+}
