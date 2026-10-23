@@ -3,6 +3,9 @@
 
 use time::OffsetDateTime;
 
+use crate::ui::copy;
+use crate::ui::glyphs::{Glyph, Glyphs};
+
 /// Most entry items in the menu.
 pub const MAX_ENTRIES: usize = 10;
 /// Longest entry label, in characters, counting the closing `…`.
@@ -128,26 +131,133 @@ pub struct TrayMenu {
 /// One-line label of a preview: newlines become `⏎`, other control characters go, at most
 /// [`LABEL_MAX`] characters with a closing `…`.
 #[must_use]
-pub fn label_of(_preview: &str) -> String {
-    todo!()
+pub fn label_of(preview: &str) -> String {
+    // The daemon already escaped newlines to the two characters `\n`; real ones are handled too.
+    let mut out = String::new();
+    let mut chars = preview.chars().peekable();
+    while let Some(c) = chars.next() {
+        match c {
+            '\\' if chars.peek() == Some(&'n') => {
+                chars.next();
+                out.push_str(NEWLINE);
+            }
+            '\r' if chars.peek() == Some(&'\n') => {}
+            '\n' | '\r' => out.push_str(NEWLINE),
+            c if c.is_control() => {}
+            c => out.push(c),
+        }
+    }
+    if out.chars().count() <= LABEL_MAX {
+        return out;
+    }
+    let mut cut: String = out.chars().take(LABEL_MAX - 1).collect();
+    cut.push('…');
+    cut
+}
+
+const NEWLINE: &str = "⏎";
+
+fn remaining_label(until: OffsetDateTime, now: OffsetDateTime) -> String {
+    let ms = (until - now).whole_milliseconds().max(0);
+    // Round up: a pause that has not ended never reads 0:00.
+    let secs = u64::try_from(ms).unwrap_or(0).div_ceil(1000).max(1);
+    copy::format(
+        copy::STATE_PAUSED_UNTIL,
+        &[
+            ("m", &(secs / 60).to_string()),
+            ("ss", &format!("{:02}", secs % 60)),
+        ],
+    )
 }
 
 impl TrayMenu {
     /// Builds the model. `rows` is the history newest first (extra rows are ignored).
     #[must_use]
     pub fn build(
-        _rows: &[EntryRow],
-        _view: &View,
-        _now: OffsetDateTime,
-        _picker_available: bool,
-        _clear: Clear,
+        rows: &[EntryRow],
+        view: &View,
+        now: OffsetDateTime,
+        picker_available: bool,
+        clear: Clear,
     ) -> Self {
-        todo!()
+        let entries = rows
+            .iter()
+            .take(MAX_ENTRIES)
+            .map(|r| {
+                let label = label_of(&r.preview);
+                let label = if r.pinned {
+                    format!("{} {label}", Glyphs::new(false).get(Glyph::Pin))
+                } else {
+                    label
+                };
+                (r.id.clone(), label, r.pinned)
+            })
+            .collect();
+        let (status_label, pause_item) = match view {
+            View::Recording => (copy::STATE_RECORDING.to_string(), PauseItem::Pause),
+            View::Paused { until: None } => (copy::STATE_PAUSED.to_string(), PauseItem::Resume),
+            View::Paused { until: Some(t) } => (remaining_label(*t, now), PauseItem::Resume),
+            View::Inactive { reason } => (
+                copy::format(copy::STATE_INACTIVE, &[("reason", reason)]),
+                PauseItem::Pause,
+            ),
+        };
+        Self {
+            entries,
+            status_label,
+            pause_item,
+            show_pause_minute: pause_item == PauseItem::Pause,
+            show_open_picker: picker_available,
+            clear,
+        }
     }
 
     /// The items in contract order.
     #[must_use]
     pub fn items(&self) -> Vec<Item> {
-        todo!()
+        let mut out: Vec<Item> = Vec::new();
+        if self.entries.is_empty() {
+            out.push(Item::Label(copy::MENU_EMPTY.to_string()));
+        }
+        for (id, label, _) in &self.entries {
+            out.push(Item::Action {
+                label: label.clone(),
+                action: Action::Restore(id.clone()),
+            });
+        }
+        out.push(Item::Separator);
+        out.push(Item::Label(self.status_label.clone()));
+        out.push(match self.pause_item {
+            PauseItem::Pause => action(copy::MENU_PAUSE, Action::Pause),
+            PauseItem::Resume => action(copy::MENU_RESUME, Action::Resume),
+        });
+        if self.show_pause_minute {
+            out.push(action(copy::MENU_PAUSE_MINUTE, Action::PauseMinute));
+        }
+        if self.show_open_picker {
+            out.push(action(copy::MENU_OPEN_PICKER, Action::OpenPicker));
+        }
+        out.push(Item::Separator);
+        out.push(match self.clear {
+            Clear::Idle => action(copy::MENU_CLEAR, Action::ClearBegin),
+            Clear::Confirming(n) => Item::Submenu {
+                label: copy::MENU_CLEAR.to_string(),
+                children: vec![
+                    action(
+                        &copy::format(copy::MENU_CLEAR_CONFIRM, &[("n", &n.to_string())]),
+                        Action::ClearConfirm,
+                    ),
+                    action(copy::MENU_CLEAR_CANCEL, Action::ClearCancel),
+                ],
+            },
+        });
+        out
+    }
+}
+
+fn action(label: &str, action: Action) -> Item {
+    Item::Action {
+        label: label.to_string(),
+        action,
     }
 }
