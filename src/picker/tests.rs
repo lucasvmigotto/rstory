@@ -787,3 +787,31 @@ fn read_only_ignores_pin_and_delete() {
     assert_eq!(s.mode(), &Mode::Normal);
     assert!(fake.calls.is_empty());
 }
+
+// ---------------------------------------------------------------- polish (T020)
+
+#[test]
+fn f1_shows_the_full_keymap_in_two_footer_lines_and_toggles_back() {
+    let (mut s, mut fake) = open(b_and_a(), (80, 24));
+    let rows_before = s.list_rows();
+    drive(&mut s, &mut fake, vec![key(Key::F(1))]);
+    assert!(s.keymap());
+    assert_eq!(s.list_rows(), rows_before - 1);
+    let out = screen(&s, COLOR);
+    let text: Vec<&str> = out.lines().filter(|l| l.starts_with('|')).collect();
+    let n = text.len();
+    assert!(text[n - 2].contains("Enter restore"), "{out}");
+    assert!(text[n - 1].contains("Ctrl-U clear"), "{out}");
+    assert!(text[n - 1].contains("F1 close"), "{out}");
+    drive(&mut s, &mut fake, vec![key(Key::F(1))]);
+    assert!(!s.keymap());
+    assert_eq!(s.list_rows(), rows_before);
+}
+
+#[test]
+fn snapshot_keymap() {
+    for size in SIZES {
+        let s = loaded(rich(), false, size, vec![key(Key::F(1))]);
+        insta::assert_snapshot!(format!("keymap_{}x{}", size.0, size.1), screen(&s, COLOR));
+    }
+}
