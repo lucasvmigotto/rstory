@@ -18,7 +18,7 @@ description: "Task list for Command-line interface"
 
 ## Phase 1: Setup
 
-- [ ] T001 [P] Add `assert_cmd`/`insta` dev-deps and a test harness that starts a daemon with FakeBackend on a temp runtime dir in `tests/support/daemon.rs` — Executor: builder · Reviewer: thinker
+- [x] T001 [P] Add `assert_cmd`/`insta` dev-deps and a test harness that starts a daemon with FakeBackend on a temp runtime dir in `tests/support/daemon.rs` — Executor: builder · Reviewer: thinker
 
 ---
 
@@ -26,7 +26,7 @@ description: "Task list for Command-line interface"
 
 **⚠️ CRITICAL**: blocks every story in this feature.
 
-- [ ] T002 Define `ExitCode` enum and `EntryRef` parser per `/contracts/cli.md` in `src/cli/mod.rs` with unit tests — Executor: builder · Reviewer: thinker · Effort: low
+- [x] T002 Define `ExitCode` enum and `EntryRef` parser per `/contracts/cli.md` in `src/cli/mod.rs` with unit tests — Executor: builder · Reviewer: thinker · Effort: low
 
 **Checkpoint**: foundation ready.
 
@@ -38,12 +38,12 @@ description: "Task list for Command-line interface"
 
 ### Tests for User Story 1 ⚠️
 
-- [ ] T003 [P] [US1] assert_cmd tests: ls text (insta), ls --json schema, show raw bytes, copy, unknown/ambiguous ref exit 2 in `tests/cli_browse.rs` — Executor: builder · Reviewer: thinker
+- [x] T003 [P] [US1] assert_cmd tests: ls text (insta), ls --json schema, show raw bytes, copy, unknown/ambiguous ref exit 2 in `tests/cli_browse.rs` — Executor: builder · Reviewer: thinker
 
 ### Implementation for User Story 1
 
-- [ ] T004 [US1] Terminal UI / CLI implementation — see `## Frontend` (appended by `frontend:spec`; `[TUI]`/`[CLI]` tasks built by `frontend:tui`) — Executor: builder · Reviewer: thinker
-- [ ] T005 [US1] Backend implementation — see `## Backend` (appended by `backend:spec`) — Executor: builder · Reviewer: thinker
+- [x] T004 [US1] Terminal UI / CLI implementation — see `## Frontend` (appended by `frontend:spec`; `[TUI]`/`[CLI]` tasks built by `frontend:tui`) — Executor: builder · Reviewer: thinker
+- [x] T005 [US1] Backend implementation — see `## Backend` (appended by `backend:spec`) — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: User Story 1 passes its tests independently.
 
@@ -55,11 +55,11 @@ description: "Task list for Command-line interface"
 
 ### Tests for User Story 2 ⚠️
 
-- [ ] T006 [P] [US2] assert_cmd tests incl. pin_limit exit 6, clear prompt/--yes/no-TTY, clear --all prompt, pause without daemon exit 3 in `tests/cli_manage.rs` — Executor: builder · Reviewer: thinker
+- [x] T006 [P] [US2] assert_cmd tests incl. pin_limit exit 6, clear prompt/--yes/no-TTY, clear --all prompt, pause without daemon exit 3 in `tests/cli_manage.rs` — Executor: builder · Reviewer: thinker
 
 ### Implementation for User Story 2
 
-- [ ] T007 [US2] Terminal UI / CLI implementation — see `## Frontend` (appended by `frontend:spec`; `[TUI]`/`[CLI]` tasks built by `frontend:tui`) — Executor: builder · Reviewer: thinker
+- [x] T007 [US2] Terminal UI / CLI implementation — see `## Frontend` (appended by `frontend:spec`; `[TUI]`/`[CLI]` tasks built by `frontend:tui`) — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: User Story 2 passes its tests independently.
 
@@ -71,11 +71,11 @@ description: "Task list for Command-line interface"
 
 ### Tests for User Story 3 ⚠️
 
-- [ ] T008 [P] [US3] read-only fallback tests in `tests/cli_readonly.rs` — Executor: builder · Reviewer: thinker
+- [x] T008 [P] [US3] read-only fallback tests in `tests/cli_readonly.rs` — Executor: builder · Reviewer: thinker
 
 ### Implementation for User Story 3
 
-- [ ] T009 [US3] Terminal UI / CLI implementation — see `## Frontend` (appended by `frontend:spec`; `[TUI]`/`[CLI]` tasks built by `frontend:tui`) — Executor: builder · Reviewer: thinker
+- [x] T009 [US3] Terminal UI / CLI implementation — see `## Frontend` (appended by `frontend:spec`; `[TUI]`/`[CLI]` tasks built by `frontend:tui`) — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: User Story 3 passes its tests independently.
 
@@ -87,11 +87,11 @@ description: "Task list for Command-line interface"
 
 ### Tests for User Story 4 ⚠️
 
-- [ ] T010 [P] [US4] status/config tests in `tests/cli_status.rs`; exit-code coverage matrix (SC-003) — Executor: builder · Reviewer: thinker
+- [x] T010 [P] [US4] status/config tests in `tests/cli_status.rs`; exit-code coverage matrix (SC-003) — Executor: builder · Reviewer: thinker
 
 ### Implementation for User Story 4
 
-- [ ] T011 [US4] Terminal UI / CLI implementation — see `## Frontend` (appended by `frontend:spec`; `[TUI]`/`[CLI]` tasks built by `frontend:tui`) — Executor: builder · Reviewer: thinker
+- [x] T011 [US4] Terminal UI / CLI implementation — see `## Frontend` (appended by `frontend:spec`; `[TUI]`/`[CLI]` tasks built by `frontend:tui`) — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: User Story 4 passes its tests independently.
 
@@ -99,9 +99,9 @@ description: "Task list for Command-line interface"
 
 ## Phase 7: Polish & Cross-Cutting
 
-- [ ] T012 [P] `benches/ls.rs`: < 50 ms at 500 entries (SC-001) — Executor: builder · Reviewer: thinker
-- [ ] T013 Shell completions smoke test — Executor: builder · Reviewer: thinker · Effort: low
-- [ ] T014 Run quickstart.md validation — Executor: scout · Reviewer: thinker · Effort: low
+- [x] T012 [P] `benches/ls.rs`: < 50 ms at 500 entries (SC-001) — Executor: builder · Reviewer: thinker
+- [x] T013 Shell completions smoke test — Executor: builder · Reviewer: thinker · Effort: low
+- [x] T014 Run quickstart.md validation — Executor: scout · Reviewer: thinker · Effort: low
 - [ ] T015 QA tasks — see `## QA` (appended by `qa:strategy`) — Executor: thinker · Reviewer: reviewer · Effort: high
 
 ---
@@ -125,8 +125,8 @@ Appended by `backend:spec`. Built by `backend:build` (ticks only this section). 
 
 ### Backend US1 — Browse and restore from the shell
 
-- [ ] T016 [US1] Blocking protocol client with timeouts and typed errors in `src/ipc/client.rs` — Executor: builder · Reviewer: thinker
-- [ ] T017 [US1] Read-only fallback adapter (`ls`/`show`) in `src/cli/source.rs` — Executor: builder · Reviewer: thinker
+- [x] T016 [US1] Blocking protocol client with timeouts and typed errors in `src/ipc/client.rs` — Executor: builder · Reviewer: thinker
+- [x] T017 [US1] Read-only fallback adapter (`ls`/`show`) in `src/cli/source.rs` — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: the US1 tests in this file's story phase pass (`cargo test`), plus the contract tests where they apply.
 
@@ -139,32 +139,32 @@ Appended by `frontend:spec`. `[TUI]`/`[CLI]` tasks built by `frontend:tui` (tick
 
 ### Frontend Foundational
 
-- [ ] T018 [CLI] clap command tree for every subcommand with help text and examples (`src/cli/args.rs`); `rstory completions` via clap_complete — Executor: builder · Reviewer: thinker
+- [x] T018 [CLI] clap command tree for every subcommand with help text and examples (`src/cli/args.rs`); `rstory completions` via clap_complete — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: unit tests green.
 
 ### Frontend US1 — Browse and restore from the shell
 
-- [ ] T019 [US1] [CLI] snapshots first, then `ls` renderer (TTY width-aware, piped TSV) and `show` raw output in `src/cli/render.rs` using `EntryLine` — Executor: builder · Reviewer: thinker
-- [ ] T020 [US1] [CLI] `--json` serializers per `/contracts/cli.md` with `schema: 1` — Executor: builder · Reviewer: thinker
+- [x] T019 [US1] [CLI] snapshots first, then `ls` renderer (TTY width-aware, piped TSV) and `show` raw output in `src/cli/render.rs` using `EntryLine` — Executor: builder · Reviewer: thinker
+- [x] T020 [US1] [CLI] `--json` serializers per `/contracts/cli.md` with `schema: 1` — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: the US1 snapshot/journey tests pass; `cargo insta review` is clean.
 
 ### Frontend US2 — Manage the history
 
-- [ ] T021 [US2] [CLI] pin/unpin/rm/clear/clear --all/pause/resume commands with prompts (TTY, /dev/tty, --yes) and copy-keyed messages in `src/cli/commands.rs` — Executor: builder · Reviewer: thinker
+- [x] T021 [US2] [CLI] pin/unpin/rm/clear/clear --all/pause/resume commands with prompts (TTY, /dev/tty, --yes) and copy-keyed messages in `src/cli/commands.rs` — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: the US2 snapshot/journey tests pass; `cargo insta review` is clean.
 
 ### Frontend US3 — Read while the daemon is down
 
-- [ ] T022 [US3] [CLI] read-only fallback messaging (`cli.readonly`) and exit 3 for write commands — Executor: builder · Reviewer: thinker · Effort: low
+- [x] T022 [US3] [CLI] read-only fallback messaging (`cli.readonly`) and exit 3 for write commands — Executor: builder · Reviewer: thinker · Effort: low
 
 **Checkpoint**: the US3 snapshot/journey tests pass; `cargo insta review` is clean.
 
 ### Frontend US4 — Status and configuration
 
-- [ ] T023 [US4] [CLI] `status` text renderer + `config [--path]` in `src/cli/status.rs` — Executor: builder · Reviewer: thinker · Effort: low
+- [x] T023 [US4] [CLI] `status` text renderer + `config [--path]` in `src/cli/status.rs` — Executor: builder · Reviewer: thinker · Effort: low
 
 **Checkpoint**: the US4 snapshot/journey tests pass; `cargo insta review` is clean.
 
@@ -177,3 +177,9 @@ Appended by `qa:strategy`. Executed by `qa:e2e` / `qa:load` after the builds (ti
 - [ ] T024 `tests/e2e/E2E-K6.rs` (scripting, non-TTY) — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: the journeys and suites in `qa.md` are green in CI; the exit criteria are met → Verified in `specs/README.md`.
+
+---
+
+## Convergence — 2026-10-23
+
+Converged, both layers. The commands in `contracts/cli.md` map to `src/cli/{args,commands,render,env,error,mod}.rs` and `src/ipc/client.rs`. Reads fall back to the read-only store when the daemon is down, and writes exit 3. `--json` output is validated against the protocol schema (`tests/contract/cli_json.rs`). Every exit code from 0 to 7 has a run in `tests/cli_exit_codes.rs`; 130 has a unit test only. `benches/ls.rs` measures `ls` on 500 entries at a 21 ms median read-only and 29 ms through the socket, against a 50 ms budget. After the rebase, `install-autostart` (012) goes through the CLI parser to `install::autostart::run`. `daemon` stays in `src/main.rs`, because the `cli` module may not depend on `daemon` (F1). Readings the spec left open: a cancelled `clear` exits 1 ("Cancelled."); `ls --json` is the contract's `{schema, entries, read_only}` object; `show` through the daemon returns lossy UTF-8 (protocol `content: string`). Unverified until QA: the interactive `clear` prompt on a real TTY and colored snapshots. The QA tasks (T015, T024) are deferred to before Verified.
