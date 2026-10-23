@@ -26,7 +26,7 @@ No feature-specific setup (crate skeleton comes from 001).
 
 **⚠️ CRITICAL**: blocks every story in this feature.
 
-- [ ] T001 Define `Check`, statuses, text/JSON renderers and exit scale in `src/doctor/mod.rs` — Executor: builder · Reviewer: thinker
+- [x] T001 Define `Check`, statuses, text/JSON renderers and exit scale in `src/doctor/mod.rs` — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: foundation ready.
 

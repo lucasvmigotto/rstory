@@ -30,7 +30,12 @@ impl Status {
     /// The name in `--json`.
     #[must_use]
     pub fn as_str(self) -> &'static str {
-        todo!()
+        match self {
+            Self::Ok => "ok",
+            Self::Info => "info",
+            Self::Warn => "warn",
+            Self::Fail => "fail",
+        }
     }
 }
 
@@ -52,8 +57,12 @@ impl Check {
     /// A check that passed.
     #[must_use]
     pub fn ok(id: &'static str, message: impl Into<String>) -> Self {
-        let _ = (id, message.into());
-        todo!()
+        Self {
+            id,
+            status: Status::Ok,
+            message: message.into(),
+            hint: None,
+        }
     }
 
     /// A check with a status other than ok, and its next step.
@@ -64,8 +73,12 @@ impl Check {
         message: impl Into<String>,
         hint: impl Into<String>,
     ) -> Self {
-        let _ = (id, status, message.into(), hint.into());
-        todo!()
+        Self {
+            id,
+            status,
+            message: message.into(),
+            hint: Some(hint.into()),
+        }
     }
 }
 
@@ -73,13 +86,16 @@ impl Check {
 /// warn, 2 when any fail.
 #[must_use]
 pub fn exit_code(checks: &[Check]) -> u8 {
-    let _ = checks;
-    todo!()
+    match checks.iter().map(|c| c.status).max() {
+        Some(Status::Fail) => 2,
+        Some(Status::Warn) => 1,
+        _ => 0,
+    }
 }
 
 /// How many results are warnings and failures.
 #[must_use]
 pub fn counts(checks: &[Check]) -> (usize, usize) {
-    let _ = checks;
-    todo!()
+    let n = |s| checks.iter().filter(|c| c.status == s).count();
+    (n(Status::Warn), n(Status::Fail))
 }
