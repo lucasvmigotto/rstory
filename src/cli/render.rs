@@ -66,6 +66,12 @@ impl Term {
         self.glyphs.text(s)
     }
 
+    /// Whether output is limited to ASCII.
+    #[must_use]
+    pub fn is_ascii(&self) -> bool {
+        self.glyphs.is_ascii()
+    }
+
     /// Whether styling is on (a color tier above mono).
     #[must_use]
     pub fn styled(&self) -> bool {

@@ -87,11 +87,11 @@ description: "Task list for Command-line interface"
 
 ### Tests for User Story 4 ⚠️
 
-- [ ] T010 [P] [US4] status/config tests in `tests/cli_status.rs`; exit-code coverage matrix (SC-003) — Executor: builder · Reviewer: thinker
+- [x] T010 [P] [US4] status/config tests in `tests/cli_status.rs`; exit-code coverage matrix (SC-003) — Executor: builder · Reviewer: thinker
 
 ### Implementation for User Story 4
 
-- [ ] T011 [US4] Terminal UI / CLI implementation — see `## Frontend` (appended by `frontend:spec`; `[TUI]`/`[CLI]` tasks built by `frontend:tui`) — Executor: builder · Reviewer: thinker
+- [x] T011 [US4] Terminal UI / CLI implementation — see `## Frontend` (appended by `frontend:spec`; `[TUI]`/`[CLI]` tasks built by `frontend:tui`) — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: User Story 4 passes its tests independently.
 
@@ -164,7 +164,7 @@ Appended by `frontend:spec`. `[TUI]`/`[CLI]` tasks built by `frontend:tui` (tick
 
 ### Frontend US4 — Status and configuration
 
-- [ ] T023 [US4] [CLI] `status` text renderer + `config [--path]` in `src/cli/status.rs` — Executor: builder · Reviewer: thinker · Effort: low
+- [x] T023 [US4] [CLI] `status` text renderer + `config [--path]` in `src/cli/status.rs` — Executor: builder · Reviewer: thinker · Effort: low
 
 **Checkpoint**: the US4 snapshot/journey tests pass; `cargo insta review` is clean.
 

@@ -13,6 +13,8 @@ use super::env::Env;
 use super::error::CliError;
 use super::render::{self, Term};
 use super::source;
+use super::status;
+use crate::config::{Caps, ConfigError, picker_command_from_toml};
 use crate::ipc::protocol::Status;
 use crate::ui::copy;
 
@@ -87,6 +89,58 @@ pub fn copy_entry(io: &mut Io<'_>, reference: &str) -> Result<(), CliError> {
         .call("restore", json!({"ref": reference}))
         .map(|_| ())
         .map_err(|e| CliError::from_client(e, Some(reference)))
+}
+
+/// `rstory status [--json]`.
+///
+/// # Errors
+/// Exit 3 without a daemon.
+pub fn status(io: &mut Io<'_>, json: bool) -> Result<(), CliError> {
+    let mut client = source::require_daemon(io.env)?;
+    let result = client
+        .call("status", json!({}))
+        .map_err(|e| CliError::from_client(e, None))?;
+    let status: Status = serde_json::from_value(result).map_err(|_| {
+        CliError::new(
+            ExitCode::Unexpected,
+            "The daemon sent a status rstory does not understand.",
+        )
+    })?;
+    let text = if json {
+        status::status_json(&status)
+    } else {
+        status::status_text(&status, OffsetDateTime::now_utc(), io.term)
+    };
+    emit(io.out, text.as_bytes())
+}
+
+/// `rstory config [--path]`: needs no daemon.
+///
+/// # Errors
+/// Exit 5 when the config file cannot be located, read or is invalid.
+pub fn config(io: &mut Io<'_>, path_only: bool) -> Result<(), CliError> {
+    let path = io.env.config_path()?;
+    if path_only {
+        return emit(io.out, format!("{}\n", path.display()).as_bytes());
+    }
+    let (text, exists) = match std::fs::read_to_string(&path) {
+        Ok(t) => (t, true),
+        Err(e) if e.kind() == io::ErrorKind::NotFound => (String::new(), false),
+        Err(e) => {
+            return Err(CliError::environment(format!(
+                "Cannot read {}: {}",
+                path.display(),
+                e.kind()
+            )));
+        }
+    };
+    let invalid = |e: ConfigError| CliError::environment(format!("{}: {e}", path.display()));
+    let caps = Caps::from_toml(&text).map_err(invalid)?;
+    let picker = picker_command_from_toml(&text).map_err(invalid)?;
+    emit(
+        io.out,
+        status::config_text(&path, exists, &caps, picker.as_deref()).as_bytes(),
+    )
 }
 
 /// `rstory pin <ref>` or `rstory unpin <ref>`: silent on success.

@@ -113,6 +113,8 @@ fn dispatch(command: args::Command, io: &mut commands::Io<'_>) -> Result<(), err
         Command::Clear { all, yes } => commands::clear(io, all, yes),
         Command::Pause { length } => commands::pause(io, length.as_deref()),
         Command::Resume => commands::resume(io),
+        Command::Status { json } => commands::status(io, json),
+        Command::Config { path } => commands::config(io, path),
         Command::Completions { shell } => {
             args::completions(shell, io.out);
             Ok(())
@@ -123,7 +125,6 @@ fn dispatch(command: args::Command, io: &mut commands::Io<'_>) -> Result<(), err
         Command::Doctor { .. } => Err(unavailable("doctor")),
         Command::InstallAutostart { .. } => Err(unavailable("install-autostart")),
         Command::InstallGnomeExtension { .. } => Err(unavailable("install-gnome-extension")),
-        _ => Err(unavailable("this command")),
     }
 }
 

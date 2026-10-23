@@ -1,5 +1,125 @@
 //! `rstory status` and `rstory config` output.
 
+use std::path::Path;
+use std::time::Duration;
+
+use serde_json::{Value, json};
+use time::OffsetDateTime;
+
+use super::render::Term;
+use crate::config::Caps;
+use crate::ipc::protocol::{StateKind, Status};
+use crate::ui::widgets::RecState;
+
+/// The three lines of `rstory status`, each ending in a newline.
+#[must_use]
+pub fn status_text(status: &Status, now: OffsetDateTime, term: &Term) -> String {
+    let sep = if term.is_ascii() { " - " } else { " · " };
+    let state = match status.state.state {
+        StateKind::Recording => RecState::Recording,
+        StateKind::Paused => match status.state.paused_until {
+            Some(until) => RecState::PausedUntil {
+                secs: u64::try_from((until - now).whole_seconds()).unwrap_or(0),
+            },
+            None => RecState::Paused,
+        },
+        StateKind::Inactive => RecState::Inactive {
+            reason: status
+                .state
+                .reason
+                .clone()
+                .unwrap_or_else(|| "unknown".into()),
+        },
+    };
+    let backend = match (status.backend.as_str(), status.mode.as_deref()) {
+        ("none", _) => "no capture backend".to_string(),
+        (b, Some("xwayland_bridge")) => format!("backend {b} (XWayland bridge)"),
+        (b, _) => format!("backend {b}"),
+    };
+    let noun = if status.entries == 1 {
+        "entry"
+    } else {
+        "entries"
+    };
+    let c = &status.counters;
+    let tray = match status.tray.as_str() {
+        "no_host" => "no host",
+        "no_bus" => "no bus",
+        other => other,
+    };
+    let picker = if status.picker_available {
+        "available"
+    } else {
+        "not available"
+    };
+    let lines = [
+        format!(
+            "{}{sep}{backend}{sep}{} {noun} ({} pinned) of {}",
+            state.label(),
+            status.entries,
+            status.pinned,
+            status.max_entries
+        ),
+        format!(
+            "Skipped: {} sensitive{sep}{} oversize{sep}{} while paused",
+            c.skipped_sensitive, c.skipped_oversize, c.skipped_paused
+        ),
+        format!("Tray: {tray}{sep}Picker: {picker}"),
+    ];
+    lines
+        .iter()
+        .map(|l| format!("{}\n", term.text(l)))
+        .collect()
+}
+
+/// `{"schema":1, …Status}` and a newline.
+#[must_use]
+pub fn status_json(status: &Status) -> String {
+    let mut value = serde_json::to_value(status).unwrap_or(Value::Null);
+    if let Value::Object(map) = &mut value {
+        map.insert("schema".into(), json!(1));
+    }
+    format!("{value}\n")
+}
+
+/// A time to live in the largest exact unit: `7d`, `36h`, `90m`.
+#[must_use]
+pub fn ttl_text(ttl: Duration) -> String {
+    let s = ttl.as_secs();
+    if s.is_multiple_of(86_400) {
+        format!("{}d", s / 86_400)
+    } else if s.is_multiple_of(3600) {
+        format!("{}h", s / 3600)
+    } else {
+        format!("{}m", s / 60)
+    }
+}
+
+/// The effective configuration as TOML, headed by the config file's path.
+#[must_use]
+pub fn config_text(path: &Path, exists: bool, caps: &Caps, picker_command: Option<&str>) -> String {
+    let note = if exists {
+        ""
+    } else {
+        " (not found, showing the defaults)"
+    };
+    let mut out = format!(
+        "# {}{note}\nmax_entries = {}\nmax_pinned = {}\nmax_entry_bytes = {}\nttl = \"{}\"\n",
+        path.display(),
+        caps.max_entries,
+        caps.max_pinned,
+        caps.max_entry_bytes,
+        ttl_text(caps.ttl)
+    );
+    if let Some(cmd) = picker_command {
+        out.push_str(&format!(
+            "picker_command = {}\n",
+            toml::Value::String(cmd.into())
+        ));
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use time::macros::datetime;
