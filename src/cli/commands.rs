@@ -87,3 +87,42 @@ pub fn copy_entry(io: &mut Io<'_>, reference: &str) -> Result<(), CliError> {
         .map(|_| ())
         .map_err(|e| CliError::from_client(e, Some(reference)))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn answer(input: &str) -> bool {
+        let mut err = Vec::new();
+        confirm("Delete? [y/N]", &mut input.as_bytes(), &mut err)
+    }
+
+    #[test]
+    fn only_y_and_yes_confirm_in_any_case() {
+        for yes in ["y\n", "Y\n", "yes\n", "YES\n", " y \n", "y", "Yes\r\n"] {
+            assert!(answer(yes), "{yes:?}");
+        }
+        for no in ["", "\n", "n\n", "no\n", "maybe\n", "yy\n", "yes please\n"] {
+            assert!(!answer(no), "{no:?}");
+        }
+    }
+
+    #[test]
+    fn the_prompt_is_written_before_reading_and_without_a_newline() {
+        let mut err = Vec::new();
+        confirm("Delete? [y/N]", &mut "n\n".as_bytes(), &mut err);
+        assert_eq!(String::from_utf8(err).unwrap(), "Delete? [y/N] ");
+    }
+
+    #[test]
+    fn clear_prompts_follow_the_copy_keys() {
+        assert_eq!(
+            clear_prompt(12, 3, false),
+            "Delete 12 unpinned entries? This can't be undone. [y/N]"
+        );
+        assert_eq!(
+            clear_prompt(12, 3, true),
+            "Delete ALL 15 entries, including 3 pinned? This can't be undone. [y/N]"
+        );
+    }
+}
