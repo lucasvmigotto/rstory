@@ -12,11 +12,11 @@ An ESM GJS extension in `extension/` (PanelMenu.Button + PopupMenu, menu per `00
 
 **Language/Version**: Rust, edition 2024; MSRV = stable from 6 months before v0.1 (architecture AA3); toolchain pinned in `rust-toolchain.toml`
 
-**Primary Dependencies**: Rust: include_dir 0.7; JS: GNOME Shell 48–51 APIs (`resource:///org/gnome/shell/...` ESM imports, Gio, GLib, St); dev: eslint (CI lint), gjs for fixture tests when available
+**Primary Dependencies**: Rust: include_dir 0.7; JS: GNOME Shell 48–51 APIs (`resource:///org/gnome/shell/...` ESM imports, Gio, GLib, St); dev: eslint (CI lint), gjs for fixture tests when available, TypeScript 7.0.2 as a checker only (`tsc --noEmit --checkJs`, JSDoc + `// @ts-check`, `@girs/gnome-shell` 50.0.4 types; no transpile, ADR-0008 amendment)
 
 **Storage**: Installed files under `$XDG_DATA_HOME/gnome-shell/extensions/<uuid>/`
 
-**Testing**: Rust install/uninstall tests (temp XDG dirs), JS client fixture tests under gjs, eslint, manual matrix Shell 48–51
+**Testing**: Rust install/uninstall tests (temp XDG dirs), JS client fixture tests under gjs, eslint, `make ext-typecheck`, manual matrix Shell 48–51
 
 **Target Platform**: Linux x86_64/aarch64, glibc or musl; Tier-1 sessions: GNOME 48–51 Wayland (bridge), KDE Wayland, sway, X11
 
