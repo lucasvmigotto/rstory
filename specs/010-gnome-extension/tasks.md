@@ -38,11 +38,11 @@ description: "Task list for GNOME Shell extension"
 
 ### Tests for User Story 1 ⚠️
 
-- [ ] T003 [P] [US1] install/reinstall/uninstall/--enable (stub gnome-extensions) tests in `tests/install_gnome.rs` (SC-003) — Executor: builder · Reviewer: thinker
+- [x] T003 [P] [US1] install/reinstall/uninstall/--enable (stub gnome-extensions) tests in `tests/install_gnome.rs` (SC-003) — Executor: builder · Reviewer: thinker
 
 ### Implementation for User Story 1
 
-- [ ] T004 [US1] Terminal UI / CLI implementation — see `## Frontend` (appended by `frontend:spec`; `[TUI]`/`[CLI]` tasks built by `frontend:tui`) — Executor: builder · Reviewer: thinker
+- [x] T004 [US1] Terminal UI / CLI implementation — see `## Frontend` (appended by `frontend:spec`; `[TUI]`/`[CLI]` tasks built by `frontend:tui`) — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: User Story 1 passes its tests independently.
 
@@ -98,7 +98,7 @@ Appended by `frontend:spec`. `[TUI]`/`[CLI]` tasks built by `frontend:tui` (tick
 
 ### Frontend US1 — Install the extension from the binary
 
-- [ ] T012 [US1] [CLI] `install-gnome-extension` (embed via include_dir, write, `--enable`, `--uninstall`, version compare) in `src/install/gnome.rs` with tui.md messages — Executor: builder · Reviewer: thinker
+- [x] T012 [US1] [CLI] `install-gnome-extension` (embed via include_dir, write, `--enable`, `--uninstall`, version compare) in `src/install/gnome.rs` with tui.md messages — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: the US1 snapshot/journey tests pass; `cargo insta review` is clean.
 

@@ -148,7 +148,10 @@ fn fresh_install_writes_the_runtime_files_and_explains_the_relogin() {
     ] {
         assert!(!t.join(dev).exists(), "{dev} is not installed");
     }
-    assert!(f.calls().is_empty(), "no --enable: gnome-extensions is not run");
+    assert!(
+        f.calls().is_empty(),
+        "no --enable: gnome-extensions is not run"
+    );
 }
 
 #[test]
@@ -157,7 +160,10 @@ fn metadata_declares_uuid_shell_versions_and_the_crate_version() {
     f.run(plain());
     let m = metadata(&f.target());
     assert_eq!(m["uuid"], UUID);
-    assert_eq!(m["shell-version"], serde_json::json!(["48", "49", "50", "51"]));
+    assert_eq!(
+        m["shell-version"],
+        serde_json::json!(["48", "49", "50", "51"])
+    );
     assert_eq!(m["version-name"], VERSION);
 }
 
@@ -212,9 +218,15 @@ fn enable_without_gnome_extensions_points_to_the_extensions_app() {
 fn enable_that_fails_keeps_the_install_and_says_what_to_do() {
     let f = Fixture::new(Some(false));
     let (code, out, err) = f.run(enable());
-    assert_eq!(code, 0, "the files are installed; the Shell may just not see them yet");
+    assert_eq!(
+        code, 0,
+        "the files are installed; the Shell may just not see them yet"
+    );
     assert_eq!(out, DONE);
-    assert!(err.contains("gnome-extensions enable did not succeed"), "{err}");
+    assert!(
+        err.contains("gnome-extensions enable did not succeed"),
+        "{err}"
+    );
     assert!(err.contains(UUID), "{err}");
     assert!(f.target().join("metadata.json").is_file());
 }
@@ -237,7 +249,10 @@ fn reinstall_over_an_older_version_replaces_the_files() {
         format!("GNOME extension updated to {VERSION}. Log out and back in to load it.\n")
     );
     assert_eq!(err, "");
-    assert!(!t.join("stale.js").exists(), "files of the old version are gone");
+    assert!(
+        !t.join("stale.js").exists(),
+        "files of the old version are gone"
+    );
     assert_eq!(metadata(&t)["version-name"], VERSION);
 }
 
