@@ -1,6 +1,8 @@
 //! Tray icons as ARGB32 pixel data (FR-002), decoded from `assets/icons/png` by `build.rs`.
 //! No icon theme lookup: the pixels travel in the SNI `IconPixmap` property.
 
+include!(concat!(env!("OUT_DIR"), "/icons_data.rs"));
+
 /// Which icon.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum IconState {
@@ -26,8 +28,20 @@ pub struct Pixmap {
 
 /// The pixmaps of `state`, one per size.
 #[must_use]
-pub fn pixmaps(_state: IconState) -> Vec<Pixmap> {
-    Vec::new()
+pub fn pixmaps(state: IconState) -> Vec<Pixmap> {
+    let name = match state {
+        IconState::Recording => "recording",
+        IconState::Paused => "paused",
+        IconState::Inactive => "disconnected",
+    };
+    ICON_DATA
+        .iter()
+        .filter(|(n, _, _)| *n == name)
+        .map(|(_, size, bytes)| Pixmap {
+            size: *size,
+            argb: bytes.to_vec(),
+        })
+        .collect()
 }
 
 #[cfg(test)]
