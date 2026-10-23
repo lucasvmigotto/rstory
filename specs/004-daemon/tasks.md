@@ -181,3 +181,9 @@ Appended by `qa:strategy`. Executed by `qa:e2e` / `qa:load` after the builds (ti
 - [ ] T030 Charter session → `docs/product/qa/charters/004.md` — Executor: thinker · Reviewer: reviewer · Effort: high
 
 **Checkpoint**: the journeys and suites in `qa.md` are green in CI; the exit criteria are met → Verified in `specs/README.md`.
+
+---
+
+## Convergence (Backend) — 2026-10-23
+
+Converged. FR-001–FR-011 map to `src/daemon/{mod,start,pipeline,restore,handlers,state,timers}.rs`, `src/ipc/{protocol,codec,error,server,peercred}.rs` and `src/domain/pause.rs`. Protocol v1 is checked against `contracts/protocol.schema.json` by `tests/contract`. The daemon drives the X11 backend (Xvfb test) and the Wayland backend (headless sway test, added after the rebase onto 003); a Wayland connect failure reports `no_data_control` or `wayland_unreachable` and keeps retrying. `fmt-check`, `lint`, `test` and `test-integration` are green. Review: focused thinker review (unsafe = 0, logs carry decisions, sizes and error kinds only). A terminal-list test that would have spawned a real `kitty` on a host where it is installed now checks resolution only. Caveats: the red commits for US1–US4 are red against a stubbed `Daemon::run`; SC-002 is asserted as growth over 10 000 captures (at most 8 MiB) plus a 64 MiB whole-process bound, not the daemon's absolute 20 MiB; F7 and F10 are checked with the fake backend and tokio's paused clock only; the tray status is always `disabled` until 009. T015 (quickstart run), the QA tasks and the fresh-context review are deferred to before Verified.

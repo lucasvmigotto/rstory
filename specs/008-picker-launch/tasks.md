@@ -89,3 +89,9 @@ Appended by `qa:strategy`. Executed by `qa:e2e` / `qa:load` after the builds (ti
 - [ ] T009 Verify the launch table against the terminals installed in the tools container (smoke) — Executor: builder · Reviewer: thinker · Effort: low
 
 **Checkpoint**: the journeys and suites in `qa.md` are green in CI; the exit criteria are met → Verified in `specs/README.md`.
+
+---
+
+## Convergence — 2026-10-23
+
+Converged. FR-001–FR-003 map to `src/launch/mod.rs` (resolution order and launch table, PR #57), `src/config/mod.rs` (`picker_command_from_toml`) and the daemon's `open_picker` handler and `status.picker_available` (`src/daemon/handlers.rs`, landed with 004). Tests cover the configured command, `$TERMINAL`, `xdg-terminal-exec` and the fixed list, `no_terminal`, and `picker_command_failed` naming only the program. No test starts a terminal from the host: spawns use `/bin/true`, a fake script or a missing path. The QA tasks (T006, T009) are deferred to before Verified.
