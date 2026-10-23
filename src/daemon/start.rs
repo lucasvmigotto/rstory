@@ -2,14 +2,16 @@
 
 use std::future::Future;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 use std::time::Duration;
 
 use thiserror::Error;
 use tokio::net::UnixStream;
 use tokio::sync::watch;
 
+use crate::backend::wayland::{ConnectError, WaylandBackend, WaylandOptions};
 use crate::backend::x11::{X11Backend, X11Options};
-use crate::backend::{Backend, BackendKind, Mode};
+use crate::backend::{Backend, BackendKind, EventStream, Mode, ReadError, ServeError};
 use crate::config::Caps;
 use crate::ipc::peercred::peer_cred;
 use crate::ipc::server;
@@ -230,14 +232,60 @@ fn load_caps() -> Result<Caps, StartError> {
     }
 }
 
-/// Connects the X11 backend for `info`; `None` when unreachable.
-async fn connect_x11(display: String, bridge: bool) -> Option<X11Backend> {
-    let opts = X11Options::new(&display);
-    let opts = if bridge { opts.bridge() } else { opts };
-    X11Backend::connect(opts).await.ok()
+/// The backend the session selected: one concrete type for the daemon.
+enum SessionBackend {
+    X11(X11Backend),
+    Wayland(WaylandBackend),
 }
 
-async fn provide_backend(args: DaemonArgs, env: SessionEnv) -> Provided<X11Backend> {
+impl Backend for SessionBackend {
+    fn events(&mut self) -> &mut EventStream {
+        match self {
+            Self::X11(b) => b.events(),
+            Self::Wayland(b) => b.events(),
+        }
+    }
+
+    async fn read_text(&mut self, limit: usize) -> Result<Vec<u8>, ReadError> {
+        match self {
+            Self::X11(b) => b.read_text(limit).await,
+            Self::Wayland(b) => b.read_text(limit).await,
+        }
+    }
+
+    async fn serve(&mut self, text: Arc<[u8]>) -> Result<(), ServeError> {
+        match self {
+            Self::X11(b) => b.serve(text).await,
+            Self::Wayland(b) => b.serve(text).await,
+        }
+    }
+
+    fn stop_serving(&mut self) {
+        match self {
+            Self::X11(b) => b.stop_serving(),
+            Self::Wayland(b) => b.stop_serving(),
+        }
+    }
+}
+
+/// Connects the X11 backend; `None` when unreachable.
+async fn connect_x11(display: String, bridge: bool) -> Option<SessionBackend> {
+    let opts = X11Options::new(&display);
+    let opts = if bridge { opts.bridge() } else { opts };
+    X11Backend::connect(opts)
+        .await
+        .ok()
+        .map(SessionBackend::X11)
+}
+
+/// Connects the Wayland backend from the environment's socket, `ext` preferred.
+async fn connect_wayland() -> Result<SessionBackend, ConnectError> {
+    WaylandBackend::connect(WaylandOptions::new())
+        .await
+        .map(SessionBackend::Wayland)
+}
+
+async fn provide_backend(args: DaemonArgs, env: SessionEnv) -> Provided<SessionBackend> {
     let for_select = env.clone();
     let selection = tokio::task::spawn_blocking(move || {
         let mut probe = RealProbe::new(&for_select, None);
@@ -252,45 +300,49 @@ async fn provide_backend(args: DaemonArgs, env: SessionEnv) -> Provided<X11Backe
             connector: None,
         };
     };
-    match sel.backend {
+    let (backend, reason, connector): (_, _, Connector<SessionBackend>) = match sel.backend {
         BackendKind::X11 => {
             let display = env.display.clone().unwrap_or_default();
             let bridge = sel.mode == Mode::XwaylandBridge;
             let backend = connect_x11(display.clone(), bridge).await;
-            let info = if backend.is_some() {
-                BackendInfo::active(BackendKind::X11, sel.mode)
-            } else {
-                BackendInfo::none(session::Reason::X11Unreachable.as_str())
-            };
-            let connector: Connector<X11Backend> = Box::new(move || {
+            let connector: Connector<SessionBackend> = Box::new(move || {
                 let display = display.clone();
                 Box::pin(connect_x11(display, bridge))
             });
-            let kind_mode = BackendInfo::active(BackendKind::X11, sel.mode);
-            let mut p = Provided {
-                backend,
-                info,
-                connector: Some(connector),
-            };
-            if p.backend.is_none() {
-                // Reconnect restores this identity once the display answers.
-                p.info = BackendInfo {
-                    reason: p.info.reason,
-                    ..kind_mode
-                };
-            }
-            p
+            (backend, session::Reason::X11Unreachable.as_str(), connector)
         }
-        BackendKind::Wayland => Provided {
-            backend: None,
-            info: BackendInfo::none("wayland_backend_unavailable"),
-            connector: None,
-        },
-        BackendKind::None => Provided {
-            backend: None,
-            info: BackendInfo::none(sel.reason.as_str()),
-            connector: None,
-        },
+        BackendKind::Wayland => {
+            let (backend, reason) = match connect_wayland().await {
+                Ok(b) => (Some(b), ""),
+                Err(ConnectError::NoDataControl) => (None, session::Reason::NoDataControl.as_str()),
+                Err(ConnectError::Unreachable) => (None, "wayland_unreachable"),
+            };
+            let connector: Connector<SessionBackend> =
+                Box::new(|| Box::pin(async { connect_wayland().await.ok() }));
+            (backend, reason, connector)
+        }
+        BackendKind::None => {
+            return Provided {
+                backend: None,
+                info: BackendInfo::none(sel.reason.as_str()),
+                connector: None,
+            };
+        }
+    };
+    let active = BackendInfo::active(sel.backend, sel.mode);
+    let info = if backend.is_some() {
+        active
+    } else {
+        // Reconnect restores this identity once the display answers.
+        BackendInfo {
+            reason: Some(reason.to_string()),
+            ..active
+        }
+    };
+    Provided {
+        backend,
+        info,
+        connector: Some(connector),
     }
 }
 

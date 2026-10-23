@@ -58,6 +58,10 @@ name = "daemon_x11"
 required-features = ["session-tests"]
 
 [[test]]
+name = "daemon_wayland"
+required-features = ["session-tests"]
+
+[[test]]
 name = "bridge_capture"
 required-features = ["session-tests"]
 
