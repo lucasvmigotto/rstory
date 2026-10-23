@@ -43,7 +43,7 @@ description: "Task list for Command-line interface"
 ### Implementation for User Story 1
 
 - [ ] T004 [US1] Terminal UI / CLI implementation — see `## Frontend` (appended by `frontend:spec`; `[TUI]`/`[CLI]` tasks built by `frontend:tui`) — Executor: builder · Reviewer: thinker
-- [ ] T005 [US1] Backend implementation — see `## Backend` (appended by `backend:spec`) — Executor: builder · Reviewer: thinker
+- [x] T005 [US1] Backend implementation — see `## Backend` (appended by `backend:spec`) — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: User Story 1 passes its tests independently.
 
@@ -125,8 +125,8 @@ Appended by `backend:spec`. Built by `backend:build` (ticks only this section). 
 
 ### Backend US1 — Browse and restore from the shell
 
-- [ ] T016 [US1] Blocking protocol client with timeouts and typed errors in `src/ipc/client.rs` — Executor: builder · Reviewer: thinker
-- [ ] T017 [US1] Read-only fallback adapter (`ls`/`show`) in `src/cli/source.rs` — Executor: builder · Reviewer: thinker
+- [x] T016 [US1] Blocking protocol client with timeouts and typed errors in `src/ipc/client.rs` — Executor: builder · Reviewer: thinker
+- [x] T017 [US1] Read-only fallback adapter (`ls`/`show`) in `src/cli/source.rs` — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: the US1 tests in this file's story phase pass (`cargo test`), plus the contract tests where they apply.
 

@@ -5,6 +5,9 @@
 //! To add a subcommand: declare it in `args::Command` and add one arm to `dispatch`.
 
 pub mod args;
+pub mod env;
+pub mod error;
+pub mod source;
 
 use clap::Parser;
 
