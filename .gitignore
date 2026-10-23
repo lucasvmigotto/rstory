@@ -25,3 +25,6 @@ rustc-ice-*.txt
 
 # agent worktrees (agents:parallel)
 .worktrees/
+
+# extension dev tools live in a named volume (make ext-deps)
+extension/node_modules/

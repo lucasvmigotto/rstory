@@ -33,9 +33,12 @@ OFFLINE := --network=none
 FEATURES := --features fault-injection
 # Lint and check also compile the session tests (Xvfb / mutter), which `make test` skips.
 LINT_FEATURES := --features fault-injection,session-tests
+# Extension dev tools (typescript, @girs types) live in a named volume, so nothing lands in the repo.
+NPM_VOLUME ?= rstory-tools-npm
+EXT_MOUNT := -v $(NPM_VOLUME):/src/extension/node_modules
 TTY := $(shell [ -t 0 ] && echo -it)
 
-.PHONY: help image fetch fmt fmt-check lint check test bench test-integration build build-static test-launch ext-lint ext-test doctor shell clean-cache
+.PHONY: help image fetch fmt fmt-check lint check test bench test-integration build build-static test-launch ext-lint ext-test ext-deps ext-typecheck doctor shell clean-cache
 
 help: ## List recipes
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-17s %s\n", $$1, $$2}'
@@ -79,11 +82,17 @@ build-static: image ## Static musl release build for this host's arch + F2/F5 ch
 	  b=/target/$$t/release/rstory && file $$b && file $$b | grep -Eq "static(-pie)? linked|statically linked" && \
 	  s=$$(stat -c %s $$b) && echo "size $$s bytes" && [ $$s -le 15728640 ]'
 
-ext-lint: image ## Lint the GNOME extension
-	$(RUN) $(OFFLINE) $(IMAGE) eslint extension/
+ext-lint: image ## Lint the GNOME extension (eslint from the npm volume), offline
+	$(RUN) $(OFFLINE) $(EXT_MOUNT) -w /src/extension $(IMAGE) npx --no-install eslint .
 
-ext-test: image ## Run the extension's gjs fixture tests
-	$(RUN) $(OFFLINE) $(IMAGE) sh -c 'for t in extension/tests/*.test.js; do gjs -m "$$t" || exit 1; done'
+ext-deps: image ## Install the extension's dev tools into the npm volume (the only networked ext step)
+	$(RUN) $(EXT_MOUNT) -w /src/extension $(IMAGE) npm ci --no-audit --no-fund
+
+ext-typecheck: image ## Type-check the extension (tsc --checkJs, JSDoc), offline
+	$(RUN) $(OFFLINE) $(EXT_MOUNT) -w /src/extension $(IMAGE) npx --no-install tsc -p jsconfig.json
+
+ext-test: image ## Run the extension's gjs fixture tests (fake socket server), offline
+	$(RUN) $(OFFLINE) $(IMAGE) sh -c 'for t in extension/tests/*.test.js; do echo "== $$t"; gjs -m "$$t" || exit 1; done'
 
 doctor: image ## Print tool versions per layer; fail on drift from rust-toolchain.toml
 	@echo "rust-toolchain.toml: $(RUST_VERSION)"

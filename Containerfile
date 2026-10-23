@@ -19,8 +19,9 @@ RUN --mount=type=bind,source=rust-toolchain.toml,target=/tmp/tc/rust-toolchain.t
 FROM base AS deps
 # Test-time session stack only (the product itself has no runtime dependencies):
 # Xvfb + headless sway with XWayland for capture/restore integration tests,
-# a session D-Bus for the tray tests, reference clipboard clients, gjs + eslint
-# for the GNOME extension, rsvg-convert to render the icon PNGs from their SVG sources.
+# a session D-Bus for the tray tests, reference clipboard clients, gjs
+# + Node/npm (type-check and eslint only, never in the release build; the JS tools come from
+# `make ext-deps`) for the GNOME extension, rsvg-convert to render the icon PNGs from their SVG sources.
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
     rm -f /etc/apt/apt.conf.d/docker-clean \
@@ -28,7 +29,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     && apt-get install -y --no-install-recommends \
         xvfb sway mutter xwayland dbus-daemon dbus-x11 \
         wl-clipboard xclip x11-utils \
-        gjs eslint \
+        gjs nodejs npm \
         jq socat file procps \
         librsvg2-bin
 ARG UID=1000

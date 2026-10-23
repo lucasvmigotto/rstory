@@ -113,3 +113,47 @@ Record per desktop: version, result per row, and anything odd. A failing row blo
 
 CI cross-check before the manual run: `make test TEST_ARGS=` runs `tests/tray_dbus.rs` against a
 private `dbus-daemon` and a stub watcher inside the tools container.
+
+## GNOME Shell extension manual matrix (48, 49, 50, 51)
+
+Why manual: the panel button, the Shell's extension loader and its theme only exist in a real
+GNOME Shell. The gjs fixture tests (`make ext-test`) cover the client, the menu model and the
+cleanup in `disable()` against fakes. This covers SC-001 of spec 010. Use only throwaway text you
+typed for the check, never real clipboard contents.
+
+Repeat on each GNOME Shell version: 48, 49, 50 and 51, on a Wayland session. Run it on the light
+and the dark panel (Settings > Appearance, or `gsettings set org.gnome.desktop.interface
+color-scheme prefer-dark`). Install the release binary to `~/.local/bin` first.
+
+Setup: `rstory install-autostart --now` so a daemon is running. Keep a second terminal for
+`rstory ls` and `rstory status`. For the log: `journalctl --user -f /usr/bin/gnome-shell | grep -i
+rstory`. Nothing in that log may contain entry text; only error codes.
+
+| # | Step | Expected |
+|---|---|---|
+| 1 | `rstory install-gnome-extension` | Exit 0; prints `GNOME extension installed. Log out and back in, then run: gnome-extensions enable rstory@lucasvmigotto.github.io`; no stderr warning |
+| 2 | Log out and back in, then `gnome-extensions enable rstory@lucasvmigotto.github.io` (or `rstory install-gnome-extension --enable` on the next login) | `gnome-extensions info rstory@lucasvmigotto.github.io` shows `Enabled: Yes` and a State other than ERROR |
+| 3 | Look at the top bar | An rstory clipboard icon (recording shape: three lines). It follows the panel color on light and dark |
+| 4 | Copy three different lines of text, then open the menu | The newest entries appear first, one per line, at most 10; the status line says `Recording`; Pause recording, Pause for 1 minute and Open picker are present; `Clear history…` is last |
+| 5 | Copy a two-line text | Its menu line shows `⏎` where the newline is |
+| 6 | Click an entry, then paste into a text editor | The pasted text equals the entry |
+| 7 | `rstory pin 0`, then open the menu | The pinned entry shows the `📌 ` prefix |
+| 8 | Click `Pause recording` | The icon changes to the paused shape (two bars); the menu shows `Paused` and `Resume recording`; `Pause for 1 minute` is hidden; `rstory status` says paused |
+| 9 | Click `Resume recording` | The icon returns to the recording shape |
+| 10 | Click `Pause for 1 minute`, keep the menu open | The status line counts down (`Paused — resumes in 0:59`, ...) and the icon returns to recording by itself at zero |
+| 11 | `rstory pause` in a terminal while the menu is closed, then open it | The icon is already the paused shape (the change came from the daemon, not the click) |
+| 12 | Click `Open picker` | A terminal with the picker opens; the extension spawned nothing itself (the process parent is the daemon) |
+| 13 | Click `Clear history…` then `Cancel` | The menu closes; `rstory ls` is unchanged |
+| 14 | Click `Clear history…` then `Delete N unpinned entries` | N matches the unpinned count in `rstory status`; pinned entries remain |
+| 15 | `pkill rstory` with the menu open | The icon becomes the disconnected shape (clipboard with a slash); the menu shows only `rstory daemon not running` |
+| 16 | Start the daemon again (`rstory daemon &`) | Within 30 s (1 s, 2 s, 4 s, ... backoff) the icon is back to recording and the entries are listed |
+| 17 | `rstory install-gnome-extension` again | Same version: the plain `installed` message. After a version bump: `GNOME extension updated to X. Log out and back in to load it.` |
+| 18 | `rstory install-gnome-extension --uninstall`, then log out and back in | The icon is gone; `~/.local/share/gnome-shell/extensions/rstory@lucasvmigotto.github.io` does not exist |
+
+Record per Shell version: version, distribution, panel theme, result per row, and anything odd
+(for example the icon not following the panel color, or a Shell error in the journal on enable).
+A failing row blocks the release. A Shell outside 48 to 51 must refuse to load the extension
+because of `metadata.json`; `rstory doctor` explains it.
+
+Quick CI cross-check before the manual run: `make ext-test ext-typecheck ext-lint` and
+`make test` (the install tests in `tests/install_gnome.rs`).
