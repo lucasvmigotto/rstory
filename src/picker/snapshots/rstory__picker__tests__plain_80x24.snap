@@ -1,0 +1,18 @@
+---
+source: src/picker/tests.rs
+expression: plain(&s)
+---
+# plain 80x24
+|query: _
+|> [0] 3m  git rebase -i HEAD~3
+  ~ 0..30 REV
+|  [1] 2h  [pinned] git reset --soft HEAD~1 && git push --force-with-lease ori...
+|  [2] 1d  https://example.org/a/very/long/path/that/keeps/going/on
+|  [3] 2d  日本語のテキスト
+|  [4] 3d  fn main() {⏎    println!("synthetic");⏎}
+|  [5] 0s  [pinned] cargo test -p rstory --test daemon_restore
+|
+|
+|
+|
+|6 of 6 shown. Enter restores, Esc quits.

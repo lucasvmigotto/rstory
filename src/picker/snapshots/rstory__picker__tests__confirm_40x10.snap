@@ -1,0 +1,25 @@
+---
+source: src/picker/tests.rs
+expression: "screen(&s, COLOR)"
+---
+# 40x10 tier=16 ascii=false
+| > _                     6/6  Recording
+  ~ 1..2 fg=Cyan ; 3..4 fg=Cyan ; 25..28 fg=DarkGray
+|────────────────────────────────────────
+  ~ 0..40 fg=DarkGray
+| >   3m    git rebase -i HEAD~3
+  ~ 0..3 REV ; 3..7 fg=DarkGray REV ; 7..40 REV
+|     2h 📌 git reset --soft HEAD~1 && g…
+  ~ 3..7 fg=DarkGray ; 8..9 fg=Yellow
+|     1d    https://example.org/a/very/l…
+  ~ 3..7 fg=DarkGray
+|     2d    日本語のテキスト
+  ~ 3..7 fg=DarkGray
+|     3d    fn main() {⏎    println!("sy…
+  ~ 3..7 fg=DarkGray
+|     0s 📌 cargo test -p rstory --test …
+  ~ 3..7 fg=DarkGray ; 8..9 fg=Yellow
+|────────────────────────────────────────
+  ~ 0..40 fg=DarkGray
+| Delete this entry? y/n
+  ~ 1..23 fg=Red

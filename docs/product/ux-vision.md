@@ -327,7 +327,7 @@ Avoid: clip, item, snippet, buffer, paste (rstory never pastes), service.
 | `picker.hints.full` | Enter restore  Tab preview  Ctrl-T pin  Ctrl-D delete  Esc quit |
 | `picker.hints.short` | Enter restore  Tab preview  Esc quit |
 | `picker.confirm.delete` | Delete this entry? y/n |
-| `picker.pin.limit` | Pin limit reached (10). Unpin an entry first. |
+| `picker.pin.limit` | Pin limit reached ({max}). Unpin an entry first. |
 | `picker.restoring` | Restoring… |
 | `picker.too_small` | Terminal too small (need 20×5). |
 | `picker.count` | {shown}/{total} |

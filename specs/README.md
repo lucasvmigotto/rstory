@@ -22,7 +22,7 @@ in that layer.
 | 004 | [daemon](004-daemon/) | `rstory daemon`: single instance, control socket protocol v1, capture pipeline, restore ownership, pause and timed pause, counters, expiry timer, inactive state | P1 | 001, 002 | — | Implemented |
 | 005 | [privacy-filters](005-privacy-filters/) | Sensitive hint skip, size-cap drop, pause gate, no-content logging | P1 | 004 | — | Implemented |
 | 006 | [cli](006-cli/) | `ls`, `show`, `copy`, `pin`, `unpin`, `rm`, `clear`, `pause [--for]`, `resume`, `status`, `config`; `--json`; index and short id; exit codes; read-only when the daemon is down | P1 | 004 | Implemented | Implemented |
-| 007 | [picker](007-picker/) | `rstory pick` TUI: search, preview, restore, pin, unpin, delete, plain mode | P1 | 000, 006 | Planned | — |
+| 007 | [picker](007-picker/) | `rstory pick` TUI: search, preview, restore, pin, unpin, delete, plain mode | P1 | 000, 006 | Implemented | — |
 | 008 | [picker-launch](008-picker-launch/) | `picker_command`, terminal detection order, daemon-side `open_picker` | P2 | 007 | Implemented | Implemented |
 | 009 | [tray](009-tray/) | SNI tray: icon (normal and paused), last 10, pause, pause 1 min, open picker, clear with confirm | P2 | 004, 008 | Implemented | Implemented |
 | 010 | [gnome-extension](010-gnome-extension/) | Embedded GNOME Shell 48–51 extension: panel icon and menu over the control socket; `install-gnome-extension` | P1 (v0.1 gate) | 004, 008 | Implemented | Implemented |

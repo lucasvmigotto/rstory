@@ -8,7 +8,7 @@ pub const PICKER_HINTS_FULL: &str =
     "Enter restore  Tab preview  Ctrl-T pin  Ctrl-D delete  Esc quit";
 pub const PICKER_HINTS_SHORT: &str = "Enter restore  Tab preview  Esc quit";
 pub const PICKER_CONFIRM_DELETE: &str = "Delete this entry? y/n";
-pub const PICKER_PIN_LIMIT: &str = "Pin limit reached (10). Unpin an entry first.";
+pub const PICKER_PIN_LIMIT: &str = "Pin limit reached ({max}). Unpin an entry first.";
 pub const PICKER_RESTORING: &str = "Restoring…";
 pub const PICKER_TOO_SMALL: &str = "Terminal too small (need 20×5).";
 pub const PICKER_COUNT: &str = "{shown}/{total}";

@@ -1,0 +1,17 @@
+---
+source: src/picker/tests.rs
+expression: out
+---
+# 40x10 tier=mono ascii=true
+| > _                     6/6  Recording
+  ~ 1..2 BOLD UL ; 3..4 BOLD UL
+|----------------------------------------
+| >   3m     git rebase -i HEAD~3
+  ~ 0..40 REV
+|     2h [p] git reset --soft HEAD~1 &...
+|     1d     https://example.org/a/ver...
+|     2d     日本語のテキスト
+|     3d     fn main() {⏎    println!(...
+|     0s [p] cargo test -p rstory --te...
+|----------------------------------------
+| Enter restore  Tab preview  Esc quit

@@ -1,0 +1,19 @@
+---
+source: src/picker/tests.rs
+expression: out
+---
+# 40x10 tier=16 ascii=false
+| > _                     0/0  Recording
+  ~ 1..2 fg=Cyan ; 3..4 fg=Cyan ; 25..28 fg=DarkGray
+|────────────────────────────────────────
+  ~ 0..40 fg=DarkGray
+| No entries yet. Copy something and it …
+|
+|
+|
+|
+|
+|────────────────────────────────────────
+  ~ 0..40 fg=DarkGray
+| Enter restore  Tab preview  Esc quit
+  ~ 1..37 fg=DarkGray
