@@ -39,7 +39,7 @@ No feature-specific setup (crate skeleton comes from 001).
 ### Tests for User Story 1 ⚠️
 
 - [x] T002 [P] [US1] resolution-order tests (config › $TERMINAL › xdg-terminal-exec › list) and one argv test per table row (SC-001) in `src/launch/tests.rs` — Executor: builder · Reviewer: thinker
-- [ ] T003 [P] [US1] protocol test: open_picker ok / no_terminal; status.picker_available — Executor: builder · Reviewer: thinker
+- [x] T003 [P] [US1] protocol test: open_picker ok / no_terminal; status.picker_available — Executor: builder · Reviewer: thinker
 
 ### Implementation for User Story 1
 
@@ -76,7 +76,7 @@ Appended by `backend:spec`. Built by `backend:build` (ticks only this section). 
 ### Backend US1 — Open the picker from a menu
 
 - [x] T007 [US1] `launch::plan` resolution + `TERMINALS` table in `src/launch/mod.rs` — Executor: builder · Reviewer: thinker
-- [ ] T008 [US1] `launch::spawn` detached (setsid, null stdio) + `open_picker` handler + `picker_available` in status — Executor: builder · Reviewer: thinker
+- [x] T008 [US1] `launch::spawn` detached (setsid, null stdio) + `open_picker` handler + `picker_available` in status — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: the US1 tests in this file's story phase pass (`cargo test`), plus the contract tests where they apply.
 
@@ -89,3 +89,9 @@ Appended by `qa:strategy`. Executed by `qa:e2e` / `qa:load` after the builds (ti
 - [ ] T009 Verify the launch table against the terminals installed in the tools container (smoke) — Executor: builder · Reviewer: thinker · Effort: low
 
 **Checkpoint**: the journeys and suites in `qa.md` are green in CI; the exit criteria are met → Verified in `specs/README.md`.
+
+---
+
+## Convergence — 2026-10-23
+
+Converged. FR-001–FR-003 map to `src/launch/mod.rs` (resolution order and launch table, PR #57), `src/config/mod.rs` (`picker_command_from_toml`) and the daemon's `open_picker` handler and `status.picker_available` (`src/daemon/handlers.rs`, landed with 004). Tests cover the configured command, `$TERMINAL`, `xdg-terminal-exec` and the fixed list, `no_terminal`, and `picker_command_failed` naming only the program. No test starts a terminal from the host: spawns use `/bin/true`, a fake script or a missing path. The QA tasks (T006, T009) are deferred to before Verified.

@@ -1,0 +1,2 @@
+{"v":1,"id":12,"op":"subscribe","args":{"events":["history_changed","pause_changed"]}}
+{"v":1,"id":12,"ok":true,"result":{}}

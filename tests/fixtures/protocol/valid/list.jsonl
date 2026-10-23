@@ -1,0 +1,2 @@
+{"v":1,"id":1,"op":"list","args":{"limit":2}}
+{"v":1,"id":1,"ok":true,"result":{"entries":[{"id":"01JBD8Z0R5S7K3M2N1P0Q9T8V7","short_id":"01JB","index":0,"size":38,"created":"2026-10-21T14:02:11Z","last_copied":"2026-10-21T14:02:11Z","pinned":false,"preview":"https://github.com/lucasvmigotto/rstory"},{"id":"01JBD8XQ4H2G6F5E4D3C2B1A09","short_id":"01JBD8X","index":1,"size":20,"created":"2026-10-21T13:58:40Z","last_copied":"2026-10-21T13:58:40Z","pinned":true,"preview":"git rebase -i HEAD~3"}]}}

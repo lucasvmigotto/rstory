@@ -1,0 +1,2 @@
+{"v":1,"id":10,"op":"status","args":{}}
+{"v":1,"id":10,"ok":true,"result":{"state":"recording","paused_until":null,"backend":"x11","mode":"xwayland_bridge","entries":8,"pinned":1,"max_entries":20,"max_pinned":10,"counters":{"skipped_sensitive":2,"skipped_oversize":0,"skipped_paused":5,"dropped_burst":0},"tray":"no_host","picker_available":true,"version":"0.1.0","protocol":1}}

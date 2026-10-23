@@ -54,6 +54,14 @@ name = "x11_serve"
 required-features = ["session-tests"]
 
 [[test]]
+name = "daemon_x11"
+required-features = ["session-tests"]
+
+[[test]]
+name = "daemon_wayland"
+required-features = ["session-tests"]
+
+[[test]]
 name = "bridge_capture"
 required-features = ["session-tests"]
 
@@ -78,13 +86,13 @@ blake3 = { version = "1.8.7", default-features = false, features = ["pure"] }
 crossterm = "0.29"
 rand = "0.10.3"
 ratatui = "0.30"
-rustix = { version = "1.1.5", features = ["event", "fs", "pipe", "process"] }
+rustix = { version = "1.1.5", features = ["event", "fs", "net", "pipe", "process"] }
 shell-words = "1.1.0"
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.154"
 thiserror = "2"
 time = { version = "0.3.55", features = ["serde", "serde-well-known", "formatting", "parsing", "macros"] }
-tokio = { version = "1.54.1", features = ["rt", "time", "net", "macros", "sync", "io-util"] }
+tokio = { version = "1.54.1", features = ["rt", "time", "net", "macros", "sync", "io-util", "signal"] }
 toml = "1.1.8"
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["fmt", "env-filter", "ansi"] }
@@ -96,6 +104,10 @@ wayland-protocols-wlr = { version = "0.3", default-features = false, features = 
 x11rb = { version = "0.14.0", default-features = false, features = ["xfixes"] }
 
 [dev-dependencies]
+# Enables the `testing` feature (FakeBackend) for the integration tests without touching the Makefile.
+rstory = { path = ".", features = ["testing"] }
+jsonschema = { version = "0.30", default-features = false }
+tokio = { version = "1.54.1", features = ["test-util", "rt", "time", "net", "macros", "sync", "io-util", "signal"] }
 insta = "1"
 proptest = "1.12.0"
 tempfile = "3.27.0"
