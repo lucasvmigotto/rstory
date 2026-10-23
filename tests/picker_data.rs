@@ -71,7 +71,7 @@ async fn the_pin_cap_is_a_pin_limit_failure() {
         s.act(Action::Pin, &snap.entries[1].id)
     })
     .await;
-    assert_eq!(second, Err(Failure::PinLimit));
+    assert_eq!(second, Err(Failure::PinLimit(Some("1".into()))));
     rig.stop().await;
 }
 

@@ -123,7 +123,7 @@ fn interactive(opts: Options, paths: &Paths) -> Result<Exit, String> {
     let snapshot = source.list().map_err(|f| match f {
         state::Failure::Other(m) => m,
         state::Failure::DaemonDown => crate::ui::copy::CLI_DAEMON_DOWN.to_string(),
-        state::Failure::PinLimit => "unexpected answer".to_string(),
+        state::Failure::PinLimit(_) => "unexpected answer".to_string(),
     })?;
     let size = crossterm::terminal::size().unwrap_or((80, 24));
     let read_only = source.read_only();

@@ -102,7 +102,15 @@ impl DaemonSource {
     /// nobody answers on the socket any more.
     fn failure(&self, e: ClientError) -> Failure {
         match e {
-            ClientError::Remote(p) if p.code == ErrorCode::PinLimit => Failure::PinLimit,
+            ClientError::Remote(p) if p.code == ErrorCode::PinLimit => {
+                // The daemon names the limit as "pin limit reached (N)" (protocol examples).
+                let max: String = p
+                    .message
+                    .split_once('(')
+                    .map(|(_, rest)| rest.chars().take_while(char::is_ascii_digit).collect())
+                    .unwrap_or_default();
+                Failure::PinLimit((!max.is_empty()).then_some(max))
+            }
             ClientError::Remote(p) => Failure::Other(p.message),
             ClientError::NotRunning => Failure::DaemonDown,
             other => match Client::connect(&self.path) {

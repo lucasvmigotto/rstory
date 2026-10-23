@@ -317,11 +317,12 @@ fn preview_split_follows_the_tokens() {
 #[test]
 fn footer_snapshots() {
     for case in cases() {
+        let pin_limit = super::copy::format(super::copy::PICKER_PIN_LIMIT, &[("max", "10")]);
         let out = render(&case, 5, |ctx, area, buf| {
             let kinds = [
                 FooterKind::Hints { short: false },
                 FooterKind::Hints { short: true },
-                FooterKind::Status(super::copy::PICKER_PIN_LIMIT),
+                FooterKind::Status(&pin_limit),
                 FooterKind::Status(super::copy::PICKER_RESTORING),
                 FooterKind::Confirm(super::copy::PICKER_CONFIRM_DELETE),
             ];

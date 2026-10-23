@@ -80,8 +80,8 @@ pub enum Action {
 pub enum Failure {
     /// The daemon is gone (no socket, or it closed).
     DaemonDown,
-    /// Pinning would exceed `max_pinned`.
-    PinLimit,
+    /// Pinning would exceed `max_pinned` (the limit, when the daemon names it).
+    PinLimit(Option<String>),
     /// Anything else, with a one-line message for the status line.
     Other(String),
 }
@@ -632,8 +632,11 @@ fn on_done(state: &mut PickerState, action: Action, result: Result<(), Failure>)
             code: EXIT_DAEMON_DOWN,
             message: Some(copy::CLI_DAEMON_DOWN.to_string()),
         })],
-        (_, Err(Failure::PinLimit)) => {
-            state.status = Some(copy::PICKER_PIN_LIMIT.to_string());
+        (_, Err(Failure::PinLimit(max))) => {
+            state.status = Some(match max {
+                Some(max) => copy::format(copy::PICKER_PIN_LIMIT, &[("max", &max)]),
+                None => copy::PICKER_PIN_LIMIT.replace(" ({max})", ""),
+            });
             Vec::new()
         }
         (_, Err(Failure::Other(message))) => {

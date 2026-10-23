@@ -524,12 +524,15 @@ fn pin_toggle_pins_then_unpins_and_relists() {
 #[test]
 fn pin_limit_shows_the_status_line_and_keeps_the_picker_open() {
     let (mut s, mut fake) = open(b_and_a(), (80, 24));
-    fake.next = Some(Failure::PinLimit);
+    fake.next = Some(Failure::PinLimit(Some("3".into())));
     assert_eq!(drive(&mut s, &mut fake, vec![key(Key::Ctrl('t'))]), None);
-    assert_eq!(s.status(), Some(crate::ui::copy::PICKER_PIN_LIMIT));
+    assert_eq!(
+        s.status(),
+        Some("Pin limit reached (3). Unpin an entry first.")
+    );
     assert!(!s.selected_entry().unwrap().pinned);
     let out = screen(&s, COLOR);
-    assert!(out.contains("Pin limit reached (10)"), "{out}");
+    assert!(out.contains("Pin limit reached (3)"), "{out}");
 }
 
 #[test]
