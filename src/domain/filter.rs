@@ -43,6 +43,47 @@ impl fmt::Debug for FilterDecision {
     }
 }
 
+/// The outcome of the checks that run before the clipboard is read.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum PreRead {
+    /// Decided without reading: [`FilterDecision::SkipPaused`] or [`FilterDecision::SkipSensitive`].
+    Skip(FilterDecision),
+    /// Read at most `limit` bytes, then call [`CopyFilter::after_read`].
+    Read {
+        /// Read limit: `max_entry_bytes + 1`, so an oversize copy is seen as such, not truncated.
+        limit: usize,
+    },
+}
+
+/// The copy filter for one size cap.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct CopyFilter {
+    max_entry_bytes: u64,
+}
+
+impl CopyFilter {
+    /// A filter dropping texts above `max_entry_bytes`.
+    #[must_use]
+    pub fn new(max_entry_bytes: u64) -> Self {
+        Self { max_entry_bytes }
+    }
+
+    /// Pause and sensitive gates, on the offered type names alone: nothing is read for a skipped
+    /// change.
+    #[must_use]
+    pub fn decide<S: AsRef<str>>(&self, types: &[S], paused: bool) -> PreRead {
+        let _ = (types, paused, self.max_entry_bytes);
+        todo!()
+    }
+
+    /// Post-read gates (oversize, empty). Consumes `bytes`, so a rejected text is dropped here.
+    #[must_use]
+    pub fn after_read(&self, bytes: Vec<u8>) -> FilterDecision {
+        let _ = (bytes, self.max_entry_bytes);
+        todo!()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -58,5 +99,110 @@ mod tests {
         let shown = format!("{d:?}");
         assert!(!shown.contains("canary"));
         assert!(shown.contains("21 bytes"));
+    }
+
+    const HINT: &str = "x-kde-passwordManagerHint";
+    const CAP: u64 = 16;
+
+    fn f() -> CopyFilter {
+        CopyFilter::new(CAP)
+    }
+
+    #[test]
+    fn hint_with_text_is_skipped_unread() {
+        let t = ["text/plain;charset=utf-8", HINT];
+        assert_eq!(
+            f().decide(&t, false),
+            PreRead::Skip(FilterDecision::SkipSensitive)
+        );
+    }
+
+    #[test]
+    fn hint_only_is_skipped_unread() {
+        assert_eq!(
+            f().decide(&[HINT], false),
+            PreRead::Skip(FilterDecision::SkipSensitive)
+        );
+    }
+
+    #[test]
+    fn hint_among_bridge_targets_is_skipped_unread() {
+        let t = [
+            "TARGETS",
+            "TIMESTAMP",
+            "UTF8_STRING",
+            "STRING",
+            HINT,
+            "TEXT",
+        ];
+        assert_eq!(
+            f().decide(&t, false),
+            PreRead::Skip(FilterDecision::SkipSensitive)
+        );
+    }
+
+    #[test]
+    fn hint_matching_is_exact_and_case_sensitive() {
+        for near in [
+            "X-KDE-PASSWORDMANAGERHINT",
+            "x-kde-passwordmanagerhint",
+            "x-kde-passwordManagerHint ",
+            "x-kde-passwordManager",
+        ] {
+            assert_eq!(
+                f().decide(&[near], false),
+                PreRead::Read { limit: 17 },
+                "{near}"
+            );
+        }
+    }
+
+    #[test]
+    fn plain_text_is_read_with_one_byte_over_the_cap() {
+        assert_eq!(
+            f().decide(&["UTF8_STRING"], false),
+            PreRead::Read { limit: 17 }
+        );
+        let no_types: [&str; 0] = [];
+        assert_eq!(f().decide(&no_types, false), PreRead::Read { limit: 17 });
+    }
+
+    #[test]
+    fn paused_is_skipped_unread() {
+        assert_eq!(
+            f().decide(&["UTF8_STRING"], true),
+            PreRead::Skip(FilterDecision::SkipPaused)
+        );
+    }
+
+    #[test]
+    fn order_of_checks_table() {
+        // (types, paused, expected): pause wins over the hint.
+        let table: [(&[&str], bool, PreRead); 4] = [
+            (&[HINT], true, PreRead::Skip(FilterDecision::SkipPaused)),
+            (&[HINT], false, PreRead::Skip(FilterDecision::SkipSensitive)),
+            (
+                &["UTF8_STRING"],
+                true,
+                PreRead::Skip(FilterDecision::SkipPaused),
+            ),
+            (&["UTF8_STRING"], false, PreRead::Read { limit: 17 }),
+        ];
+        for (types, paused, want) in table {
+            assert_eq!(f().decide(types, paused), want, "{types:?} paused={paused}");
+        }
+    }
+
+    #[test]
+    fn size_boundaries() {
+        let at = |n: u64| f().after_read(vec![b'a'; usize::try_from(n).unwrap()]);
+        assert_eq!(at(CAP - 1), FilterDecision::Record(vec![b'a'; 15]));
+        assert_eq!(at(CAP), FilterDecision::Record(vec![b'a'; 16]));
+        assert_eq!(at(CAP + 1), FilterDecision::SkipOversize);
+    }
+
+    #[test]
+    fn empty_is_ignored() {
+        assert_eq!(f().after_read(Vec::new()), FilterDecision::IgnoreEmpty);
     }
 }
