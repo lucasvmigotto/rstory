@@ -141,8 +141,14 @@ pub fn picker_command_from_toml(text: &str) -> Result<Option<String>, ConfigErro
 ///
 /// # Errors
 /// [`ConfigError::Syntax`] when the text is not TOML or the key is not a boolean.
-pub fn tray_from_toml(_text: &str) -> Result<bool, ConfigError> {
-    todo!()
+pub fn tray_from_toml(text: &str) -> Result<bool, ConfigError> {
+    #[derive(Deserialize)]
+    struct Tray {
+        tray: Option<bool>,
+    }
+    let raw: Tray =
+        toml::from_str(text).map_err(|e| ConfigError::Syntax(e.message().to_string()))?;
+    Ok(raw.tray.unwrap_or(true))
 }
 
 #[derive(Debug, Deserialize)]
