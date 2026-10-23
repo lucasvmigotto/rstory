@@ -18,7 +18,7 @@ description: "Task list for Wayland data-control capture"
 
 ## Phase 1: Setup
 
-- [ ] T001 [P] Add Wayland test client (sets/reads selection via data-control) in `tests/support/wl_client.rs` — Executor: builder · Reviewer: thinker
+- [x] T001 [P] Add Wayland test client (sets/reads selection via data-control) in `tests/support/wl_client.rs` — Executor: builder · Reviewer: thinker
 
 ---
 
@@ -26,7 +26,7 @@ description: "Task list for Wayland data-control capture"
 
 **⚠️ CRITICAL**: blocks every story in this feature.
 
-- [ ] T002 Verify wayland-protocols exposes `ext-data-control-v1`; else vendor XML under `protocols/` with `wayland-scanner` (research R2) — Executor: scout · Reviewer: thinker · Effort: low
+- [x] T002 Verify wayland-protocols exposes `ext-data-control-v1`; else vendor XML under `protocols/` with `wayland-scanner` (research R2) — Executor: scout · Reviewer: thinker · Effort: low
 
 **Checkpoint**: foundation ready.
 
@@ -38,11 +38,11 @@ description: "Task list for Wayland data-control capture"
 
 ### Tests for User Story 1 ⚠️
 
-- [ ] T003 [P] [US1] sway capture tests (ext path, zwlr fallback via protocol filter, hint present in types, clear) in `tests/wayland_capture.rs` (SC-001) — Executor: builder · Reviewer: thinker
+- [x] T003 [P] [US1] sway capture tests (ext path, zwlr fallback via protocol filter, hint present in types, clear) in `tests/wayland_capture.rs` (SC-001) — Executor: builder · Reviewer: thinker
 
 ### Implementation for User Story 1
 
-- [ ] T004 [US1] Backend implementation — see `## Backend` (appended by `backend:spec`) — Executor: builder · Reviewer: thinker
+- [x] T004 [US1] Backend implementation — see `## Backend` (appended by `backend:spec`) — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: User Story 1 passes its tests independently.
 
@@ -54,11 +54,11 @@ description: "Task list for Wayland data-control capture"
 
 ### Tests for User Story 2 ⚠️
 
-- [ ] T005 [P] [US2] sway serve tests (MIME set, 1 MiB round trip, cancelled, self_owned, EPIPE tolerance) in `tests/wayland_serve.rs` (SC-002) — Executor: builder · Reviewer: thinker
+- [x] T005 [P] [US2] sway serve tests (MIME set, 1 MiB round trip, cancelled, self_owned, EPIPE tolerance) in `tests/wayland_serve.rs` (SC-002) — Executor: builder · Reviewer: thinker
 
 ### Implementation for User Story 2
 
-- [ ] T006 [US2] Backend implementation — see `## Backend` (appended by `backend:spec`) — Executor: builder · Reviewer: thinker
+- [x] T006 [US2] Backend implementation — see `## Backend` (appended by `backend:spec`) — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: User Story 2 passes its tests independently.
 
@@ -66,8 +66,8 @@ description: "Task list for Wayland data-control capture"
 
 ## Phase 5: Polish & Cross-Cutting
 
-- [ ] T007 Add KDE Plasma manual check to `docs/release.md` (SC-003) — Executor: builder · Reviewer: thinker · Effort: low
-- [ ] T008 Run quickstart.md validation — Executor: scout · Reviewer: thinker · Effort: low
+- [x] T007 Add KDE Plasma manual check to `docs/release.md` (SC-003) — Executor: builder · Reviewer: thinker · Effort: low
+- [x] T008 Run quickstart.md validation — Executor: scout · Reviewer: thinker · Effort: low
 - [ ] T009 QA tasks — see `## QA` (appended by `qa:strategy`) — Executor: thinker · Reviewer: reviewer · Effort: high
 
 ---
@@ -91,25 +91,25 @@ Appended by `backend:spec`. Built by `backend:build` (ticks only this section). 
 
 ### Backend Foundational
 
-- [ ] T010 Protocol bindings (wayland-protocols `staging` or vendored XML) in `src/backend/wayland/protocols.rs` — Executor: builder · Reviewer: thinker
+- [x] T010 Protocol bindings (wayland-protocols `staging` or vendored XML) in `src/backend/wayland/protocols.rs` — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: `cargo build` and `cargo test` green; foundational pieces covered by unit tests.
 
 ### Backend US1 — Capture on data-control compositors
 
-- [ ] T011 [US1] Connect + bind + offer tracking + read with limit/timeout in `src/backend/wayland/{mod,read}.rs` — Executor: builder · Reviewer: reviewer · Effort: high
+- [x] T011 [US1] Connect + bind + offer tracking + read with limit/timeout in `src/backend/wayland/{mod,read}.rs` — Executor: builder · Reviewer: reviewer · Effort: high
 
 **Checkpoint**: the US1 tests in this file's story phase pass (`cargo test`), plus the contract tests where they apply.
 
 ### Backend US2 — Restore on data-control compositors
 
-- [ ] T012 [US2] Source/serve with async `send` handling and `cancelled` in `src/backend/wayland/serve.rs` — Executor: builder · Reviewer: reviewer · Effort: high
+- [x] T012 [US2] Source/serve with async `send` handling and `cancelled` in `src/backend/wayland/serve.rs` — Executor: builder · Reviewer: reviewer · Effort: high
 
 **Checkpoint**: the US2 tests in this file's story phase pass (`cargo test`), plus the contract tests where they apply.
 
 ### Backend Polish
 
-- [ ] T013 KDE Plasma manual check entry in `docs/release.md` — Executor: builder · Reviewer: thinker · Effort: low
+- [x] T013 KDE Plasma manual check entry in `docs/release.md` — Executor: builder · Reviewer: thinker · Effort: low
 
 **Checkpoint**: the budgets in backend.md are met; `/speckit-converge` (Backend) reports converged.
 
