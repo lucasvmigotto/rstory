@@ -6,6 +6,9 @@ use time::macros::datetime;
 use super::menu::{
     Action, Clear, EntryRow, Item, LABEL_MAX, MAX_ENTRIES, PauseItem, TrayMenu, View, label_of,
 };
+use super::command_for;
+use crate::domain::ids::EntryRef;
+use crate::ipc::protocol::Command;
 use crate::ui::copy;
 
 const T0: OffsetDateTime = datetime!(2026-10-21 14:00:00 UTC);
@@ -206,4 +209,43 @@ fn every_actionable_item_has_a_text_label() {
             walk(&build(3, &view, true, clear).items());
         }
     }
+}
+
+#[test]
+fn activated_items_become_protocol_requests() {
+    use std::time::Duration;
+    assert_eq!(
+        command_for(&Action::Restore("ABCD".into())),
+        Some(Command::Restore(EntryRef::ShortId("ABCD".into())))
+    );
+    assert_eq!(
+        command_for(&Action::Pause),
+        Some(Command::Pause { duration: None })
+    );
+    assert_eq!(
+        command_for(&Action::PauseMinute),
+        Some(Command::Pause {
+            duration: Some(Duration::from_secs(60))
+        })
+    );
+    assert_eq!(command_for(&Action::Resume), Some(Command::Resume));
+    assert_eq!(command_for(&Action::OpenPicker), Some(Command::OpenPicker));
+    assert_eq!(
+        command_for(&Action::ClearConfirm),
+        Some(Command::Clear { all: false })
+    );
+}
+
+#[test]
+fn only_the_confirm_item_sends_clear() {
+    assert_eq!(command_for(&Action::ClearBegin), None);
+    assert_eq!(command_for(&Action::ClearCancel), None);
+    assert_eq!(command_for(&Action::Restore("not an id".into())), None);
+}
+
+#[test]
+fn status_names_match_the_protocol() {
+    use super::TrayStatus::*;
+    let names: Vec<_> = [Active, NoHost, NoBus, Disabled].iter().map(|s| s.as_str()).collect();
+    assert_eq!(names, ["active", "no_host", "no_bus", "disabled"]);
 }

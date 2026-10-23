@@ -86,6 +86,7 @@ pub struct Daemon<B: Backend, F: Fs> {
     saved_info: Option<BackendInfo>,
     calls: Option<mpsc::Receiver<Call>>,
     probe: Probe,
+    pub(crate) tray: Option<watch::Receiver<crate::tray::TrayStatus>>,
 }
 
 enum Woke {
@@ -132,6 +133,7 @@ impl<B: Backend, F: Fs> Daemon<B, F> {
             saved_info: None,
             calls: Some(calls),
             probe: Probe::default(),
+            tray: None,
         })
     }
 
@@ -139,6 +141,11 @@ impl<B: Backend, F: Fs> Daemon<B, F> {
     #[must_use]
     pub fn link(&self) -> Link {
         self.link.clone()
+    }
+
+    /// Follows the tray's state for `status.tray` (spec 009). Without it, `status` says `disabled`.
+    pub fn set_tray_status(&mut self, rx: watch::Receiver<crate::tray::TrayStatus>) {
+        self.tray = Some(rx);
     }
 
     /// Test probe (loop wake-up counter).
