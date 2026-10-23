@@ -123,3 +123,10 @@ Appended by `qa:strategy`. Executed by `qa:e2e` / `qa:load` after the builds (ti
 - [ ] T015 Charter session → `docs/product/qa/charters/003.md` — Executor: thinker · Reviewer: reviewer · Effort: high
 
 **Checkpoint**: the journeys and suites in `qa.md` are green in CI; the exit criteria are met → Verified in `specs/README.md`.
+
+---
+
+## Convergence (Backend) — 2026-10-23
+
+Converged. FR-001–FR-006 map to `src/backend/wayland/{mod,protocols,read,serve}.rs` (ext-data-control-v1 from wayland-protocols `staging`, zwlr fallback). Capture and serve suites run on headless sway (470 tests green after the rebase). Review: focused thinker review (all suites re-run, unsafe = 0, logs carry types and sizes only). Caveats: US2 wasn't written test-first; the ext path wasn't exercised against a real compositor (sway 1.10 in the tools image offers only zwlr), so it needs a KDE or newer-wlroots check before Verified; the 1 MiB serve budget is asserted at 1 s, not 200 ms. The fresh-context review is deferred.
+
