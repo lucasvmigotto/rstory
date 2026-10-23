@@ -18,7 +18,7 @@ description: "Task list for GNOME Shell extension"
 
 ## Phase 1: Setup
 
-- [ ] T001 [P] Create `extension/` skeleton (`metadata.json` with uuid + shell-version 48–51, `extension.js`, `stylesheet.css`, `icons/`) and eslint config — Executor: builder · Reviewer: thinker · Effort: low
+- [ ] T001 [P] Create `extension/` skeleton (`metadata.json` with uuid + shell-version 48–51, `extension.js`, `stylesheet.css`, `icons/`), eslint config, and the type-check setup: `extension/package.json` (dev-only `typescript` 7.0.2, `@girs/gnome-shell` 50.0.4, lockfile), `extension/jsconfig.json` (`checkJs`, `noEmit`, strict), `// @ts-check` in every module, Node + npm in the tools image, `make ext-deps` (networked `npm ci` into a cache volume) and `make ext-typecheck` (offline) — Executor: builder · Reviewer: thinker · Effort: low
 
 ---
 
@@ -67,7 +67,7 @@ description: "Task list for GNOME Shell extension"
 
 ## Phase 5: Polish & Cross-Cutting
 
-- [ ] T008 eslint + GNOME review rules check (disable() cleanup) in CI — Executor: builder · Reviewer: thinker · Effort: low
+- [ ] T008 eslint + GNOME review rules check (disable() cleanup) and `make ext-typecheck` in CI — Executor: builder · Reviewer: thinker · Effort: low
 - [ ] T009 Run quickstart.md validation — Executor: scout · Reviewer: thinker · Effort: low
 - [ ] T010 QA tasks — see `## QA` (appended by `qa:strategy`) — Executor: thinker · Reviewer: reviewer · Effort: high
 

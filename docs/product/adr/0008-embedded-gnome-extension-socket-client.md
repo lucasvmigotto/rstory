@@ -34,6 +34,31 @@ the daemon restarts. `install-gnome-extension` writes the files, and
   comparing the version in `metadata.json`.
 
 ### Confirmation
-A manual matrix on Shell 48–51 before tags. An ESLint/gjs syntax check in
-CI. Protocol fixture tests on the JS side, run by `gjs` when it's
+A manual matrix on Shell 48–51 before tags. An ESLint/gjs syntax check and
+a TypeScript type check (see the amendment) in CI. Protocol fixture tests on the JS side, run by `gjs` when it's
 available in CI `[ASSUMPTION]`.
+
+## Amendment 2026-10-23 — plain JS, type-checked by TypeScript 7
+
+The extension stays plain ESM JavaScript with JSDoc annotations and
+`// @ts-check`. TypeScript 7 runs only as a checker,
+`tsc --noEmit --checkJs`, against `@girs/gnome-shell` types. Nothing is
+transpiled, and no generated JS is committed.
+
+- Why: the extension is small and holds no logic (see above). A
+  transpile step would either put Node into the Rust build path or force
+  committed generated JS (Constitution I). extensions.gnome.org reviewers
+  also prefer readable source.
+- How:
+  - `extension/package.json` pins the dev-only tools: `typescript`
+    7.0.2 and `@girs/gnome-shell` 50.0.4, with a lockfile.
+  - The JSDoc types for protocol messages come from
+    `contracts/protocol.schema.json`.
+  - `make ext-deps` is the only networked step: `npm ci` into a cache
+    volume.
+  - `make ext-typecheck` runs offline in the tools image. Node exists
+    only there, never in the release build.
+- Revisit full TypeScript, compiled to a committed, readable
+  `extension/dist/` with a freshness check, only if the extension gains
+  real logic. That is likely to come with brief feature 016 (GNOME
+  popup list).

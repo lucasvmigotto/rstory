@@ -29,11 +29,11 @@ Work ONLY in .worktrees/feat-gnome-extension (branch feat/gnome-extension, off d
 Goal: complete T001, T002, T011 of specs/010-gnome-extension/tasks.md.
 
 Inputs: specs/010-gnome-extension/spec.md, plan.md, data-model.md, contracts/, backend.md / tui.md / ui.md / qa.md where present; /contracts/protocol.md; docs/product/architecture.md §5.3 (module boundaries); .specify/memory/constitution.md.
-May change: extension/, extension/client.js, extension/menu.js, icons/, specs/009-tray/contracts/menu.md; Cargo.toml only to add the dependencies named in plan.md; specs/010-gnome-extension/tasks.md (tick only these task ids).
+May change: extension/, extension/client.js, extension/menu.js, icons/, specs/009-tray/contracts/menu.md; Containerfile (Node + npm in the deps stage), Makefile (`ext-deps`, `ext-typecheck`), .gitignore (`extension/node_modules/`); Cargo.toml only to add the dependencies named in plan.md; specs/010-gnome-extension/tasks.md (tick only these task ids).
 Must not touch: other features' source files beyond their public API, /contracts/* (a spec change goes through backend:spec), docs/product/*.
 
 Do:
-1. T001: [P] Create `extension/` skeleton (`metadata.json` with uuid + shell-version 48–51, `extension.js`, `stylesheet.css`, `icons/`) and eslint config
+1. T001: [P] Create `extension/` skeleton (`metadata.json` with uuid + shell-version 48–51, `extension.js`, `stylesheet.css`, `icons/`), eslint config, and the type-check setup: `extension/package.json` (dev-only `typescript` 7.0.2, `@girs/gnome-shell` 50.0.4, lockfile), `extension/jsconfig.json` (`checkJs`, `noEmit`, strict), `// @ts-check` in every module, Node + npm in the tools image, `make ext-deps` (networked `npm ci` into a cache volume) and `make ext-typecheck` (offline)
 2. T002: JS protocol client module (`extension/client.js`): connect, NDJSON read loop, request ids, reconnect backoff 1→30 s
 3. T011: [TUI] JS menu model module (`extension/menu.js`) per `specs/009-tray/contracts/menu.md` + Disconnected state
 
@@ -163,7 +163,7 @@ May change: the paths named in the tasks below; Cargo.toml only to add the depen
 Must not touch: other features' source files beyond their public API, /contracts/* (a spec change goes through backend:spec), docs/product/*.
 
 Do:
-1. T008: eslint + GNOME review rules check (disable() cleanup) in CI
+1. T008: eslint + GNOME review rules check (disable() cleanup) and `make ext-typecheck` in CI
 2. T009: Run quickstart.md validation
 
 Never: network calls at runtime, real clipboard contents in fixtures, logging content, editing other branches, publishing, secrets.
