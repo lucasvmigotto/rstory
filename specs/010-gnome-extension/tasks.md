@@ -55,7 +55,7 @@ description: "Task list for GNOME Shell extension"
 ### Tests for User Story 2 ⚠️
 
 - [x] T005 [P] [US2] gjs fixture test of client + menu model in `extension/tests/client.test.js` (SC-002) — Executor: builder · Reviewer: thinker
-- [ ] T006 [US2] Manual matrix procedure for Shell 48–51 in `docs/release.md` (SC-001) — Executor: builder · Reviewer: thinker
+- [x] T006 [US2] Manual matrix procedure for Shell 48–51 in `docs/release.md` (SC-001) — Executor: builder · Reviewer: thinker
 
 ### Implementation for User Story 2
 
