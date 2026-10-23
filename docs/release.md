@@ -34,3 +34,32 @@ GUI app that does not update the selection while unfocused). A failing row block
 
 Quick CI cross-check before the manual run:
 `make test-integration TEST_ARGS="--test bridge_capture"`.
+
+## KDE Plasma Wayland manual check
+
+Why manual: headless sway (CI) covers the data-control protocol, but only a real Plasma session
+has KWin's own data-control and the clients that set `x-kde-passwordManagerHint` (secrets
+managers). This covers SC-003 of spec 003. Use only throwaway text you typed for the check, never
+real clipboard contents.
+
+Repeat on each supported Plasma 6 release (Wayland session). Setup: start `rstory daemon` from a
+terminal with `RUST_LOG=rstory=debug`. The log must say `backend=wayland mode=native`. Keep
+another terminal for `rstory ls`.
+
+| # | Step | Expected |
+|---|---|---|
+| 1 | Copy a line from a GUI app (Kate, a Dolphin rename box, Firefox) | New entry at the top of `rstory ls`, text correct |
+| 2 | Copy with `wl-copy "wayland-native copy"` | New entry, text correct |
+| 3 | Copy a selection in Konsole with Ctrl+Shift+C | New entry |
+| 4 | Copy the same text twice | One entry, moved to the top (BR1) |
+| 5 | Copy an entry from a secrets manager (it offers the sensitive hint) | No entry recorded; `skipped_sensitive` rises |
+| 6 | Restore an entry, then paste into Kate and into an XWayland app (`xterm`) | Pasted text equals the entry |
+| 7 | Restore a value of about 1 MiB and paste into Kate | Complete paste, no hang |
+| 8 | Copy something else after a restore | The new copy is captured; rstory stops serving (no stale paste) |
+| 9 | Copy from a GUI app after the screen locked and unlocked | New entry |
+
+Record per Plasma version: version, distribution, result per row, and anything odd. A failing
+row blocks the release.
+
+Quick CI cross-check before the manual run:
+`make test-integration TEST_ARGS="--test wayland_capture"` and `--test wayland_serve`.
