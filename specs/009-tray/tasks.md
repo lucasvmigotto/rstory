@@ -18,7 +18,7 @@ description: "Task list for SNI tray"
 
 ## Phase 1: Setup
 
-- [ ] T001 [P] Add icon sources `assets/icons/{normal,paused}.svg` + rendered PNGs and `build.rs` ARGB generation — Executor: builder · Reviewer: thinker
+- [x] T001 [P] Add icon sources `assets/icons/{normal,paused}.svg` + rendered PNGs and `build.rs` ARGB generation — Executor: builder · Reviewer: thinker
 
 ---
 
@@ -26,7 +26,7 @@ description: "Task list for SNI tray"
 
 **⚠️ CRITICAL**: blocks every story in this feature.
 
-- [ ] T002 Define pure `TrayMenu` model per `contracts/menu.md` in `src/tray/menu.rs` — Executor: builder · Reviewer: thinker
+- [x] T002 Define pure `TrayMenu` model per `contracts/menu.md` in `src/tray/menu.rs` — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: foundation ready.
 
@@ -38,12 +38,12 @@ description: "Task list for SNI tray"
 
 ### Tests for User Story 1 ⚠️
 
-- [ ] T003 [P] [US1] menu-model unit tests (labels, truncation, ⏎, pin glyph, order) in `src/tray/tests.rs` — Executor: builder · Reviewer: thinker
-- [ ] T004 [P] [US1] D-Bus integration with stub watcher: item registers, activate → restore in `tests/tray_dbus.rs` — Executor: builder · Reviewer: thinker
+- [x] T003 [P] [US1] menu-model unit tests (labels, truncation, ⏎, pin glyph, order) in `src/tray/tests.rs` — Executor: builder · Reviewer: thinker
+- [x] T004 [P] [US1] D-Bus integration with stub watcher: item registers, activate → restore in `tests/tray_dbus.rs` — Executor: builder · Reviewer: thinker
 
 ### Implementation for User Story 1
 
-- [ ] T005 [US1] Backend implementation — see `## Backend` (appended by `backend:spec`) — Executor: builder · Reviewer: thinker
+- [x] T005 [US1] Backend implementation — see `## Backend` (appended by `backend:spec`) — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: User Story 1 passes its tests independently.
 
@@ -55,11 +55,11 @@ description: "Task list for SNI tray"
 
 ### Tests for User Story 2 ⚠️
 
-- [ ] T006 [P] [US2] model tests for recording/paused/timed/no-terminal/confirming (SC-002) — Executor: builder · Reviewer: thinker
+- [x] T006 [P] [US2] model tests for recording/paused/timed/no-terminal/confirming (SC-002) — Executor: builder · Reviewer: thinker
 
 ### Implementation for User Story 2
 
-- [ ] T007 [US2] Backend implementation — see `## Backend` (appended by `backend:spec`) — Executor: builder · Reviewer: thinker
+- [x] T007 [US2] Backend implementation — see `## Backend` (appended by `backend:spec`) — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: User Story 2 passes its tests independently.
 
@@ -71,11 +71,11 @@ description: "Task list for SNI tray"
 
 ### Tests for User Story 3 ⚠️
 
-- [ ] T008 [P] [US3] watcher absent/appears tests in `tests/tray_dbus.rs` — Executor: builder · Reviewer: thinker
+- [x] T008 [P] [US3] watcher absent/appears tests in `tests/tray_dbus.rs` — Executor: builder · Reviewer: thinker
 
 ### Implementation for User Story 3
 
-- [ ] T009 [US3] Backend implementation — see `## Backend` (appended by `backend:spec`) — Executor: builder · Reviewer: thinker
+- [x] T009 [US3] Backend implementation — see `## Backend` (appended by `backend:spec`) — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: User Story 3 passes its tests independently.
 
@@ -83,7 +83,7 @@ description: "Task list for SNI tray"
 
 ## Phase 6: Polish & Cross-Cutting
 
-- [ ] T010 Manual KDE + waybar check entry in `docs/release.md` (SC-001) — Executor: builder · Reviewer: thinker · Effort: low
+- [x] T010 Manual KDE + waybar check entry in `docs/release.md` (SC-001) — Executor: builder · Reviewer: thinker · Effort: low
 - [ ] T011 Run quickstart.md validation — Executor: scout · Reviewer: thinker · Effort: low
 - [ ] T012 QA tasks — see `## QA` (appended by `qa:strategy`) — Executor: thinker · Reviewer: reviewer · Effort: high
 
@@ -108,25 +108,25 @@ Appended by `backend:spec`. Built by `backend:build` (ticks only this section). 
 
 ### Backend Setup
 
-- [ ] T013 Add ksni (tokio), zbus (tokio, no default features), png (build-dep); `build.rs` icon ARGB generation — Executor: builder · Reviewer: thinker
+- [x] T013 Add ksni (tokio), zbus (tokio, no default features), png (build-dep); `build.rs` icon ARGB generation — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: `cargo build` and `cargo test` green; setup pieces covered by unit tests.
 
 ### Backend US1 — Restore from the top bar
 
-- [ ] T014 [US1] ksni `Tray` impl: icon pixmaps, tooltip, entry items → restore in `src/tray/mod.rs` — Executor: builder · Reviewer: thinker
+- [x] T014 [US1] ksni `Tray` impl: icon pixmaps, tooltip, entry items → restore in `src/tray/mod.rs` — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: the US1 tests in this file's story phase pass (`cargo test`), plus the contract tests where they apply.
 
 ### Backend US2 — Pause, timed pause, open picker, clear
 
-- [ ] T015 [US2] Pause/Resume/Pause 1 min/Open picker/Clear-confirm items wired to daemon handlers — Executor: builder · Reviewer: thinker
+- [x] T015 [US2] Pause/Resume/Pause 1 min/Open picker/Clear-confirm items wired to daemon handlers — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: the US2 tests in this file's story phase pass (`cargo test`), plus the contract tests where they apply.
 
 ### Backend US3 — No SNI host
 
-- [ ] T016 [US3] Watcher tracking, `status.tray` states, config `tray = false` — Executor: builder · Reviewer: thinker
+- [x] T016 [US3] Watcher tracking, `status.tray` states, config `tray = false` — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: the US3 tests in this file's story phase pass (`cargo test`), plus the contract tests where they apply.
 
@@ -139,7 +139,7 @@ Appended by `frontend:spec`. `[TUI]`/`[CLI]` tasks built by `frontend:tui` (tick
 
 ### Frontend US1 — Restore from the top bar
 
-- [ ] T017 [US1] Icon pixmaps from `assets/icons/png` (000-design-system T010) wired into `build.rs` — Executor: builder · Reviewer: thinker · Effort: low
+- [x] T017 [US1] Icon pixmaps from `assets/icons/png` (000-design-system T010) wired into `build.rs` — Executor: builder · Reviewer: thinker · Effort: low
 
 **Checkpoint**: the US1 snapshot/journey tests pass; `cargo insta review` is clean.
 
