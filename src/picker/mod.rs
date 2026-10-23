@@ -6,3 +6,9 @@
 
 pub mod state;
 pub mod term;
+pub mod app;
+pub mod data;
+pub mod view;
+
+#[cfg(test)]
+mod tests;
