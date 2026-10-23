@@ -72,15 +72,28 @@ impl CopyFilter {
     /// change.
     #[must_use]
     pub fn decide<S: AsRef<str>>(&self, types: &[S], paused: bool) -> PreRead {
-        let _ = (types, paused, self.max_entry_bytes);
-        todo!()
+        if paused {
+            return PreRead::Skip(FilterDecision::SkipPaused);
+        }
+        if types.iter().any(|t| SENSITIVE_HINTS.contains(&t.as_ref())) {
+            return PreRead::Skip(FilterDecision::SkipSensitive);
+        }
+        PreRead::Read {
+            limit: usize::try_from(self.max_entry_bytes)
+                .map_or(usize::MAX, |m| m.saturating_add(1)),
+        }
     }
 
     /// Post-read gates (oversize, empty). Consumes `bytes`, so a rejected text is dropped here.
     #[must_use]
     pub fn after_read(&self, bytes: Vec<u8>) -> FilterDecision {
-        let _ = (bytes, self.max_entry_bytes);
-        todo!()
+        if u64::try_from(bytes.len()).map_or(true, |n| n > self.max_entry_bytes) {
+            return FilterDecision::SkipOversize;
+        }
+        if bytes.is_empty() {
+            return FilterDecision::IgnoreEmpty;
+        }
+        FilterDecision::Record(bytes)
     }
 }
 
