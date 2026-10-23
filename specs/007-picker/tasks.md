@@ -148,3 +148,9 @@ Appended by `qa:strategy`. Executed by `qa:e2e` / `qa:load` after the builds (ti
 - [ ] T021 `tests/e2e/E2E-K2.rs` (keyboard-only recall through a pty, X11 and sway; negative read-only path) — Executor: builder · Reviewer: reviewer · Effort: high
 
 **Checkpoint**: the journeys and suites in `qa.md` are green in CI; the exit criteria are met → Verified in `specs/README.md`.
+
+---
+
+## Convergence (Frontend) — 2026-10-23
+
+Converged. `rstory pick` maps to `src/picker/{state,app,data,term,mod}.rs`: a pure reducer `update(&mut PickerState, Msg) -> Vec<Cmd>`, the daemon source with a read-only fallback and subscribe, and terminal lifecycle with restore on panic and on SIGHUP, SIGTERM and SIGINT. The picker never depends on `cli`, `backend` or `daemon` (F1). 57 unit tests (29 insta snapshots), `tests/picker_{data,cli,restore}.rs`. `fmt-check`, `lint` and `test` are green. `picker_first_frame` p95: 6.7 ms read-only and 10.2 ms over the socket at 500 entries; keystroke to redraw 3.9 ms against a 16 ms budget. Review fix: the pin-limit status line now shows the daemon's limit (copy key `picker.pin.limit` takes `{max}`, ux-vision updated). Readings the spec left open: plain mode marks pins `[pinned]` (US3 and ux-vision) where FR-005 says `[p]`; fuzzy matching runs on the ≤256-character preview; the theme stays `terminal` until the config is read. Unverified until QA: a real TTY run (alternate screen, `--plain` inline viewport, resizing, key reading). T012 (quickstart on a real terminal) and the QA tasks (T013, T021) remain.
