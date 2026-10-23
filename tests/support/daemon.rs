@@ -37,15 +37,79 @@ impl Dirs {
         let tmp = tempfile::tempdir().unwrap();
         let runtime = tmp.path().join("run");
         std::fs::create_dir(&runtime).unwrap();
+        let state = tmp.path().join("state");
+        std::fs::create_dir(&state).unwrap();
         Self {
-            store: tmp.path().join("store"),
+            store: state.join("rstory"),
             runtime,
             _tmp: tmp,
         }
     }
 
+    /// The `rstory` binary with an empty environment pointing at these directories:
+    /// the socket under `runtime`, the store at `<state>/rstory`, no config file, no color.
+    /// Nothing of the real session or `$HOME` is visible to it.
+    pub fn cli(&self, args: &[&str]) -> assert_cmd::Command {
+        let root = self._tmp.path();
+        let mut cmd = assert_cmd::Command::cargo_bin("rstory").unwrap();
+        cmd.env_clear()
+            .env("XDG_RUNTIME_DIR", &self.runtime)
+            .env("XDG_STATE_HOME", root.join("state"))
+            .env("XDG_CONFIG_HOME", root.join("config"))
+            .env("HOME", root.join("home"))
+            .env("LANG", "C.UTF-8")
+            .env("NO_COLOR", "1")
+            .args(args);
+        cmd
+    }
+
+    /// Writes `<config>/rstory/config.toml`.
+    pub fn write_config(&self, text: &str) {
+        let dir = self._tmp.path().join("config/rstory");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("config.toml"), text).unwrap();
+    }
+
+    pub fn config_file(&self) -> PathBuf {
+        self._tmp.path().join("config/rstory/config.toml")
+    }
+
     pub fn socket(&self) -> PathBuf {
         server::socket_path(&self.runtime)
+    }
+}
+
+/// What a finished CLI run left behind.
+pub struct Ran {
+    pub code: i32,
+    pub stdout: Vec<u8>,
+    pub stderr: String,
+}
+
+impl Ran {
+    pub fn out(&self) -> String {
+        String::from_utf8(self.stdout.clone()).unwrap()
+    }
+}
+
+/// Runs the CLI on a blocking thread, so the in-process daemon keeps serving meanwhile.
+pub async fn run(mut cmd: assert_cmd::Command) -> Ran {
+    tokio::task::spawn_blocking(move || {
+        let o = cmd.output().unwrap();
+        Ran {
+            code: o.status.code().unwrap_or(-1),
+            stdout: o.stdout,
+            stderr: String::from_utf8_lossy(&o.stderr).into_owned(),
+        }
+    })
+    .await
+    .unwrap()
+}
+
+impl Dirs {
+    /// `rstory <args>` run to completion.
+    pub async fn rstory(&self, args: &[&str]) -> Ran {
+        run(self.cli(args)).await
     }
 }
 
