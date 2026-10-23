@@ -2,6 +2,7 @@
 //! Every launcher gives each test its own display and sockets so tests can run in parallel.
 #![allow(dead_code)]
 
+pub mod daemon;
 pub mod mutter;
 pub mod sway;
 pub mod wl_client;
@@ -21,5 +22,14 @@ pub fn wait_for<T>(timeout: Duration, mut check: impl FnMut() -> Option<T>) -> O
             return None;
         }
         std::thread::sleep(Duration::from_millis(5));
+    }
+}
+
+/// Async flavour of [`wait_for`]: yields to the runtime between checks.
+pub async fn wait_for_async(mut check: impl FnMut() -> bool) {
+    let end = Instant::now() + Duration::from_secs(10);
+    while !check() {
+        assert!(Instant::now() < end, "condition not reached in time");
+        tokio::time::sleep(Duration::from_millis(5)).await;
     }
 }

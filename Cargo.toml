@@ -54,6 +54,10 @@ name = "x11_serve"
 required-features = ["session-tests"]
 
 [[test]]
+name = "daemon_x11"
+required-features = ["session-tests"]
+
+[[test]]
 name = "bridge_capture"
 required-features = ["session-tests"]
 
