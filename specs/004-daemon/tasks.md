@@ -39,7 +39,7 @@ description: "Task list for Daemon & control socket"
 ### Tests for User Story 1 ⚠️
 
 - [x] T003 [P] [US1] contract tests: every fixture validates; server responses validate (SC-004) in `tests/contract/protocol.rs` — Executor: builder · Reviewer: thinker
-- [x] T004 [P] [US1] integration: single instance (exit 4), inactive state, capture→list < 100 ms p95 (F7), burst 500/s bounded + `dropped_burst` in `tests/daemon_capture.rs` — Executor: builder · Reviewer: thinker
+- [x] T004 [P] [US1] integration: single instance (exit 4), inactive state, capture→list median < 100 ms smoke (the F7 p95 is `tests/perf/capture_latency.rs`), burst 500/s bounded + `dropped_burst` in `tests/daemon_capture.rs` — Executor: builder · Reviewer: thinker
 
 ### Implementation for User Story 1
 
