@@ -82,9 +82,11 @@ pub fn run(args: &[String]) -> u8 {
             return u8::try_from(code).unwrap_or(2);
         }
     };
-    // Owned by spec 012: it prints its own lines and picks its own exit code.
-    if let args::Command::InstallAutostart { args } = &cli.command {
-        return crate::install::autostart::run(args);
+    // Owned by specs 012 and 009: they print their own lines and pick their own exit code.
+    match &cli.command {
+        args::Command::InstallAutostart { args } => return crate::install::autostart::run(args),
+        args::Command::Tray => return crate::tray::client::run_main(),
+        _ => {}
     }
     let env = env::Env::process();
     let term = render::Term::detect();
@@ -127,7 +129,7 @@ fn dispatch(command: args::Command, io: &mut commands::Io<'_>) -> Result<(), err
         Command::Daemon { .. } => Err(unavailable("daemon")),
         Command::Pick { .. } => Err(unavailable("pick")),
         Command::Doctor { .. } => Err(unavailable("doctor")),
-        Command::InstallAutostart { .. } => unreachable!("handled in `run`"),
+        Command::InstallAutostart { .. } | Command::Tray => unreachable!("handled in `run`"),
         Command::InstallGnomeExtension { .. } => Err(unavailable("install-gnome-extension")),
     }
 }

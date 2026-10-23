@@ -24,7 +24,7 @@ in that layer.
 | 006 | [cli](006-cli/) | `ls`, `show`, `copy`, `pin`, `unpin`, `rm`, `clear`, `pause [--for]`, `resume`, `status`, `config`; `--json`; index and short id; exit codes; read-only when the daemon is down | P1 | 004 | Implemented | Implemented |
 | 007 | [picker](007-picker/) | `rstory pick` TUI: search, preview, restore, pin, unpin, delete, plain mode | P1 | 000, 006 | Planned | — |
 | 008 | [picker-launch](008-picker-launch/) | `picker_command`, terminal detection order, daemon-side `open_picker` | P2 | 007 | Implemented | Implemented |
-| 009 | [tray](009-tray/) | SNI tray: icon (normal and paused), last 10, pause, pause 1 min, open picker, clear with confirm | P2 | 004, 008 | Planned | Planned |
+| 009 | [tray](009-tray/) | SNI tray: icon (normal and paused), last 10, pause, pause 1 min, open picker, clear with confirm | P2 | 004, 008 | Implemented | Implemented |
 | 010 | [gnome-extension](010-gnome-extension/) | Embedded GNOME Shell 48–51 extension: panel icon and menu over the control socket; `install-gnome-extension` | P1 (v0.1 gate) | 004, 008 | Planned | Planned |
 | 011 | [doctor](011-doctor/) | `rstory doctor`: session, backend, bridge, store privacy, daemon, extension, tray host, terminal search | P2 | 002, 003, 004, 010 | Planned | Planned |
 | 012 | [autostart](012-autostart/) | `install-autostart`: XDG `.desktop` or systemd user unit | P2 | 004 | Implemented | Implemented |

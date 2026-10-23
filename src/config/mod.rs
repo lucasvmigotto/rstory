@@ -137,6 +137,20 @@ pub fn picker_command_from_toml(text: &str) -> Result<Option<String>, ConfigErro
     Ok(raw.picker_command.filter(|c| !c.trim().is_empty()))
 }
 
+/// `tray` from `config.toml`: whether the daemon shows a tray icon (default true).
+///
+/// # Errors
+/// [`ConfigError::Syntax`] when the text is not TOML or the key is not a boolean.
+pub fn tray_from_toml(text: &str) -> Result<bool, ConfigError> {
+    #[derive(Deserialize)]
+    struct Tray {
+        tray: Option<bool>,
+    }
+    let raw: Tray =
+        toml::from_str(text).map_err(|e| ConfigError::Syntax(e.message().to_string()))?;
+    Ok(raw.tray.unwrap_or(true))
+}
+
 #[derive(Debug, Deserialize)]
 struct Raw {
     max_entries: Option<u32>,
@@ -235,6 +249,18 @@ mod tests {
         assert_eq!(get("picker_command = \"  \""), None);
         assert!(matches!(
             picker_command_from_toml("picker_command = 3"),
+            Err(ConfigError::Syntax(_))
+        ));
+    }
+
+    #[test]
+    fn tray_defaults_to_on_and_false_turns_it_off() {
+        assert_eq!(tray_from_toml("max_entries = 50"), Ok(true));
+        assert_eq!(tray_from_toml(""), Ok(true));
+        assert_eq!(tray_from_toml("tray = true"), Ok(true));
+        assert_eq!(tray_from_toml("tray = false"), Ok(false));
+        assert!(matches!(
+            tray_from_toml("tray = \"no\""),
             Err(ConfigError::Syntax(_))
         ));
     }

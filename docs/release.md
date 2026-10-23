@@ -81,3 +81,35 @@ Repeat on GNOME (Wayland), KDE Plasma (Wayland) and sway, once for each autostar
 | 5 | `rstory install-autostart --uninstall`, then log out and back in | No daemon is running; `rstory status` exits 3 |
 
 Record per desktop: version, distribution, result per row. A failing row blocks the release.
+
+## Tray manual check (KDE Plasma and sway with waybar)
+
+Why manual: the D-Bus tests use a stub `StatusNotifierWatcher`; only a real Plasma panel or
+waybar's tray module shows the icon, draws the menu and renders the pixmaps. This covers SC-001
+of spec 009. Use only throwaway text you typed for the check, never real clipboard contents.
+
+Run once on KDE Plasma 6 (Wayland) and once on sway with waybar (`tray` module enabled). Setup:
+start `rstory daemon` from a terminal with `RUST_LOG=rstory=info`. The log must show
+`tray.state` with `state="active"`, and `rstory status --json` must say `"tray": "active"`.
+Copy three short throwaway lines first.
+
+| # | Step | Expected |
+|---|---|---|
+| 1 | Look at the panel | The rstory icon (clipboard outline) is visible and sharp at the panel size |
+| 2 | Open the menu | The three lines, newest first, then a separator, `Recording`, `Pause recording`, `Pause for 1 minute`, `Open picker` (when a terminal exists), a separator, `Clear history…` |
+| 3 | Click the third line, then paste into a text field | The pasted text equals that line, and the menu now lists it first |
+| 4 | Click `Pause recording` | The icon changes to the paused icon (two bars, a different shape, not only another color); the menu shows `Paused` and `Resume recording`; copying something new adds no entry |
+| 5 | Click `Resume recording` | The normal icon returns; the next copy is recorded |
+| 6 | Click `Pause for 1 minute`, reopen the menu after about 20 s | `Paused — resumes in 0:4x`; after a minute the icon is back to normal by itself |
+| 7 | Click `Clear history…` | The menu offers `Delete N unpinned entries` and `Cancel`; nothing is deleted yet; `Cancel` leaves the history as it was |
+| 8 | Click `Clear history…` then `Delete N unpinned entries` | Only the unpinned entries go (`rstory ls`); pinned ones stay |
+| 9 | Stop the panel's tray host (restart `plasmashell`, or `pkill waybar`) and start it again | The daemon keeps running; the icon reappears within a second or two; `status.tray` goes `no_host`, then `active` |
+| 10 | Start the daemon with `tray = false` in `config.toml` | No icon; `status.tray` is `disabled`. `rstory tray` in another terminal shows the icon instead |
+
+Light panels: the embedded icons are the variant for dark panels (light glyph). On a light panel
+check that the icon is still legible and record it as a finding (see the spec's Doubts).
+
+Record per desktop: version, result per row, and anything odd. A failing row blocks the release.
+
+CI cross-check before the manual run: `make test TEST_ARGS=` runs `tests/tray_dbus.rs` against a
+private `dbus-daemon` and a stub watcher inside the tools container.

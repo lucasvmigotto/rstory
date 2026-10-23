@@ -162,6 +162,9 @@ pub enum Command {
         #[arg(trailing_var_arg = true, allow_hyphen_values = true, num_args = 0..)]
         args: Vec<String>,
     },
+    /// Show the tray icon from a separate process (for `tray = false`)
+    #[command(after_long_help = "Examples:\n  rstory tray")]
+    Tray,
     /// Start the daemon at login
     #[command(name = "install-autostart", disable_help_flag = true)]
     InstallAutostart {

@@ -220,7 +220,12 @@ impl<B: Backend, F: Fs> Daemon<B, F> {
             max_entries: self.caps.max_entries,
             max_pinned: self.caps.max_pinned,
             counters: self.counters,
-            tray: "disabled".to_string(),
+            tray: self
+                .tray
+                .as_ref()
+                .map_or(crate::tray::TrayStatus::Disabled, |t| *t.borrow())
+                .as_str()
+                .to_string(),
             picker_available: matches!(self.picker_plan(), LaunchPlan::Found { .. }),
             version: env!("CARGO_PKG_VERSION").to_string(),
             protocol: VERSION,
