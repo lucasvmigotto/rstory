@@ -110,3 +110,9 @@ Appended by `qa:strategy`. Executed by `qa:e2e` / `qa:load` after the builds (ti
 - [ ] T011 Re-login manual rows (GNOME, KDE, sway) in `docs/release.md` — Executor: builder · Reviewer: thinker · Effort: low
 
 **Checkpoint**: the journeys and suites in `qa.md` are green in CI; the exit criteria are met → Verified in `specs/README.md`.
+
+---
+
+## Convergence — 2026-10-23
+
+Converged. FR-001–FR-005 map to `src/install/autostart.rs` (templates, atomic write, XDG and systemd flows, `detect` for doctor) and the `install-autostart` arm in `src/main.rs`. Every path and the `systemctl` program are injected through `Env`, and only `run()` reads the process environment. The 15 tests in `tests/install_autostart.rs` use temp dirs and a fake `systemctl`. Readings the spec left open: `--systemd` without `--now` also runs `daemon-reload` and `enable` (otherwise the unit would never start); systemd availability is probed with `systemctl --user show-environment` (exit 5, nothing written); `--uninstall` with `--systemd` or `--now` is a usage error. Unverified until QA: real re-login on GNOME, KDE and sway, and a real `systemctl --user`. The QA tasks (T008, T011) are deferred to before Verified.
