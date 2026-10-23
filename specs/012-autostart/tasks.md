@@ -38,11 +38,11 @@ No feature-specific setup (crate skeleton comes from 001).
 
 ### Tests for User Story 1 ⚠️
 
-- [ ] T002 [P] [US1] byte-exact template + idempotency + uninstall + temp-path warning tests in `tests/install_autostart.rs` (SC-002) — Executor: builder · Reviewer: thinker
+- [x] T002 [P] [US1] byte-exact template + idempotency + uninstall + temp-path warning tests in `tests/install_autostart.rs` (SC-002) — Executor: builder · Reviewer: thinker
 
 ### Implementation for User Story 1
 
-- [ ] T003 [US1] Terminal UI / CLI implementation — see `## Frontend` (appended by `frontend:spec`; `[TUI]`/`[CLI]` tasks built by `frontend:tui`) — Executor: builder · Reviewer: thinker
+- [x] T003 [US1] Terminal UI / CLI implementation — see `## Frontend` (appended by `frontend:spec`; `[TUI]`/`[CLI]` tasks built by `frontend:tui`) — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: User Story 1 passes its tests independently.
 
@@ -54,11 +54,11 @@ No feature-specific setup (crate skeleton comes from 001).
 
 ### Tests for User Story 2 ⚠️
 
-- [ ] T004 [P] [US2] unit template + stub systemctl tests — Executor: builder · Reviewer: thinker
+- [x] T004 [P] [US2] unit template + stub systemctl tests — Executor: builder · Reviewer: thinker
 
 ### Implementation for User Story 2
 
-- [ ] T005 [US2] Terminal UI / CLI implementation — see `## Frontend` (appended by `frontend:spec`; `[TUI]`/`[CLI]` tasks built by `frontend:tui`) — Executor: builder · Reviewer: thinker
+- [x] T005 [US2] Terminal UI / CLI implementation — see `## Frontend` (appended by `frontend:spec`; `[TUI]`/`[CLI]` tasks built by `frontend:tui`) — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: User Story 2 passes its tests independently.
 
@@ -66,8 +66,8 @@ No feature-specific setup (crate skeleton comes from 001).
 
 ## Phase 5: Polish & Cross-Cutting
 
-- [ ] T006 Manual re-login check on GNOME/KDE/sway in `docs/release.md` (SC-001) — Executor: builder · Reviewer: thinker · Effort: low
-- [ ] T007 Run quickstart.md validation — Executor: scout · Reviewer: thinker · Effort: low
+- [x] T006 Manual re-login check on GNOME/KDE/sway in `docs/release.md` (SC-001) — Executor: builder · Reviewer: thinker · Effort: low
+- [x] T007 Run quickstart.md validation — Executor: scout · Reviewer: thinker · Effort: low
 - [ ] T008 QA tasks — see `## QA` (appended by `qa:strategy`) — Executor: thinker · Reviewer: reviewer · Effort: high
 
 ---
@@ -91,13 +91,13 @@ Appended by `frontend:spec`. `[TUI]`/`[CLI]` tasks built by `frontend:tui` (tick
 
 ### Frontend US1 — Start at every login, any init system
 
-- [ ] T009 [US1] [CLI] `install-autostart` XDG path + messages + temp-path warning in `src/install/autostart.rs` — Executor: builder · Reviewer: thinker
+- [x] T009 [US1] [CLI] `install-autostart` XDG path + messages + temp-path warning in `src/install/autostart.rs` — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: the US1 snapshot/journey tests pass; `cargo insta review` is clean.
 
 ### Frontend US2 — systemd user unit
 
-- [ ] T010 [US2] [CLI] `--systemd`, `--now`, `--uninstall` — Executor: builder · Reviewer: thinker
+- [x] T010 [US2] [CLI] `--systemd`, `--now`, `--uninstall` — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: the US2 snapshot/journey tests pass; `cargo insta review` is clean.
 

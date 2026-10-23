@@ -63,3 +63,21 @@ row blocks the release.
 
 Quick CI cross-check before the manual run:
 `make test-integration TEST_ARGS="--test wayland_capture"` and `--test wayland_serve`.
+
+## Autostart re-login check (GNOME, KDE Plasma, sway)
+
+Why manual: only a real login runs the XDG autostart entry and the systemd user unit. This covers
+SC-001 of spec 012. Install the release binary to `~/.local/bin` first, so the entry does not
+point at a temporary path.
+
+Repeat on GNOME (Wayland), KDE Plasma (Wayland) and sway, once for each autostart kind.
+
+| # | Step | Expected |
+|---|---|---|
+| 1 | `rstory install-autostart`, then log out and back in | `rstory status` answers; the daemon is running |
+| 2 | Run `rstory install-autostart` again | Same file, exit 0, nothing else changes |
+| 3 | `rstory install-autostart --systemd`, then log out and back in | `systemctl --user status rstory` is active; no `~/.config/autostart/rstory.desktop` is left |
+| 4 | `pkill rstory` while the systemd unit is installed | The daemon is back within a few seconds (`Restart=on-failure`) |
+| 5 | `rstory install-autostart --uninstall`, then log out and back in | No daemon is running; `rstory status` exits 3 |
+
+Record per desktop: version, distribution, result per row. A failing row blocks the release.
