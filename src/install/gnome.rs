@@ -324,3 +324,21 @@ pub fn run(args: &[String]) -> u8 {
     };
     execute(&env, opts, &mut io::stdout(), &mut io::stderr())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_binary_never_embeds_node_modules() {
+        // `npm ci` belongs in the `rstory-tools-npm` volume (`make ext-deps`); a populated
+        // `extension/node_modules` on the host would be compiled into the binary.
+        let embedded = EXTENSION
+            .get_dir("node_modules")
+            .map_or(0, |d| d.entries().len());
+        assert_eq!(
+            embedded, 0,
+            "extension/node_modules is populated; remove it and use `make ext-deps`"
+        );
+    }
+}
