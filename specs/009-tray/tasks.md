@@ -153,3 +153,9 @@ Appended by `qa:strategy`. Executed by `qa:e2e` / `qa:load` after the builds (ti
 - [ ] T019 KDE + waybar manual rows in `docs/release.md` — Executor: builder · Reviewer: thinker · Effort: low
 
 **Checkpoint**: the journeys and suites in `qa.md` are green in CI; the exit criteria are met → Verified in `specs/README.md`.
+
+---
+
+## Convergence — 2026-10-23
+
+Converged, both layers. The FRs map to `src/tray/*`: the menu model per `contracts/menu.md`, ARGB32 pixmaps decoded from the 000 icons in `build.rs`, the ksni tray inside the daemon (`serve_process_with(.., Extras { tray })`) and `rstory tray` as a separate control-socket client for `tray = false` (`config::tray_from_toml`). `rstory tray` goes through the CLI parser. The D-Bus tests run a private `dbus-daemon` with a cleared environment and never use the host bus. `fmt-check`, `lint`, `test` and `test-integration` are green. Readings the spec left open: `Clear history…` turns into a confirm submenu when activated; underscores in labels are doubled (D-Bus access keys); "registers within 1 s" is asserted at 2 s. Open before Verified: only the `dark` pixmap variant is embedded, so the icon may be hard to see on light panels; rendering at 16–48 px and the KDE/waybar manual check (SC-001); the QA tasks (T012, T018, T019).
