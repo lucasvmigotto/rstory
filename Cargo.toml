@@ -81,6 +81,10 @@ required-features = ["session-tests"]
 name = "store"
 harness = false
 
+[[bench]]
+name = "ls"
+harness = false
+
 [dependencies]
 blake3 = { version = "1.8.7", default-features = false, features = ["pure"] }
 clap = { version = "4", features = ["derive"] }

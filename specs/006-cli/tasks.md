@@ -99,9 +99,9 @@ description: "Task list for Command-line interface"
 
 ## Phase 7: Polish & Cross-Cutting
 
-- [ ] T012 [P] `benches/ls.rs`: < 50 ms at 500 entries (SC-001) — Executor: builder · Reviewer: thinker
-- [ ] T013 Shell completions smoke test — Executor: builder · Reviewer: thinker · Effort: low
-- [ ] T014 Run quickstart.md validation — Executor: scout · Reviewer: thinker · Effort: low
+- [x] T012 [P] `benches/ls.rs`: < 50 ms at 500 entries (SC-001) — Executor: builder · Reviewer: thinker
+- [x] T013 Shell completions smoke test — Executor: builder · Reviewer: thinker · Effort: low
+- [x] T014 Run quickstart.md validation — Executor: scout · Reviewer: thinker · Effort: low
 - [ ] T015 QA tasks — see `## QA` (appended by `qa:strategy`) — Executor: thinker · Reviewer: reviewer · Effort: high
 
 ---

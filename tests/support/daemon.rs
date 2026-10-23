@@ -150,6 +150,7 @@ pub struct Rig {
     pub fake: FakeHandle,
     pub probe: Probe,
     pub socket: PathBuf,
+    store_dir: PathBuf,
     stop: watch::Sender<bool>,
     task: tokio::task::JoinHandle<Store<RealFs>>,
 }
@@ -179,6 +180,7 @@ impl Rig {
             fake,
             probe,
             socket: dirs.socket(),
+            store_dir: dirs.store.clone(),
             stop,
             task,
         }
@@ -191,8 +193,29 @@ impl Rig {
     /// Stops the daemon and waits until the store lock is released.
     pub async fn stop(self) {
         self.stop.send(true).unwrap();
+        let (socket, store_dir) = (self.socket.clone(), self.store_dir.clone());
         let store = self.task.await.unwrap();
         drop(store);
+        Self::wait_released(&socket, &store_dir);
+    }
+
+    /// Tests run in parallel threads, and a child forked by another test's `Command` briefly
+    /// inherits every open descriptor (the lock file, the listening socket) until it execs.
+    /// Wait until nobody answers on the socket and the store lock can be taken, so a CLI run
+    /// right after `stop` sees a daemon that is really gone.
+    fn wait_released(socket: &std::path::Path, store_dir: &std::path::Path) {
+        let end = std::time::Instant::now() + Duration::from_secs(5);
+        loop {
+            let socket_gone = std::os::unix::net::UnixStream::connect(socket).is_err();
+            let lock_free = !matches!(
+                rstory::store::readonly::ReadOnlyStore::open(store_dir),
+                Err(rstory::store::StoreError::DaemonRunning | rstory::store::StoreError::Locked)
+            );
+            if (socket_gone && lock_free) || std::time::Instant::now() >= end {
+                return;
+            }
+            std::thread::sleep(Duration::from_millis(2));
+        }
     }
 }
 
