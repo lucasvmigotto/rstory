@@ -53,7 +53,9 @@ fn a_signal_restores_the_terminal_then_exits_with_128_plus_n() {
         let (tx, rx) = mpsc::channel();
         watch_signals(r.clone(), move |c| tx.send(c).unwrap()).unwrap();
         kill_process(getpid(), sig).unwrap();
-        let got = rx.recv_timeout(Duration::from_secs(5)).expect("no signal seen");
+        let got = rx
+            .recv_timeout(Duration::from_secs(5))
+            .expect("no signal seen");
         assert_eq!(got, code, "{sig:?}");
         assert!(!r.active(), "{sig:?}");
         assert_eq!(leaves.load(Ordering::SeqCst), 1, "{sig:?}");
