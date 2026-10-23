@@ -5,6 +5,7 @@
 //! To add a subcommand: declare it in `args::Command` and add one arm to `dispatch`.
 
 pub mod args;
+pub mod commands;
 pub mod env;
 pub mod error;
 pub mod render;
@@ -80,31 +81,51 @@ pub fn run(args: &[String]) -> u8 {
             return u8::try_from(code).unwrap_or(2);
         }
     };
-    dispatch(cli.command)
+    let env = env::Env::process();
+    let term = render::Term::detect();
+    let (mut out, mut err) = (std::io::stdout().lock(), std::io::stderr().lock());
+    let mut io = commands::Io {
+        env: &env,
+        term: &term,
+        out: &mut out,
+        err: &mut err,
+    };
+    match dispatch(cli.command, &mut io) {
+        Ok(()) => ExitCode::Ok.code(),
+        Err(e) => {
+            let _ = writeln!(io.err, "{}", e.message);
+            e.exit.code()
+        }
+    }
 }
 
-/// Runs one parsed command.
-fn dispatch(command: args::Command) -> u8 {
+/// Runs one parsed command. To add a subcommand, add an arm here.
+fn dispatch(command: args::Command, io: &mut commands::Io<'_>) -> Result<(), error::CliError> {
     use args::Command;
     match command {
-        // `src/main.rs` runs the daemon itself: the cli module may not depend on it.
-        Command::Daemon { .. } => unavailable("daemon"),
+        Command::Ls { json, limit } => commands::ls(io, json, limit),
+        Command::Show { entry, json } => commands::show(io, &entry.entry, json),
+        Command::Copy { entry } => commands::copy_entry(io, &entry.entry),
         Command::Completions { shell } => {
-            args::completions(shell, &mut std::io::stdout());
-            ExitCode::Ok.code()
+            args::completions(shell, io.out);
+            Ok(())
         }
-        Command::Pick { .. } => unavailable("pick"),
-        Command::Doctor { .. } => unavailable("doctor"),
-        Command::InstallAutostart { .. } => unavailable("install-autostart"),
-        Command::InstallGnomeExtension { .. } => unavailable("install-gnome-extension"),
-        _ => unavailable("this command"),
+        // `src/main.rs` runs the daemon itself: the cli module may not depend on it.
+        Command::Daemon { .. } => Err(unavailable("daemon")),
+        Command::Pick { .. } => Err(unavailable("pick")),
+        Command::Doctor { .. } => Err(unavailable("doctor")),
+        Command::InstallAutostart { .. } => Err(unavailable("install-autostart")),
+        Command::InstallGnomeExtension { .. } => Err(unavailable("install-gnome-extension")),
+        _ => Err(unavailable("this command")),
     }
 }
 
 /// A command another spec has not delivered yet.
-fn unavailable(name: &str) -> u8 {
-    eprintln!("rstory: {name} is not available in this build");
-    ExitCode::Unexpected.code()
+fn unavailable(name: &str) -> error::CliError {
+    error::CliError::new(
+        ExitCode::Unexpected,
+        format!("rstory: {name} is not available in this build"),
+    )
 }
 
 #[cfg(test)]

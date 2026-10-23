@@ -38,11 +38,11 @@ description: "Task list for Command-line interface"
 
 ### Tests for User Story 1 ⚠️
 
-- [ ] T003 [P] [US1] assert_cmd tests: ls text (insta), ls --json schema, show raw bytes, copy, unknown/ambiguous ref exit 2 in `tests/cli_browse.rs` — Executor: builder · Reviewer: thinker
+- [x] T003 [P] [US1] assert_cmd tests: ls text (insta), ls --json schema, show raw bytes, copy, unknown/ambiguous ref exit 2 in `tests/cli_browse.rs` — Executor: builder · Reviewer: thinker
 
 ### Implementation for User Story 1
 
-- [ ] T004 [US1] Terminal UI / CLI implementation — see `## Frontend` (appended by `frontend:spec`; `[TUI]`/`[CLI]` tasks built by `frontend:tui`) — Executor: builder · Reviewer: thinker
+- [x] T004 [US1] Terminal UI / CLI implementation — see `## Frontend` (appended by `frontend:spec`; `[TUI]`/`[CLI]` tasks built by `frontend:tui`) — Executor: builder · Reviewer: thinker
 - [x] T005 [US1] Backend implementation — see `## Backend` (appended by `backend:spec`) — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: User Story 1 passes its tests independently.
@@ -145,8 +145,8 @@ Appended by `frontend:spec`. `[TUI]`/`[CLI]` tasks built by `frontend:tui` (tick
 
 ### Frontend US1 — Browse and restore from the shell
 
-- [ ] T019 [US1] [CLI] snapshots first, then `ls` renderer (TTY width-aware, piped TSV) and `show` raw output in `src/cli/render.rs` using `EntryLine` — Executor: builder · Reviewer: thinker
-- [ ] T020 [US1] [CLI] `--json` serializers per `/contracts/cli.md` with `schema: 1` — Executor: builder · Reviewer: thinker
+- [x] T019 [US1] [CLI] snapshots first, then `ls` renderer (TTY width-aware, piped TSV) and `show` raw output in `src/cli/render.rs` using `EntryLine` — Executor: builder · Reviewer: thinker
+- [x] T020 [US1] [CLI] `--json` serializers per `/contracts/cli.md` with `schema: 1` — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: the US1 snapshot/journey tests pass; `cargo insta review` is clean.
 

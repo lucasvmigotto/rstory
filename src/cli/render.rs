@@ -1,4 +1,160 @@
-//! Human and JSON output for `ls` and `show`.
+//! Human and JSON output for `ls` and `show`, built on the design system (`src/ui`).
+//!
+//! On a terminal `ls` is width-aware and styled; piped it is tab-separated
+//! (`index  short_id  pinned  age_seconds  preview`) with no styling, for `cut` and `awk`.
+//! Previews arrive escaped from the daemon; nothing here prints content except `show`.
+
+use std::io::IsTerminal;
+
+use serde_json::json;
+use time::OffsetDateTime;
+
+use crate::ipc::protocol::EntrySummary;
+use crate::ui::ansi;
+use crate::ui::glyphs::{Glyphs, LocaleEnv, ascii_mode};
+use crate::ui::theme::{Background, TermEnv, Theme, ThemePref, Tier};
+use crate::ui::widgets::{Ctx, EntryLine};
+
+/// What the output goes to: a terminal or a pipe, how wide, how colorful.
+#[derive(Debug, Clone, Copy)]
+pub struct Term {
+    /// Whether stdout is a terminal.
+    pub tty: bool,
+    /// Columns available (80 when unknown).
+    pub width: usize,
+    theme: Theme,
+    glyphs: Glyphs,
+}
+
+impl Term {
+    /// An explicit output description (tests).
+    #[must_use]
+    pub fn new(tty: bool, width: usize, tier: Tier, ascii: bool) -> Self {
+        Self {
+            tty,
+            width,
+            theme: Theme::new(tier, Background::Dark),
+            glyphs: Glyphs::new(ascii),
+        }
+    }
+
+    /// Looks at stdout, `NO_COLOR`, `TERM`, the locale and the terminal size.
+    #[must_use]
+    pub fn detect() -> Self {
+        let out = std::io::stdout();
+        let tty = out.is_terminal();
+        let theme = Theme::detect(
+            ThemePref::Terminal,
+            &TermEnv::from_process(),
+            Background::Dark,
+        );
+        let tier = if tty { theme.tier() } else { Tier::Mono };
+        let ascii = ascii_mode(false, &LocaleEnv::from_process());
+        let width = if tty { terminal_width(&out) } else { 80 };
+        Self::new(tty, width, tier, ascii)
+    }
+
+    /// The design-system context for widgets.
+    #[must_use]
+    pub fn ctx(&self) -> Ctx<'_> {
+        Ctx::new(&self.theme, &self.glyphs)
+    }
+
+    /// Copy text with the ASCII fallbacks applied.
+    #[must_use]
+    pub fn text<'a>(&self, s: &'a str) -> std::borrow::Cow<'a, str> {
+        self.glyphs.text(s)
+    }
+
+    /// Whether styling is on (a color tier above mono).
+    #[must_use]
+    pub fn styled(&self) -> bool {
+        self.theme.tier() != Tier::Mono
+    }
+}
+
+fn terminal_width(out: &std::io::Stdout) -> usize {
+    if let Ok(ws) = rustix::termios::tcgetwinsize(out)
+        && ws.ws_col > 0
+    {
+        return usize::from(ws.ws_col);
+    }
+    std::env::var("COLUMNS")
+        .ok()
+        .and_then(|c| c.parse().ok())
+        .filter(|w| *w > 0)
+        .unwrap_or(80)
+}
+
+/// Seconds from `then` to `now`; a future time counts as now.
+#[must_use]
+pub fn age_secs(now: OffsetDateTime, then: OffsetDateTime) -> u64 {
+    u64::try_from((now - then).whole_seconds()).unwrap_or(0)
+}
+
+/// A short age: `59s`, `3m`, `2h`, `5d`.
+#[must_use]
+pub fn age(now: OffsetDateTime, then: OffsetDateTime) -> String {
+    let s = age_secs(now, then);
+    match s {
+        0..=59 => format!("{s}s"),
+        60..=3599 => format!("{}m", s / 60),
+        3600..=86_399 => format!("{}h", s / 3600),
+        _ => format!("{}d", s / 86_400),
+    }
+}
+
+fn entry_line<'a>(e: &'a EntrySummary, age: &'a str) -> EntryLine<'a> {
+    EntryLine {
+        index: e.index as usize,
+        short_id: &e.short_id,
+        pinned: e.pinned,
+        age,
+        preview: &e.preview,
+    }
+}
+
+/// The `ls` lines, each ending in a newline; empty for an empty history.
+#[must_use]
+pub fn ls_text(entries: &[EntrySummary], now: OffsetDateTime, term: &Term) -> String {
+    let ctx = term.ctx();
+    let mut out = String::new();
+    for e in entries {
+        if term.tty {
+            let styled = entry_line(e, &age(now, e.last_copied)).tty(term.width, ctx);
+            out.push_str(&if term.styled() {
+                ansi::ansi(&styled)
+            } else {
+                ansi::plain(&styled)
+            });
+        } else {
+            out.push_str(&entry_line(e, &age_secs(now, e.last_copied).to_string()).tsv(ctx));
+        }
+        out.push('\n');
+    }
+    out
+}
+
+/// `{"schema":1,"entries":[…],"read_only":bool}` and a newline.
+#[must_use]
+pub fn ls_json(entries: &[EntrySummary], read_only: bool) -> String {
+    let mut text = json!({"schema": 1, "entries": entries, "read_only": read_only}).to_string();
+    text.push('\n');
+    text
+}
+
+/// `{"schema":1,"entry":…,"content":…}` and a newline. Content that is not UTF-8 is lossy.
+#[must_use]
+pub fn show_json(entry: &EntrySummary, content: &[u8]) -> String {
+    let mut text = json!({
+        "schema": 1,
+        "entry": entry,
+        "content": String::from_utf8_lossy(content),
+    })
+    .to_string();
+    text.push('\n');
+    text
+}
 
 #[cfg(test)]
 mod tests {
@@ -57,9 +213,9 @@ mod tests {
     fn tty_at_80_columns() {
         let term = Term::new(true, 80, Tier::Mono, false);
         insta::assert_snapshot!(ls_text(&sample(), NOW, &term), @r"
-        [0]  01JBD8Z       3m  https://example.org/rstory
-        [1]  01JBD8X  📌    2h  git rebase -i HEAD~3
-        [2]  01JBC2K        1d  cargo test -p rstory --test daemon_restore -- --nocapture --…
+        [0]   01JBD8Z      3m  https://example.org/rstory
+        [1]   01JBD8X 📌   2h  git rebase -i HEAD~3
+        [2]   01JBC2K      1d  cargo test -p rstory --test daemon_restore -- --nocaptur…
         ");
     }
 
@@ -67,8 +223,14 @@ mod tests {
     fn tty_at_120_columns_shows_more_preview() {
         let term = Term::new(true, 120, Tier::Mono, false);
         let out = ls_text(&sample(), NOW, &term);
-        assert!(out.contains("--test-threads=1 and a very long tail"), "{out}");
-        assert!(out.lines().all(|l| unicode_width::UnicodeWidthStr::width(l) <= 120));
+        assert!(
+            out.contains("--test-threads=1 and a very long tail"),
+            "{out}"
+        );
+        assert!(
+            out.lines()
+                .all(|l| unicode_width::UnicodeWidthStr::width(l) <= 120)
+        );
     }
 
     #[test]
@@ -76,9 +238,9 @@ mod tests {
         let term = Term::new(true, 40, Tier::Mono, true);
         let out = ls_text(&sample(), NOW, &term);
         insta::assert_snapshot!(out, @r"
-        [0]  01JBD8Z       3m  https://example....
-        [1]  01JBD8X  [p]  2h  git rebase -i HEA...
-        [2]  01JBC2K       1d  cargo test -p rstor...
+        [0]   01JBD8Z       3m  https://examp...
+        [1]   01JBD8X [p]   2h  git rebase -i...
+        [2]   01JBC2K       1d  cargo test -p...
         ");
     }
 
@@ -121,7 +283,10 @@ mod tests {
 
     #[test]
     fn no_entries_print_nothing() {
-        assert_eq!(ls_text(&[], NOW, &Term::new(true, 80, Tier::Mono, false)), "");
+        assert_eq!(
+            ls_text(&[], NOW, &Term::new(true, 80, Tier::Mono, false)),
+            ""
+        );
     }
 
     #[test]
