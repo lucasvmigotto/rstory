@@ -68,7 +68,7 @@ test('pause_changed switches the icon and the status label without a request', a
         d.push({v: 1, event: 'pause_changed', data: {state: 'paused', paused_until: null}});
         await waitFor(() => last.status.state === 'paused', 'paused');
         assertEquals(iconName(last), 'paused');
-        assertEquals(buildMenu(last, 0).find(i => 'id' in i && i.id === 'status')?.label, 'Paused');
+        assertEquals(/** @type {any} */ (buildMenu(last, 0).find(i => 'id' in i && i.id === 'status')).label, 'Paused');
         d.push({v: 1, event: 'pause_changed', data: {state: 'recording', paused_until: null}});
         await waitFor(() => last.status.state === 'recording', 'recording');
         assertEquals(d.requests.length, before);

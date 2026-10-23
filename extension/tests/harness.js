@@ -122,7 +122,7 @@ export class FakeDaemon {
     start() {
         try {
             Gio.File.new_for_path(this.#path).delete(null);
-        } catch (_e) {
+        } catch {
             // nothing to remove
         }
         const service = new Gio.SocketService();
@@ -144,14 +144,14 @@ export class FakeDaemon {
         for (const c of this.#clients) {
             try {
                 c.conn.close(null);
-            } catch (_e) {
+            } catch {
                 // already closed
             }
         }
         this.#clients.clear();
         try {
             Gio.File.new_for_path(this.#path).delete(null);
-        } catch (_e) {
+        } catch {
             // already gone
         }
     }
@@ -179,7 +179,7 @@ export class FakeDaemon {
                 let bytes;
                 try {
                     [bytes] = input.read_line_finish(res);
-                } catch (_e) {
+                } catch {
                     this.#clients.delete(client);
                     return;
                 }

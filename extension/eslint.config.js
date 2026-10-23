@@ -9,7 +9,6 @@ const gjsGlobals = {
   ARGV: 'readonly',
   TextEncoder: 'readonly',
   TextDecoder: 'readonly',
-  setTimeout: 'off',
 };
 
 export default [

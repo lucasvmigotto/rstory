@@ -25,6 +25,9 @@ function connected(over = {}, entries = [entry(0), entry(1, true), entry(2)]) {
     return /** @type {any} */ ({connected: true, status: status(over), entries});
 }
 
+/** @param {import('../menu.js').MenuItem[]} items @param {string} id @returns {any} */
+const byId = (items, id) => items.find(i => 'id' in i && i.id === id);
+
 /** @param {any[]} items */
 const ids = items => items.map(i => i.type === 'separator' ? '---' : i.id);
 
@@ -41,15 +44,15 @@ test('normal: entries, separator, status, pause, pause 1 min, picker, separator,
     assertEquals(ids(items).map(s => s.replace(/^entry:.*/, 'entry')),
         ['entry', 'entry', 'entry', '---', 'status', 'pause', 'pause_minute', 'open_picker', '---',
             'clear']);
-    const labels = items.filter(i => i.type === 'entry').map(i => i.label);
+    const labels = items.filter(i => i.type === 'entry').map(i => /** @type {any} */ (i).label);
     assertEquals(labels, ['item 0', '📌 item 1', 'item 2']);
     assertEquals(iconName(connected()), 'recording');
 });
 
 test('an entry restores by id', () => {
     const e = entry(0);
-    const first = buildMenu(connected({}, [e]), NOW)[0];
-    assertEquals(first.type === 'entry' && first.request, {op: 'restore', args: {ref: e.id}});
+    const first = /** @type {any} */ (buildMenu(connected({}, [e]), NOW)[0]);
+    assertEquals(first.request, {op: 'restore', args: {ref: e.id}});
 });
 
 test('at most 10 entries are shown', () => {
@@ -65,8 +68,8 @@ test('empty: an insensitive placeholder instead of entries', () => {
 });
 
 test('status line and pause items per state', () => {
-    /** @param {any} state */
-    const find = (state, id) => buildMenu(state, NOW).find(i => 'id' in i && i.id === id);
+    /** @param {any} state @param {string} id */
+    const find = (state, id) => byId(buildMenu(state, NOW), id);
     assertEquals(find(connected(), 'status')?.label, 'Recording');
 
     const paused = connected({state: 'paused', paused_until: null});
@@ -91,21 +94,17 @@ test('status line and pause items per state', () => {
 
 test('pause requests', () => {
     const items = buildMenu(connected(), NOW);
-    const req = (/** @type {string} */ id) =>
-        items.find(i => 'id' in i && i.id === id && i.type === 'action');
-    assertEquals(req('pause')?.type === 'action' && req('pause')?.request,
-        {op: 'pause', args: {}});
-    const minute = req('pause_minute');
-    assertEquals(minute?.type === 'action' && minute.request, {op: 'pause', args: {for: '1m'}});
-    const resume = buildMenu(connected({state: 'paused'}), NOW).find(i => 'id' in i && i.id === 'resume');
-    assertEquals(resume?.type === 'action' && resume.request, {op: 'resume', args: {}});
+    assertEquals(byId(items, 'pause').request, {op: 'pause', args: {}});
+    assertEquals(byId(items, 'pause_minute').request, {op: 'pause', args: {for: '1m'}});
+    const resume = byId(buildMenu(connected({state: 'paused'}), NOW), 'resume');
+    assertEquals(resume.request, {op: 'resume', args: {}});
 });
 
 test('open picker only when picker_available, and it asks the daemon', () => {
     const none = buildMenu(connected({picker_available: false}), NOW);
     assert(!ids(none).includes('open_picker'), 'hidden without a terminal');
-    const item = buildMenu(connected(), NOW).find(i => 'id' in i && i.id === 'open_picker');
-    assertEquals(item?.type === 'action' && item.request, {op: 'open_picker', args: {}});
+    const item = byId(buildMenu(connected(), NOW), 'open_picker');
+    assertEquals(item.request, {op: 'open_picker', args: {}});
 });
 
 test('clear is a submenu with a counted confirm and a cancel', () => {

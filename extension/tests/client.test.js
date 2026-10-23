@@ -112,7 +112,7 @@ test('invalid fixture lines are ignored and the link keeps working', async () =>
             for (const f of listDir(`${FIXTURES}/${dir}`)) {
                 for (const line of readLines(`${FIXTURES}/${dir}/${f}`)) {
                     // Responses to ids we never asked for and events with bad shapes: no crash.
-                    daemon.push(line);
+                    daemon.push(unrelatedId(line));
                 }
             }
         }
@@ -183,5 +183,17 @@ test('stop() closes the socket and cancels the reconnect timer', async () => {
     assertEquals(d2.connections, 0);
     d2.stop();
 });
+
+/** Moves a fixture's request id out of the way of the ids this test uses. @param {string} line */
+function unrelatedId(line) {
+    try {
+        const o = JSON.parse(line);
+        if (o !== null && typeof o === 'object' && typeof o.id === 'number')
+            return JSON.stringify({...o, id: 900000 + Math.abs(o.id)});
+    } catch {
+        // not JSON: pushed as is
+    }
+    return line;
+}
 
 await runAll();

@@ -18,7 +18,7 @@ description: "Task list for GNOME Shell extension"
 
 ## Phase 1: Setup
 
-- [ ] T001 [P] Create `extension/` skeleton (`metadata.json` with uuid + shell-version 48–51, `extension.js`, `stylesheet.css`, `icons/`), eslint config, and the type-check setup: `extension/package.json` (dev-only `typescript` 7.0.2, `@girs/gnome-shell` 50.0.4, lockfile), `extension/jsconfig.json` (`checkJs`, `noEmit`, strict), `// @ts-check` in every module, Node + npm in the tools image, `make ext-deps` (networked `npm ci` into a cache volume) and `make ext-typecheck` (offline) — Executor: builder · Reviewer: thinker · Effort: low
+- [x] T001 [P] Create `extension/` skeleton (`metadata.json` with uuid + shell-version 48–51, `extension.js`, `stylesheet.css`, `icons/`), eslint config, and the type-check setup: `extension/package.json` (dev-only `typescript` 7.0.2, `@girs/gnome-shell` 50.0.4, lockfile), `extension/jsconfig.json` (`checkJs`, `noEmit`, strict), `// @ts-check` in every module, Node + npm in the tools image, `make ext-deps` (networked `npm ci` into a cache volume) and `make ext-typecheck` (offline) — Executor: builder · Reviewer: thinker · Effort: low
 
 ---
 
@@ -26,7 +26,7 @@ description: "Task list for GNOME Shell extension"
 
 **⚠️ CRITICAL**: blocks every story in this feature.
 
-- [ ] T002 JS protocol client module (`extension/client.js`): connect, NDJSON read loop, request ids, reconnect backoff 1→30 s — Executor: builder · Reviewer: reviewer · Effort: high
+- [x] T002 JS protocol client module (`extension/client.js`): connect, NDJSON read loop, request ids, reconnect backoff 1→30 s — Executor: builder · Reviewer: reviewer · Effort: high
 
 **Checkpoint**: foundation ready.
 
@@ -92,7 +92,7 @@ Appended by `frontend:spec`. `[TUI]`/`[CLI]` tasks built by `frontend:tui` (tick
 
 ### Frontend Foundational
 
-- [ ] T011 [TUI] JS menu model module (`extension/menu.js`) per `specs/009-tray/contracts/menu.md` + Disconnected state — Executor: builder · Reviewer: thinker
+- [x] T011 [TUI] JS menu model module (`extension/menu.js`) per `specs/009-tray/contracts/menu.md` + Disconnected state — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: unit tests green.
 
