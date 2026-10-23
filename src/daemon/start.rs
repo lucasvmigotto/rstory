@@ -12,7 +12,7 @@ use tokio::sync::watch;
 use crate::backend::wayland::{ConnectError, WaylandBackend, WaylandOptions};
 use crate::backend::x11::{X11Backend, X11Options};
 use crate::backend::{Backend, BackendKind, EventStream, Mode, ReadError, ServeError};
-use crate::config::Caps;
+use crate::config::{Caps, ConfigError, picker_command_from_toml};
 use crate::ipc::peercred::peer_cred;
 use crate::ipc::server;
 use crate::session::{self, RealProbe, SessionEnv};
@@ -218,18 +218,22 @@ fn store_dir() -> Result<PathBuf, StartError> {
     Ok(PathBuf::from(home).join(".local/state/rstory"))
 }
 
-fn load_caps() -> Result<Caps, StartError> {
+/// `config.toml`: the caps and `picker_command`; defaults when the file is absent.
+fn load_config() -> Result<(Caps, Option<String>), StartError> {
     let dir = match env_var("XDG_CONFIG_HOME") {
         Some(c) => PathBuf::from(c),
         None => match env_var("HOME") {
             Some(h) => PathBuf::from(h).join(".config"),
-            None => return Ok(Caps::default()),
+            None => return Ok((Caps::default(), None)),
         },
     };
-    match std::fs::read_to_string(dir.join("rstory/config.toml")) {
-        Ok(text) => Caps::from_toml(&text).map_err(|e| StartError::Environment(e.to_string())),
-        Err(_) => Ok(Caps::default()),
-    }
+    let Ok(text) = std::fs::read_to_string(dir.join("rstory/config.toml")) else {
+        return Ok((Caps::default(), None));
+    };
+    let invalid = |e: ConfigError| StartError::Environment(e.to_string());
+    let caps = Caps::from_toml(&text).map_err(invalid)?;
+    let picker_command = picker_command_from_toml(&text).map_err(invalid)?;
+    Ok((caps, picker_command))
 }
 
 /// The backend the session selected: one concrete type for the daemon.
@@ -374,11 +378,12 @@ async fn run_inner(args: DaemonArgs) -> Result<(), StartError> {
         Path::new("/run/user"),
     )
     .map_err(|e| StartError::Environment(e.to_string()))?;
+    let (caps, picker_command) = load_config()?;
     let rt = Runtime {
         store_dir: store_dir()?,
         runtime_dir,
-        caps: load_caps()?,
-        launch: LaunchEnv::from_env(None),
+        caps,
+        launch: LaunchEnv::from_env(picker_command),
         lock_retry: LOCK_RETRY,
     };
     let env = SessionEnv {

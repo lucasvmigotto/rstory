@@ -123,6 +123,20 @@ fn range_error(
     }
 }
 
+/// `picker_command` from `config.toml` (spec 008 FR-001): `None` when unset or blank.
+///
+/// # Errors
+/// [`ConfigError::Syntax`] when the text is not TOML or the key is not a string.
+pub fn picker_command_from_toml(text: &str) -> Result<Option<String>, ConfigError> {
+    #[derive(Deserialize)]
+    struct Launch {
+        picker_command: Option<String>,
+    }
+    let raw: Launch =
+        toml::from_str(text).map_err(|e| ConfigError::Syntax(e.message().to_string()))?;
+    Ok(raw.picker_command.filter(|c| !c.trim().is_empty()))
+}
+
 #[derive(Debug, Deserialize)]
 struct Raw {
     max_entries: Option<u32>,
@@ -208,6 +222,21 @@ mod tests {
             (50, 5, 2048)
         );
         assert_eq!(c.ttl, Duration::from_secs(36 * 3600));
+    }
+
+    #[test]
+    fn picker_command_is_read_and_blank_means_unset() {
+        let get = |t: &str| picker_command_from_toml(t).unwrap();
+        assert_eq!(
+            get("picker_command = \"foot -e rstory pick\"").as_deref(),
+            Some("foot -e rstory pick")
+        );
+        assert_eq!(get("max_entries = 50"), None);
+        assert_eq!(get("picker_command = \"  \""), None);
+        assert!(matches!(
+            picker_command_from_toml("picker_command = 3"),
+            Err(ConfigError::Syntax(_))
+        ));
     }
 
     #[test]
