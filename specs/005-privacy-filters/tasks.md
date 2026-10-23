@@ -26,7 +26,7 @@ No feature-specific setup (crate skeleton comes from 001).
 
 **⚠️ CRITICAL**: blocks every story in this feature.
 
-- [ ] T001 Define `FilterDecision` and `SENSITIVE_HINTS` in `src/domain/filter.rs` — Executor: builder · Reviewer: thinker · Effort: low
+- [x] T001 Define `FilterDecision` and `SENSITIVE_HINTS` in `src/domain/filter.rs` — Executor: builder · Reviewer: thinker · Effort: low
 
 **Checkpoint**: foundation ready.
 
@@ -38,12 +38,12 @@ No feature-specific setup (crate skeleton comes from 001).
 
 ### Tests for User Story 1 ⚠️
 
-- [ ] T002 [P] [US1] proptest: random jobs incl. hinted ones; assert hinted bytes never reach store, logs, or post-decision memory (SC-001, F8) in `tests/filter_props.rs` — Executor: builder · Reviewer: thinker
-- [ ] T003 [P] [US1] unit: hint with text, hint only, hint via bridge targets — Executor: builder · Reviewer: thinker
+- [x] T002 [P] [US1] proptest: random jobs incl. hinted ones; assert hinted bytes never reach store, logs, or post-decision memory (SC-001, F8) in `tests/filter_props.rs` — Executor: builder · Reviewer: thinker
+- [x] T003 [P] [US1] unit: hint with text, hint only, hint via bridge targets — Executor: builder · Reviewer: thinker
 
 ### Implementation for User Story 1
 
-- [ ] T004 [US1] Backend implementation — see `## Backend` (appended by `backend:spec`) — Executor: builder · Reviewer: thinker
+- [x] T004 [US1] Backend implementation — see `## Backend` (appended by `backend:spec`) — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: User Story 1 passes its tests independently.
 
@@ -55,11 +55,11 @@ No feature-specific setup (crate skeleton comes from 001).
 
 ### Tests for User Story 2 ⚠️
 
-- [ ] T005 [P] [US2] boundary tests cap−1/cap/cap+1 (SC-002) — Executor: builder · Reviewer: thinker
+- [x] T005 [P] [US2] boundary tests cap−1/cap/cap+1 (SC-002) — Executor: builder · Reviewer: thinker
 
 ### Implementation for User Story 2
 
-- [ ] T006 [US2] Backend implementation — see `## Backend` (appended by `backend:spec`) — Executor: builder · Reviewer: thinker
+- [x] T006 [US2] Backend implementation — see `## Backend` (appended by `backend:spec`) — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: User Story 2 passes its tests independently.
 
@@ -71,11 +71,11 @@ No feature-specific setup (crate skeleton comes from 001).
 
 ### Tests for User Story 3 ⚠️
 
-- [ ] T007 [P] [US3] pause-gate unit tests + order-of-checks table test — Executor: builder · Reviewer: thinker
+- [x] T007 [P] [US3] pause-gate unit tests + order-of-checks table test — Executor: builder · Reviewer: thinker
 
 ### Implementation for User Story 3
 
-- [ ] T008 [US3] Backend implementation — see `## Backend` (appended by `backend:spec`) — Executor: builder · Reviewer: thinker
+- [x] T008 [US3] Backend implementation — see `## Backend` (appended by `backend:spec`) — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: User Story 3 passes its tests independently.
 
@@ -83,8 +83,8 @@ No feature-specific setup (crate skeleton comes from 001).
 
 ## Phase 6: Polish & Cross-Cutting
 
-- [ ] T009 Write README sections: threat model, sensitive hints, `passc` wrapper (FR-007) — Executor: builder · Reviewer: thinker · Effort: low
-- [ ] T010 Run quickstart.md validation — Executor: scout · Reviewer: thinker · Effort: low
+- [x] T009 Write README sections: threat model, sensitive hints, `passc` wrapper (FR-007) — Executor: builder · Reviewer: thinker · Effort: low
+- [x] T010 Run quickstart.md validation — Executor: scout · Reviewer: thinker · Effort: low
 - [ ] T011 QA tasks — see `## QA` (appended by `qa:strategy`) — Executor: thinker · Reviewer: reviewer · Effort: high
 
 ---
@@ -108,25 +108,25 @@ Appended by `backend:spec`. Built by `backend:build` (ticks only this section). 
 
 ### Backend US1 — Copies marked sensitive are never stored
 
-- [ ] T012 [US1] `CopyFilter` pre-read gates (pause, sensitive) using `SENSITIVE_HINTS` in `src/domain/filter.rs` — Executor: builder · Reviewer: thinker
+- [x] T012 [US1] `CopyFilter` pre-read gates (pause, sensitive) using `SENSITIVE_HINTS` in `src/domain/filter.rs` — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: the US1 tests in this file's story phase pass (`cargo test`), plus the contract tests where they apply.
 
 ### Backend US2 — Oversize copies are dropped, never truncated
 
-- [ ] T013 [US2] Post-read gates (oversize via limit+1, empty) and drop of rejected bytes — Executor: builder · Reviewer: thinker
+- [x] T013 [US2] Post-read gates (oversize via limit+1, empty) and drop of rejected bytes — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: the US2 tests in this file's story phase pass (`cargo test`), plus the contract tests where they apply.
 
 ### Backend US3 — Nothing recorded while paused
 
-- [ ] T014 [US3] Wire filter into the daemon pipeline with counters (`skipped_*`) in `src/daemon/pipeline.rs` — Executor: builder · Reviewer: thinker
+- [x] T014 [US3] Wire filter into the daemon pipeline with counters (`skipped_*`) in `src/daemon/pipeline.rs` — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: the US3 tests in this file's story phase pass (`cargo test`), plus the contract tests where they apply.
 
 ### Backend Polish
 
-- [ ] T015 README: threat model, hints, `passc` wrapper — Executor: builder · Reviewer: thinker · Effort: low
+- [x] T015 README: threat model, hints, `passc` wrapper — Executor: builder · Reviewer: thinker · Effort: low
 
 **Checkpoint**: the budgets in backend.md are met; `/speckit-converge` (Backend) reports converged.
 
@@ -140,3 +140,9 @@ Appended by `qa:strategy`. Executed by `qa:e2e` / `qa:load` after the builds (ti
 - [ ] T017 Charter session → `docs/product/qa/charters/005.md` — Executor: thinker · Reviewer: reviewer · Effort: high
 
 **Checkpoint**: the journeys and suites in `qa.md` are green in CI; the exit criteria are met → Verified in `specs/README.md`.
+
+---
+
+## Convergence (Backend) — 2026-10-23
+
+Converged. The FRs map to `src/domain/filter.rs` (`CopyFilter`: the pause and sensitive-hint gates before the read, the size and empty gates after it; `SENSITIVE_HINTS`) and its wiring in `src/daemon/pipeline.rs`, which replaces 004's pass-through hook. Reads are limited to `max_entry_bytes + 1`, so oversize is dropped whole, never truncated. The no-text gate stays in the backends (`ReadError::NoText` maps to `ignored_no_text`, with no counter), so each backend keeps its own text-type list. A 10,000-case proptest checks that no decision or log carries the content. `fmt-check`, `lint` and `test` are green. Unverified until QA: the manual `wl-copy --type x-kde-passwordManagerHint` check and journeys K3/K3b (T011, T016, T017).

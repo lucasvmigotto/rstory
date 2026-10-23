@@ -5,6 +5,23 @@ A clipboard history for any Linux session. It ships as one static Rust binary th
 > [!NOTE]
 > rstory is in development. Nothing is released yet. The product, its scope and its plan are in [`docs/product/brief.md`](docs/product/brief.md), and the features and their status are in [`specs/README.md`](specs/README.md).
 
+## Privacy
+
+rstory keeps clipboard text in a private store on your machine and never uses the network. What it protects, and what it does not:
+
+- **Sensitive hints.** When the app that owns a copy offers the type `x-kde-passwordManagerHint` (KeePassXC, KDE and other password managers set it), rstory skips the copy without reading it. The decision uses the offered type names only, so the content never enters rstory's memory. Matching is exact and case-sensitive, and the list of hints is one constant (`SENSITIVE_HINTS`); extending it is a spec amendment. Skips are counted in `rstory status` as `skipped_sensitive`.
+- **Size cap.** A copy larger than `max_entry_bytes` (1 MiB by default) is dropped whole, never truncated, and counted as `skipped_oversize`. Empty copies and copies with no text are ignored.
+- **Pause.** While recording is paused nothing is read, and the changes are counted as `skipped_paused`. The pause is checked before the hint.
+- **Logs.** Decisions log their name and size, never content.
+
+**Threat model.** rstory defends against a copy that an app marks as sensitive ending up in the history. It cannot defend against apps that set no hint: another program running as you can read the clipboard while the copy is on it, and the `pass` password manager sets no hint. A secret copied from an app that gives no hint is recorded like any other text.
+
+**The `passc` wrapper.** For tools that set no hint, pause recording around the copy. The `pass` copy mode clears the clipboard after 45 seconds, so a 50 second pause covers it:
+
+```sh
+passc() { rstory pause --for 50s && pass -c "$@"; }
+```
+
 ## Development
 
 > [!IMPORTANT]
