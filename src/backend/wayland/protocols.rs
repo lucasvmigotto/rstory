@@ -313,11 +313,7 @@ macro_rules! impl_data_control_dispatch {
                         p::$dev_m::Event::Selection { id } => {
                             Handler::selection(state, id.map(Offer::$variant));
                         }
-                        p::$dev_m::Event::PrimarySelection { id } => {
-                            if let Some(o) = id {
-                                o.destroy();
-                            }
-                        }
+                        p::$dev_m::Event::PrimarySelection { id: Some(o) } => o.destroy(),
                         p::$dev_m::Event::Finished => Handler::finished(state),
                         _ => {}
                     }
