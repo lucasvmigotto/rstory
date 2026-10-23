@@ -83,8 +83,8 @@ No feature-specific setup (crate skeleton comes from 001).
 
 ## Phase 6: Polish & Cross-Cutting
 
-- [ ] T009 Write README sections: threat model, sensitive hints, `passc` wrapper (FR-007) — Executor: builder · Reviewer: thinker · Effort: low
-- [ ] T010 Run quickstart.md validation — Executor: scout · Reviewer: thinker · Effort: low
+- [x] T009 Write README sections: threat model, sensitive hints, `passc` wrapper (FR-007) — Executor: builder · Reviewer: thinker · Effort: low
+- [x] T010 Run quickstart.md validation — Executor: scout · Reviewer: thinker · Effort: low
 - [ ] T011 QA tasks — see `## QA` (appended by `qa:strategy`) — Executor: thinker · Reviewer: reviewer · Effort: high
 
 ---
@@ -126,7 +126,7 @@ Appended by `backend:spec`. Built by `backend:build` (ticks only this section). 
 
 ### Backend Polish
 
-- [ ] T015 README: threat model, hints, `passc` wrapper — Executor: builder · Reviewer: thinker · Effort: low
+- [x] T015 README: threat model, hints, `passc` wrapper — Executor: builder · Reviewer: thinker · Effort: low
 
 **Checkpoint**: the budgets in backend.md are met; `/speckit-converge` (Backend) reports converged.
 
