@@ -220,13 +220,13 @@ async fn open_picker_without_a_terminal_is_no_terminal_and_status_hides_the_pick
 }
 
 #[tokio::test]
-async fn open_picker_resolves_a_terminal_from_the_list() {
+async fn a_terminal_from_the_list_makes_the_picker_available() {
+    // Resolution only: no `open_picker` here, so no test can start a terminal installed on the
+    // machine running it (the spawn path is covered with `/bin/true` and a missing command).
     let dirs = Dirs::new();
-    let launch = stub_launch(None, &["/definitely/not/installed-kitty"]);
-    // A name from the fixed list that is "on PATH" for the daemon but cannot really be run.
     let launch = LaunchEnv {
         on_path: Arc::new(|n| n == "kitty"),
-        ..launch
+        ..stub_launch(None, &[])
     };
     let rig = Rig::start(
         &dirs,
@@ -238,11 +238,6 @@ async fn open_picker_resolves_a_terminal_from_the_list() {
     .await;
     let mut c = rig.client().await;
     assert_eq!(c.status().await["picker_available"], true);
-    let r = c.call("open_picker", json!({})).await;
-    // The program is not really installed here, so the spawn fails by name only.
-    assert_eq!(r["ok"], false);
-    assert_eq!(r["error"]["code"], "picker_command_failed");
-    assert_eq!(r["error"]["message"], "could not start kitty");
     rig.stop().await;
 }
 
