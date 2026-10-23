@@ -84,7 +84,7 @@ description: "Task list for Terminal picker"
 
 ## Phase 6: Polish & Cross-Cutting
 
-- [ ] T011 [P] `benches/picker_first_frame.rs` 20 and 500 entries (F6, SC-001/002) — Executor: builder · Reviewer: thinker
+- [x] T011 [P] `benches/picker_first_frame.rs` 20 and 500 entries (F6, SC-001/002) — Executor: builder · Reviewer: thinker
 - [ ] T012 Run quickstart.md validation — Executor: scout · Reviewer: thinker · Effort: low
 - [ ] T013 QA tasks — see `## QA` (appended by `qa:strategy`) — Executor: thinker · Reviewer: reviewer · Effort: high
 
@@ -135,7 +135,7 @@ Appended by `frontend:spec`. `[TUI]`/`[CLI]` tasks built by `frontend:tui` (tick
 
 ### Frontend Polish
 
-- [ ] T020 [TUI] first-frame optimization against F6 (load before draw, no alt-screen flicker); F1 keymap footer — Executor: builder · Reviewer: reviewer · Effort: high
+- [x] T020 [TUI] first-frame optimization against F6 (load before draw, no alt-screen flicker); F1 keymap footer — Executor: builder · Reviewer: reviewer · Effort: high
 
 **Checkpoint**: budgets met; `/speckit-converge` (Frontend) reports converged.
 

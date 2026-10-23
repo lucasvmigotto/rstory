@@ -530,6 +530,10 @@ fn on_key(state: &mut PickerState, key: Key) -> Vec<Cmd> {
         return Vec::new();
     }
     state.status = None;
+    if key == Key::F(1) {
+        state.keymap = !state.keymap;
+        return Vec::new();
+    }
     if let Mode::ConfirmDelete(id) = &state.mode {
         let id = id.clone();
         return match key {

@@ -216,7 +216,14 @@ fn footer(state: &PickerState, area: Rect, buf: &mut Buffer, ctx: Ctx<'_>) {
         },
     };
     Footer { kind, ctx }.render(row(area, 0), buf);
+    if state.keymap() && area.height > 1 {
+        text_line(buf, row(area, 1), KEYMAP_MORE, Some(Role::Muted), ctx);
+    }
 }
+
+/// F1's second footer line: the keys the hints leave out (tui.md "Keymap").
+pub const KEYMAP_MORE: &str =
+    "Up/Down move  PgUp/PgDn jump  Home/End  Ctrl-U clear  Ctrl-W word  F1 close";
 
 /// Rows the inline (`--plain`) viewport takes on a terminal `height` rows tall.
 #[must_use]

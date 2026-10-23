@@ -1,0 +1,53 @@
+---
+source: src/picker/tests.rs
+expression: "screen(&s, COLOR)"
+---
+# 80x24 tier=16 ascii=false
+| > _                                                             6/6  Recording
+  ~ 1..2 fg=Cyan ; 3..4 fg=Cyan ; 65..68 fg=DarkGray
+|────────────────────────────────────────────────────────────────────────────────
+  ~ 0..80 fg=DarkGray
+| >   3m    git rebase -i HEAD~3                 │ git rebase -i HEAD~3 (full)
+  ~ 0..3 REV ; 3..7 fg=DarkGray REV ; 7..48 REV ; 48..49 fg=DarkGray
+|     2h 📌 git reset --soft HEAD~1 && git push …│
+  ~ 3..7 fg=DarkGray ; 8..9 fg=Yellow ; 48..49 fg=DarkGray
+|     1d    https://example.org/a/very/long/path…│
+  ~ 3..7 fg=DarkGray ; 48..49 fg=DarkGray
+|     2d    日本語のテキスト                     │
+  ~ 3..7 fg=DarkGray ; 48..49 fg=DarkGray
+|     3d    fn main() {⏎    println!("synthetic"…│
+  ~ 3..7 fg=DarkGray ; 48..49 fg=DarkGray
+|     0s 📌 cargo test -p rstory --test daemon_r…│
+  ~ 3..7 fg=DarkGray ; 8..9 fg=Yellow ; 48..49 fg=DarkGray
+|                                                │
+  ~ 48..49 fg=DarkGray
+|                                                │
+  ~ 48..49 fg=DarkGray
+|                                                │
+  ~ 48..49 fg=DarkGray
+|                                                │
+  ~ 48..49 fg=DarkGray
+|                                                │
+  ~ 48..49 fg=DarkGray
+|                                                │
+  ~ 48..49 fg=DarkGray
+|                                                │
+  ~ 48..49 fg=DarkGray
+|                                                │
+  ~ 48..49 fg=DarkGray
+|                                                │
+  ~ 48..49 fg=DarkGray
+|                                                │
+  ~ 48..49 fg=DarkGray
+|                                                │
+  ~ 48..49 fg=DarkGray
+|                                                │
+  ~ 48..49 fg=DarkGray
+|                                                │ 27 B
+  ~ 48..49 fg=DarkGray ; 50..54 fg=DarkGray
+|────────────────────────────────────────────────────────────────────────────────
+  ~ 0..80 fg=DarkGray
+| Enter restore  Tab preview  Ctrl-T pin  Ctrl-D delete  Esc quit
+  ~ 1..64 fg=DarkGray
+| Up/Down move  PgUp/PgDn jump  Home/End  Ctrl-U clear  Ctrl-W word  F1 close
+  ~ 1..76 fg=DarkGray
