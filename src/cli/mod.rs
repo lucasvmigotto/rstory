@@ -1,6 +1,107 @@
 //! Command-line interface: clap commands, text and JSON output, exit codes.
+//!
+//! `run` is the whole CLI: it parses the arguments and dispatches. `src/main.rs` calls it for
+//! everything except `daemon`, which it starts itself (architecture 5.3: cli does not use daemon).
+//! To add a subcommand: declare it in `args::Command` and add one arm to `dispatch`.
 
 pub mod args;
+
+use clap::Parser;
+
+use crate::ipc::error::ErrorCode;
+
+pub use crate::domain::ids::EntryRef;
+
+/// Process exit codes (`contracts/cli.md`, stable within a major version).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ExitCode {
+    /// 0: done.
+    Ok,
+    /// 1: unexpected error (the picker also uses it for "dismissed").
+    Unexpected,
+    /// 2: usage error, entry not found or ambiguous, no terminal where one is needed.
+    Usage,
+    /// 3: the daemon is not running.
+    DaemonDown,
+    /// 4: a daemon is already running.
+    AlreadyRunning,
+    /// 5: environment error (runtime directory, store, config).
+    Environment,
+    /// 6: a limit was reached (the pin cap).
+    LimitReached,
+    /// 7: inactive, there is no capture backend.
+    Inactive,
+    /// 130: interrupted.
+    Interrupted,
+}
+
+impl ExitCode {
+    /// The number the process exits with.
+    #[must_use]
+    pub fn code(self) -> u8 {
+        match self {
+            Self::Ok => 0,
+            Self::Unexpected => 1,
+            Self::Usage => 2,
+            Self::DaemonDown => 3,
+            Self::AlreadyRunning => 4,
+            Self::Environment => 5,
+            Self::LimitReached => 6,
+            Self::Inactive => 7,
+            Self::Interrupted => 130,
+        }
+    }
+
+    /// The exit code the error catalog assigns to a protocol error; 1 where it assigns none.
+    #[must_use]
+    pub fn from_proto(code: ErrorCode) -> Self {
+        match code.cli_exit() {
+            Some(2) => Self::Usage,
+            Some(6) => Self::LimitReached,
+            Some(7) => Self::Inactive,
+            _ => Self::Unexpected,
+        }
+    }
+}
+
+/// Parses `args` (without the program name), runs the command and returns the exit status.
+#[must_use]
+pub fn run(args: &[String]) -> u8 {
+    let argv = std::iter::once("rstory".to_string()).chain(args.iter().cloned());
+    let cli = match args::Cli::try_parse_from(argv) {
+        Ok(cli) => cli,
+        Err(e) => {
+            let code = e.exit_code();
+            let _ = e.print();
+            return u8::try_from(code).unwrap_or(2);
+        }
+    };
+    dispatch(cli.command)
+}
+
+/// Runs one parsed command.
+fn dispatch(command: args::Command) -> u8 {
+    use args::Command;
+    match command {
+        // `src/main.rs` runs the daemon itself: the cli module may not depend on it.
+        Command::Daemon { .. } => unavailable("daemon"),
+        Command::Completions { shell } => {
+            args::completions(shell, &mut std::io::stdout());
+            ExitCode::Ok.code()
+        }
+        Command::Pick { .. } => unavailable("pick"),
+        Command::Doctor { .. } => unavailable("doctor"),
+        Command::InstallAutostart { .. } => unavailable("install-autostart"),
+        Command::InstallGnomeExtension { .. } => unavailable("install-gnome-extension"),
+        _ => unavailable("this command"),
+    }
+}
+
+/// A command another spec has not delivered yet.
+fn unavailable(name: &str) -> u8 {
+    eprintln!("rstory: {name} is not available in this build");
+    ExitCode::Unexpected.code()
+}
 
 #[cfg(test)]
 mod tests {

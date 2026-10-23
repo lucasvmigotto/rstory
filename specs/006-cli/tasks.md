@@ -18,7 +18,7 @@ description: "Task list for Command-line interface"
 
 ## Phase 1: Setup
 
-- [ ] T001 [P] Add `assert_cmd`/`insta` dev-deps and a test harness that starts a daemon with FakeBackend on a temp runtime dir in `tests/support/daemon.rs` — Executor: builder · Reviewer: thinker
+- [x] T001 [P] Add `assert_cmd`/`insta` dev-deps and a test harness that starts a daemon with FakeBackend on a temp runtime dir in `tests/support/daemon.rs` — Executor: builder · Reviewer: thinker
 
 ---
 
@@ -26,7 +26,7 @@ description: "Task list for Command-line interface"
 
 **⚠️ CRITICAL**: blocks every story in this feature.
 
-- [ ] T002 Define `ExitCode` enum and `EntryRef` parser per `/contracts/cli.md` in `src/cli/mod.rs` with unit tests — Executor: builder · Reviewer: thinker · Effort: low
+- [x] T002 Define `ExitCode` enum and `EntryRef` parser per `/contracts/cli.md` in `src/cli/mod.rs` with unit tests — Executor: builder · Reviewer: thinker · Effort: low
 
 **Checkpoint**: foundation ready.
 
@@ -139,7 +139,7 @@ Appended by `frontend:spec`. `[TUI]`/`[CLI]` tasks built by `frontend:tui` (tick
 
 ### Frontend Foundational
 
-- [ ] T018 [CLI] clap command tree for every subcommand with help text and examples (`src/cli/args.rs`); `rstory completions` via clap_complete — Executor: builder · Reviewer: thinker
+- [x] T018 [CLI] clap command tree for every subcommand with help text and examples (`src/cli/args.rs`); `rstory completions` via clap_complete — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: unit tests green.
 
