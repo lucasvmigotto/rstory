@@ -65,10 +65,21 @@ impl Source for Fake {
         if self.read_only {
             return Err(Failure::DaemonDown);
         }
-        match self.next.take() {
-            Some(f) => Err(f),
-            None => Ok(()),
+        if let Some(f) = self.next.take() {
+            return Err(f);
         }
+        // Like the daemon: the next `list` shows the change.
+        let entries = &mut self.snapshot.entries;
+        match action {
+            Action::Pin | Action::Unpin => {
+                if let Some(e) = entries.iter_mut().find(|e| e.id == id) {
+                    e.pinned = action == Action::Pin;
+                }
+            }
+            Action::Remove => entries.retain(|e| e.id != id),
+            Action::Restore => {}
+        }
+        Ok(())
     }
 }
 
@@ -489,4 +500,93 @@ fn the_selected_row_has_the_marker_and_reverse_video() {
     assert!(line.starts_with("| >"), "{line}");
     assert!(out.contains("REV"), "{out}");
     let _ = NOW;
+}
+
+// ---------------------------------------------------------------- US2 journeys (T006)
+
+#[test]
+fn pin_toggle_pins_then_unpins_and_relists() {
+    let (mut s, mut fake) = open(b_and_a(), (80, 24));
+    assert_eq!(update(&mut s.clone(), key(Key::Ctrl('t'))), vec![Cmd::Pin(id(2))]);
+    drive(&mut s, &mut fake, vec![key(Key::Ctrl('t'))]);
+    assert_eq!(fake.calls, vec![(Action::Pin, id(2))]);
+    assert_eq!(fake.lists, 1, "relisted after the pin");
+    assert!(s.selected_entry().unwrap().pinned);
+    assert_eq!(s.selected_id(), Some(id(2).as_str()), "selection kept");
+    drive(&mut s, &mut fake, vec![key(Key::Ctrl('t'))]);
+    assert_eq!(fake.calls[1], (Action::Unpin, id(2)));
+    assert!(!s.selected_entry().unwrap().pinned);
+}
+
+#[test]
+fn pin_limit_shows_the_status_line_and_keeps_the_picker_open() {
+    let (mut s, mut fake) = open(b_and_a(), (80, 24));
+    fake.next = Some(Failure::PinLimit);
+    assert_eq!(drive(&mut s, &mut fake, vec![key(Key::Ctrl('t'))]), None);
+    assert_eq!(s.status(), Some(crate::ui::copy::PICKER_PIN_LIMIT));
+    assert!(!s.selected_entry().unwrap().pinned);
+    let out = screen(&s, COLOR);
+    assert!(out.contains("Pin limit reached (10)"), "{out}");
+}
+
+#[test]
+fn delete_asks_and_y_removes() {
+    let (mut s, mut fake) = open(b_and_a(), (80, 24));
+    assert!(drive(&mut s, &mut fake, vec![key(Key::Ctrl('d'))]).is_none());
+    assert_eq!(s.mode(), &Mode::ConfirmDelete(id(2)));
+    assert!(fake.calls.is_empty(), "nothing removed before the answer");
+    // Typing does not edit the query while asking.
+    drive(&mut s, &mut fake, typed("x"));
+    assert_eq!(s.query(), "");
+    assert_eq!(s.mode(), &Mode::ConfirmDelete(id(2)));
+    drive(&mut s, &mut fake, typed("y"));
+    assert_eq!(fake.calls, vec![(Action::Remove, id(2))]);
+    assert_eq!(s.mode(), &Mode::Normal);
+    assert_eq!(s.rows().len(), 1, "relisted after the removal");
+    assert_eq!(s.selected_id(), Some(id(1).as_str()), "the next entry takes its place");
+}
+
+#[test]
+fn delete_n_or_esc_cancels_without_quitting() {
+    for cancel in [Key::Char('n'), Key::Esc] {
+        let (mut s, mut fake) = open(b_and_a(), (80, 24));
+        let exit = drive(&mut s, &mut fake, vec![key(Key::Ctrl('d')), key(cancel)]);
+        assert_eq!(exit, None, "{cancel:?}");
+        assert_eq!(s.mode(), &Mode::Normal);
+        assert!(fake.calls.is_empty());
+        assert_eq!(s.rows().len(), 2);
+    }
+}
+
+#[test]
+fn ctrl_c_still_interrupts_while_asking() {
+    let (mut s, mut fake) = open(b_and_a(), (80, 24));
+    let exit = drive(&mut s, &mut fake, vec![key(Key::Ctrl('d')), key(Key::Ctrl('c'))]);
+    assert_eq!(exit, Some(Exit::code(EXIT_INTERRUPTED)));
+    assert!(fake.calls.is_empty());
+}
+
+#[test]
+fn pin_and_delete_need_a_selection() {
+    let (mut s, mut fake) = open(b_and_a(), (80, 24));
+    drive(&mut s, &mut fake, typed("zzzz"));
+    drive(&mut s, &mut fake, vec![key(Key::Ctrl('t')), key(Key::Ctrl('d'))]);
+    assert_eq!(s.mode(), &Mode::Normal);
+    assert!(fake.calls.is_empty());
+}
+
+#[test]
+fn snapshot_confirm_delete() {
+    for size in SIZES {
+        let s = loaded(rich(), false, size, vec![key(Key::Ctrl('d'))]);
+        insta::assert_snapshot!(format!("confirm_{}x{}", size.0, size.1), screen(&s, COLOR));
+    }
+}
+
+#[test]
+fn snapshot_pinned_after_ctrl_t() {
+    let s = loaded(rich(), false, (80, 24), vec![key(Key::Ctrl('t'))]);
+    let out = screen(&s, COLOR);
+    let line = out.lines().find(|l| l.contains("git rebase")).unwrap();
+    assert!(line.contains('📌'), "{line}");
 }
