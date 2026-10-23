@@ -55,11 +55,11 @@ description: "Task list for Terminal picker"
 
 ### Tests for User Story 2 ⚠️
 
-- [ ] T006 [P] [US2] journey tests for pin toggle, pin_limit status line, delete confirm y/n — Executor: builder · Reviewer: thinker
+- [x] T006 [P] [US2] journey tests for pin toggle, pin_limit status line, delete confirm y/n — Executor: builder · Reviewer: thinker
 
 ### Implementation for User Story 2
 
-- [ ] T007 [US2] Terminal UI / CLI implementation — see `## Frontend` (appended by `frontend:spec`; `[TUI]`/`[CLI]` tasks built by `frontend:tui`) — Executor: builder · Reviewer: thinker
+- [x] T007 [US2] Terminal UI / CLI implementation — see `## Frontend` (appended by `frontend:spec`; `[TUI]`/`[CLI]` tasks built by `frontend:tui`) — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: User Story 2 passes its tests independently.
 
@@ -123,7 +123,7 @@ Appended by `frontend:spec`. `[TUI]`/`[CLI]` tasks built by `frontend:tui` (tick
 
 ### Frontend US2 — Manage entries from the picker
 
-- [ ] T018 [US2] [TUI] Ctrl-T pin toggle, Ctrl-D confirm mode, pin-limit status line — Executor: builder · Reviewer: thinker
+- [x] T018 [US2] [TUI] Ctrl-T pin toggle, Ctrl-D confirm mode, pin-limit status line — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: the US2 snapshot/journey tests pass; `cargo insta review` is clean.
 

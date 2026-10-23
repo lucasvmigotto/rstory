@@ -530,9 +530,38 @@ fn on_key(state: &mut PickerState, key: Key) -> Vec<Cmd> {
         return Vec::new();
     }
     state.status = None;
+    if let Mode::ConfirmDelete(id) = &state.mode {
+        let id = id.clone();
+        return match key {
+            Key::Char('y' | 'Y') => {
+                state.mode = Mode::Normal;
+                vec![Cmd::Remove(id)]
+            }
+            Key::Char('n' | 'N') | Key::Esc => {
+                state.mode = Mode::Normal;
+                Vec::new()
+            }
+            _ => Vec::new(),
+        };
+    }
     match key {
         Key::Esc => return vec![Cmd::Quit(Exit::code(EXIT_DISMISSED))],
         Key::Enter => return restore(state),
+        Key::Ctrl('t') if !state.read_only => {
+            if let Some(e) = state.selected_entry() {
+                let id = e.id.clone();
+                return vec![if e.pinned {
+                    Cmd::Unpin(id)
+                } else {
+                    Cmd::Pin(id)
+                }];
+            }
+        }
+        Key::Ctrl('d') if !state.read_only => {
+            if let Some(id) = state.selected.clone() {
+                state.mode = Mode::ConfirmDelete(id);
+            }
+        }
         Key::Char(c) => {
             state.query.push(c);
             state.requery();

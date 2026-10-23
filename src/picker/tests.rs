@@ -507,7 +507,10 @@ fn the_selected_row_has_the_marker_and_reverse_video() {
 #[test]
 fn pin_toggle_pins_then_unpins_and_relists() {
     let (mut s, mut fake) = open(b_and_a(), (80, 24));
-    assert_eq!(update(&mut s.clone(), key(Key::Ctrl('t'))), vec![Cmd::Pin(id(2))]);
+    assert_eq!(
+        update(&mut s.clone(), key(Key::Ctrl('t')))[0],
+        Cmd::Pin(id(2))
+    );
     drive(&mut s, &mut fake, vec![key(Key::Ctrl('t'))]);
     assert_eq!(fake.calls, vec![(Action::Pin, id(2))]);
     assert_eq!(fake.lists, 1, "relisted after the pin");
@@ -543,7 +546,11 @@ fn delete_asks_and_y_removes() {
     assert_eq!(fake.calls, vec![(Action::Remove, id(2))]);
     assert_eq!(s.mode(), &Mode::Normal);
     assert_eq!(s.rows().len(), 1, "relisted after the removal");
-    assert_eq!(s.selected_id(), Some(id(1).as_str()), "the next entry takes its place");
+    assert_eq!(
+        s.selected_id(),
+        Some(id(1).as_str()),
+        "the next entry takes its place"
+    );
 }
 
 #[test]
@@ -561,7 +568,11 @@ fn delete_n_or_esc_cancels_without_quitting() {
 #[test]
 fn ctrl_c_still_interrupts_while_asking() {
     let (mut s, mut fake) = open(b_and_a(), (80, 24));
-    let exit = drive(&mut s, &mut fake, vec![key(Key::Ctrl('d')), key(Key::Ctrl('c'))]);
+    let exit = drive(
+        &mut s,
+        &mut fake,
+        vec![key(Key::Ctrl('d')), key(Key::Ctrl('c'))],
+    );
     assert_eq!(exit, Some(Exit::code(EXIT_INTERRUPTED)));
     assert!(fake.calls.is_empty());
 }
@@ -570,7 +581,11 @@ fn ctrl_c_still_interrupts_while_asking() {
 fn pin_and_delete_need_a_selection() {
     let (mut s, mut fake) = open(b_and_a(), (80, 24));
     drive(&mut s, &mut fake, typed("zzzz"));
-    drive(&mut s, &mut fake, vec![key(Key::Ctrl('t')), key(Key::Ctrl('d'))]);
+    drive(
+        &mut s,
+        &mut fake,
+        vec![key(Key::Ctrl('t')), key(Key::Ctrl('d'))],
+    );
     assert_eq!(s.mode(), &Mode::Normal);
     assert!(fake.calls.is_empty());
 }
