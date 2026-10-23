@@ -26,7 +26,7 @@ No feature-specific setup (crate skeleton comes from 001).
 
 **⚠️ CRITICAL**: blocks every story in this feature.
 
-- [ ] T001 Templates (desktop entry, systemd unit) as consts in `src/install/autostart.rs` — Executor: builder · Reviewer: thinker · Effort: low
+- [x] T001 Templates (desktop entry, systemd unit) as consts in `src/install/autostart.rs` — Executor: builder · Reviewer: thinker · Effort: low
 
 **Checkpoint**: foundation ready.
 
@@ -38,11 +38,11 @@ No feature-specific setup (crate skeleton comes from 001).
 
 ### Tests for User Story 1 ⚠️
 
-- [ ] T002 [P] [US1] byte-exact template + idempotency + uninstall + temp-path warning tests in `tests/install_autostart.rs` (SC-002) — Executor: builder · Reviewer: thinker
+- [x] T002 [P] [US1] byte-exact template + idempotency + uninstall + temp-path warning tests in `tests/install_autostart.rs` (SC-002) — Executor: builder · Reviewer: thinker
 
 ### Implementation for User Story 1
 
-- [ ] T003 [US1] Terminal UI / CLI implementation — see `## Frontend` (appended by `frontend:spec`; `[TUI]`/`[CLI]` tasks built by `frontend:tui`) — Executor: builder · Reviewer: thinker
+- [x] T003 [US1] Terminal UI / CLI implementation — see `## Frontend` (appended by `frontend:spec`; `[TUI]`/`[CLI]` tasks built by `frontend:tui`) — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: User Story 1 passes its tests independently.
 
@@ -54,11 +54,11 @@ No feature-specific setup (crate skeleton comes from 001).
 
 ### Tests for User Story 2 ⚠️
 
-- [ ] T004 [P] [US2] unit template + stub systemctl tests — Executor: builder · Reviewer: thinker
+- [x] T004 [P] [US2] unit template + stub systemctl tests — Executor: builder · Reviewer: thinker
 
 ### Implementation for User Story 2
 
-- [ ] T005 [US2] Terminal UI / CLI implementation — see `## Frontend` (appended by `frontend:spec`; `[TUI]`/`[CLI]` tasks built by `frontend:tui`) — Executor: builder · Reviewer: thinker
+- [x] T005 [US2] Terminal UI / CLI implementation — see `## Frontend` (appended by `frontend:spec`; `[TUI]`/`[CLI]` tasks built by `frontend:tui`) — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: User Story 2 passes its tests independently.
 
@@ -66,8 +66,8 @@ No feature-specific setup (crate skeleton comes from 001).
 
 ## Phase 5: Polish & Cross-Cutting
 
-- [ ] T006 Manual re-login check on GNOME/KDE/sway in `docs/release.md` (SC-001) — Executor: builder · Reviewer: thinker · Effort: low
-- [ ] T007 Run quickstart.md validation — Executor: scout · Reviewer: thinker · Effort: low
+- [x] T006 Manual re-login check on GNOME/KDE/sway in `docs/release.md` (SC-001) — Executor: builder · Reviewer: thinker · Effort: low
+- [x] T007 Run quickstart.md validation — Executor: scout · Reviewer: thinker · Effort: low
 - [ ] T008 QA tasks — see `## QA` (appended by `qa:strategy`) — Executor: thinker · Reviewer: reviewer · Effort: high
 
 ---
@@ -91,13 +91,13 @@ Appended by `frontend:spec`. `[TUI]`/`[CLI]` tasks built by `frontend:tui` (tick
 
 ### Frontend US1 — Start at every login, any init system
 
-- [ ] T009 [US1] [CLI] `install-autostart` XDG path + messages + temp-path warning in `src/install/autostart.rs` — Executor: builder · Reviewer: thinker
+- [x] T009 [US1] [CLI] `install-autostart` XDG path + messages + temp-path warning in `src/install/autostart.rs` — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: the US1 snapshot/journey tests pass; `cargo insta review` is clean.
 
 ### Frontend US2 — systemd user unit
 
-- [ ] T010 [US2] [CLI] `--systemd`, `--now`, `--uninstall` — Executor: builder · Reviewer: thinker
+- [x] T010 [US2] [CLI] `--systemd`, `--now`, `--uninstall` — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: the US2 snapshot/journey tests pass; `cargo insta review` is clean.
 
@@ -110,3 +110,9 @@ Appended by `qa:strategy`. Executed by `qa:e2e` / `qa:load` after the builds (ti
 - [ ] T011 Re-login manual rows (GNOME, KDE, sway) in `docs/release.md` — Executor: builder · Reviewer: thinker · Effort: low
 
 **Checkpoint**: the journeys and suites in `qa.md` are green in CI; the exit criteria are met → Verified in `specs/README.md`.
+
+---
+
+## Convergence — 2026-10-23
+
+Converged. FR-001–FR-005 map to `src/install/autostart.rs` (templates, atomic write, XDG and systemd flows, `detect` for doctor) and the `install-autostart` arm in `src/main.rs`. Every path and the `systemctl` program are injected through `Env`, and only `run()` reads the process environment. The 15 tests in `tests/install_autostart.rs` use temp dirs and a fake `systemctl`. Readings the spec left open: `--systemd` without `--now` also runs `daemon-reload` and `enable` (otherwise the unit would never start); systemd availability is probed with `systemctl --user show-environment` (exit 5, nothing written); `--uninstall` with `--systemd` or `--now` is a usage error. Unverified until QA: real re-login on GNOME, KDE and sway, and a real `systemctl --user`. The QA tasks (T008, T011) are deferred to before Verified.
