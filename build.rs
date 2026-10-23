@@ -38,7 +38,12 @@ fn decode(path: &std::path::Path, size: u32) -> Vec<u8> {
     let mut reader = decoder.read_info().expect("png header");
     let mut buf = vec![0; reader.output_buffer_size().expect("png size")];
     let info = reader.next_frame(&mut buf).expect("png frame");
-    assert_eq!((info.width, info.height), (size, size), "{}", path.display());
+    assert_eq!(
+        (info.width, info.height),
+        (size, size),
+        "{}",
+        path.display()
+    );
     let data = &buf[..info.buffer_size()];
     let mut out = Vec::with_capacity((size * size * 4) as usize);
     match info.color_type {

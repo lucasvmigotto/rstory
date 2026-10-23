@@ -69,7 +69,11 @@ mod tests {
             for x in pixmaps(state) {
                 let opaque = x.argb.chunks(4).filter(|px| px[0] > 0).count();
                 assert!(opaque > 0, "{state:?} {} is blank", x.size);
-                assert_eq!(x.argb[0], 0, "{state:?} {} corner is not transparent", x.size);
+                assert_eq!(
+                    x.argb[0], 0,
+                    "{state:?} {} corner is not transparent",
+                    x.size
+                );
             }
         }
     }
@@ -83,7 +87,11 @@ mod tests {
                 .map(|x| x.argb.chunks(4).map(|p| u8::from(p[0] > 127)).collect())
                 .unwrap_or_default()
         };
-        let (r, p, i) = (alpha(IconState::Recording), alpha(IconState::Paused), alpha(IconState::Inactive));
+        let (r, p, i) = (
+            alpha(IconState::Recording),
+            alpha(IconState::Paused),
+            alpha(IconState::Inactive),
+        );
         assert!(!r.is_empty());
         assert_ne!(r, p);
         assert_ne!(r, i);

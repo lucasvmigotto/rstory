@@ -280,7 +280,11 @@ async fn perform(link: &Link, handle: &Handle<RstoryTray>, action: Action) {
     }
 }
 
-async fn run(link: Link, mut shutdown: watch::Receiver<bool>, status: Arc<watch::Sender<TrayStatus>>) {
+async fn run(
+    link: Link,
+    mut shutdown: watch::Receiver<bool>,
+    status: Arc<watch::Sender<TrayStatus>>,
+) {
     let mut events = link.subscribe();
     let Some(snap) = snapshot(&link).await else {
         return;

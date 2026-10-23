@@ -3,10 +3,10 @@
 use time::OffsetDateTime;
 use time::macros::datetime;
 
+use super::command_for;
 use super::menu::{
     Action, Clear, EntryRow, Item, LABEL_MAX, MAX_ENTRIES, PauseItem, TrayMenu, View, label_of,
 };
-use super::command_for;
 use crate::domain::ids::EntryRef;
 use crate::ipc::protocol::Command;
 use crate::ui::copy;
@@ -123,7 +123,10 @@ fn a_timed_pause_shows_the_remaining_time() {
     assert_eq!(m.status_label, "Paused — resumes in 1:00");
     let until = T0 + std::time::Duration::from_millis(400);
     let m = build(0, &View::Paused { until: Some(until) }, true, Clear::Idle);
-    assert_eq!(m.status_label, "Paused — resumes in 0:01", "never 0:00 while paused");
+    assert_eq!(
+        m.status_label, "Paused — resumes in 0:01",
+        "never 0:00 while paused"
+    );
     let past = T0 - std::time::Duration::from_secs(5);
     let m = build(0, &View::Paused { until: Some(past) }, true, Clear::Idle);
     assert_eq!(m.status_label, "Paused — resumes in 0:01");
@@ -180,7 +183,15 @@ fn clear_goes_through_a_confirm_submenu() {
     );
     let n_confirm = confirming
         .iter()
-        .filter(|i| matches!(i, Item::Action { action: Action::ClearConfirm, .. }))
+        .filter(|i| {
+            matches!(
+                i,
+                Item::Action {
+                    action: Action::ClearConfirm,
+                    ..
+                }
+            )
+        })
         .count();
     assert_eq!(n_confirm, 0, "only the submenu child sends clear");
 }
@@ -246,7 +257,10 @@ fn only_the_confirm_item_sends_clear() {
 #[test]
 fn status_names_match_the_protocol() {
     use super::TrayStatus::*;
-    let names: Vec<_> = [Active, NoHost, NoBus, Disabled].iter().map(|s| s.as_str()).collect();
+    let names: Vec<_> = [Active, NoHost, NoBus, Disabled]
+        .iter()
+        .map(|s| s.as_str())
+        .collect();
     assert_eq!(names, ["active", "no_host", "no_bus", "disabled"]);
 }
 

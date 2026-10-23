@@ -138,7 +138,10 @@ fn start_bus() -> Bus {
     support::wait_for(Duration::from_secs(10), || sock.exists().then_some(()))
         .expect("the private bus socket");
     let addr = format!("unix:path={}", sock.display());
-    assert!(addr.contains(dir.path().to_str().unwrap()), "private bus only");
+    assert!(
+        addr.contains(dir.path().to_str().unwrap()),
+        "private bus only"
+    );
     Bus {
         _dbus: guard,
         addr,
@@ -391,7 +394,11 @@ async fn rig() -> Rig {
 #[tokio::test]
 async fn the_item_registers_with_pixel_icons_and_a_recording_tooltip() {
     let r = rig().await;
-    assert!(r.item.starts_with("org.kde.StatusNotifierItem-"), "{}", r.item);
+    assert!(
+        r.item.starts_with("org.kde.StatusNotifierItem-"),
+        "{}",
+        r.item
+    );
     let icon = until("recording icon", async || {
         let i = icon_48(&r.conn, &r.item).await;
         (i == expected_48(IconState::Recording)).then_some(i)
@@ -417,7 +424,12 @@ async fn the_menu_lists_the_entries_and_activating_one_restores_it() {
     })
     .await;
     // Newest first, so the third item is the oldest copy.
-    let labels: Vec<&str> = root.children.iter().take(3).map(|n| n.label.as_str()).collect();
+    let labels: Vec<&str> = root
+        .children
+        .iter()
+        .take(3)
+        .map(|n| n.label.as_str())
+        .collect();
     assert_eq!(labels, ["tray three", "tray two", "tray one"]);
     let status = find(&root, "Recording").unwrap();
     assert!(!status.enabled, "the status label is insensitive");
@@ -461,13 +473,24 @@ async fn pause_switches_the_icon_label_and_state_and_resume_undoes_it() {
     })
     .await;
     assert!(find(&root, "Paused").is_some());
-    assert!(find(&root, "Pause for 1 minute").is_none(), "hidden while paused");
-    assert_ne!(expected_48(IconState::Paused), expected_48(IconState::Recording));
+    assert!(
+        find(&root, "Pause for 1 minute").is_none(),
+        "hidden while paused"
+    );
+    assert_ne!(
+        expected_48(IconState::Paused),
+        expected_48(IconState::Recording)
+    );
     let tip = sni_prop(&r.conn, &r.item, "ToolTip").await;
     let Value::Structure(s) = &*tip else { panic!() };
     assert_eq!(<&str>::try_from(&s.fields()[2]).unwrap(), "rstory — paused");
 
-    click(&r.conn, &r.item, find(&root, "Resume recording").unwrap().id).await;
+    click(
+        &r.conn,
+        &r.item,
+        find(&root, "Resume recording").unwrap().id,
+    )
+    .await;
     until("recording again", async || {
         (c.status().await["state"] == "recording").then_some(())
     })
@@ -479,7 +502,12 @@ async fn pause_for_one_minute_starts_a_timed_pause_with_the_remaining_time() {
     let r = rig().await;
     let mut c = client(&r.child).await;
     let root = layout(&r.conn, &r.item).await;
-    click(&r.conn, &r.item, find(&root, "Pause for 1 minute").unwrap().id).await;
+    click(
+        &r.conn,
+        &r.item,
+        find(&root, "Pause for 1 minute").unwrap().id,
+    )
+    .await;
     let st = until("timed pause", async || {
         let s = c.status().await;
         (s["state"] == "paused").then_some(s)
@@ -490,7 +518,10 @@ async fn pause_for_one_minute_starts_a_timed_pause_with_the_remaining_time() {
         let l = layout(&r.conn, &r.item).await;
         l.children
             .iter()
-            .any(|n| n.label.starts_with("Paused — resumes in 0:") || n.label == "Paused — resumes in 1:00")
+            .any(|n| {
+                n.label.starts_with("Paused — resumes in 0:")
+                    || n.label == "Paused — resumes in 1:00"
+            })
             .then_some(l)
     })
     .await;
@@ -519,12 +550,18 @@ async fn clear_goes_through_a_confirm_step() {
         find(&l, "Delete 3 unpinned entries").map(|n| (n.id, find(&l, "Cancel").unwrap().id))
     })
     .await;
-    assert_eq!(c.list().await.len(), 3, "nothing is deleted before the confirmation");
+    assert_eq!(
+        c.list().await.len(),
+        3,
+        "nothing is deleted before the confirmation"
+    );
 
     click(&r.conn, &r.item, confirm.1).await;
     until("back to idle", async || {
         let l = layout(&r.conn, &r.item).await;
-        find(&l, "Delete 3 unpinned entries").is_none().then_some(())
+        find(&l, "Delete 3 unpinned entries")
+            .is_none()
+            .then_some(())
     })
     .await;
     assert_eq!(c.list().await.len(), 3, "cancel deletes nothing");
@@ -537,7 +574,10 @@ async fn clear_goes_through_a_confirm_step() {
     })
     .await;
     click(&r.conn, &r.item, confirm).await;
-    until("history cleared", async || (c.list().await.is_empty()).then_some(())).await;
+    until("history cleared", async || {
+        (c.list().await.is_empty()).then_some(())
+    })
+    .await;
     until("menu says empty", async || {
         let l = layout(&r.conn, &r.item).await;
         find(&l, "No entries yet").map(|_| ())
@@ -551,8 +591,15 @@ async fn without_a_watcher_the_daemon_runs_with_no_host_and_the_item_registers_w
     let base = bus.dir.path().join("child");
     let child = spawn_child(&bus, &base, &bus.addr, true);
     let mut c = client(&child).await;
-    until("no_host", async || (c.status().await["tray"] == "no_host").then_some(())).await;
-    assert_eq!(c.status().await["state"], "recording", "the daemon is unaffected");
+    until("no_host", async || {
+        (c.status().await["tray"] == "no_host").then_some(())
+    })
+    .await;
+    assert_eq!(
+        c.status().await["state"],
+        "recording",
+        "the daemon is unaffected"
+    );
 
     let started = std::time::Instant::now();
     let (_watcher, mut rx) = start_watcher(&bus.addr).await;
@@ -562,7 +609,10 @@ async fn without_a_watcher_the_daemon_runs_with_no_host_and_the_item_registers_w
         .unwrap();
     assert!(item.starts_with("org.kde.StatusNotifierItem-"));
     assert!(started.elapsed() < Duration::from_secs(2));
-    until("active", async || (c.status().await["tray"] == "active").then_some(())).await;
+    until("active", async || {
+        (c.status().await["tray"] == "active").then_some(())
+    })
+    .await;
 }
 
 #[tokio::test]
@@ -572,7 +622,10 @@ async fn no_session_bus_gives_no_bus() {
     let nowhere = format!("unix:path={}", bus.dir.path().join("no-such-bus").display());
     let child = spawn_child(&bus, &base, &nowhere, true);
     let mut c = client(&child).await;
-    until("no_bus", async || (c.status().await["tray"] == "no_bus").then_some(())).await;
+    until("no_bus", async || {
+        (c.status().await["tray"] == "no_bus").then_some(())
+    })
+    .await;
     assert_eq!(c.status().await["state"], "recording");
 }
 
@@ -585,7 +638,9 @@ async fn tray_false_disables_it() {
     let mut c = client(&child).await;
     assert_eq!(c.status().await["tray"], "disabled");
     assert!(
-        tokio::time::timeout(Duration::from_millis(500), rx.recv()).await.is_err(),
+        tokio::time::timeout(Duration::from_millis(500), rx.recv())
+            .await
+            .is_err(),
         "a disabled tray registers nothing"
     );
 }

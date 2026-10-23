@@ -91,7 +91,10 @@ pub async fn bridge(socket: &Path) -> io::Result<(Link, JoinHandle<()>)> {
     let task = tokio::spawn(async move {
         let mut next_id = 1u64;
         if wr
-            .write_all(&encode(&request_of(next_id, &Command::Subscribe { events: vec![] })))
+            .write_all(&encode(&request_of(
+                next_id,
+                &Command::Subscribe { events: vec![] },
+            )))
             .await
             .is_err()
         {
@@ -127,7 +130,9 @@ pub async fn bridge(socket: &Path) -> io::Result<(Link, JoinHandle<()>)> {
             }
         }
         if let Some((_, call)) = waiting.take() {
-            let _ = call.reply.send(Err(ProtoError::internal(Correlation::next())));
+            let _ = call
+                .reply
+                .send(Err(ProtoError::internal(Correlation::next())));
         }
         // `calls` drops here: later requests fail at once instead of hanging.
     });

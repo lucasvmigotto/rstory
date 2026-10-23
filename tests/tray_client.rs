@@ -30,7 +30,10 @@ async fn requests_and_errors_cross_the_socket() {
     assert_eq!(ev.kind, EventKind::HistoryChanged);
 
     support::wait_for_async(|| rig.fake.read_limits().len() == 2).await;
-    let listed = link.request(Command::List { limit: Some(10) }).await.unwrap();
+    let listed = link
+        .request(Command::List { limit: Some(10) })
+        .await
+        .unwrap();
     let entries = listed["entries"].as_array().unwrap();
     assert_eq!(entries.len(), 2);
     let oldest = entries[1]["id"].as_str().unwrap().to_string();
