@@ -106,6 +106,12 @@ fn dispatch(command: args::Command, io: &mut commands::Io<'_>) -> Result<(), err
         Command::Ls { json, limit } => commands::ls(io, json, limit),
         Command::Show { entry, json } => commands::show(io, &entry.entry, json),
         Command::Copy { entry } => commands::copy_entry(io, &entry.entry),
+        Command::Pin { entry } => commands::pin(io, &entry.entry, true),
+        Command::Unpin { entry } => commands::pin(io, &entry.entry, false),
+        Command::Rm { entry } => commands::rm(io, &entry.entry),
+        Command::Clear { all, yes } => commands::clear(io, all, yes),
+        Command::Pause { length } => commands::pause(io, length.as_deref()),
+        Command::Resume => commands::resume(io),
         Command::Completions { shell } => {
             args::completions(shell, io.out);
             Ok(())

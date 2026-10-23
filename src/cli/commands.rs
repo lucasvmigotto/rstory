@@ -3,9 +3,9 @@
 //! Each command writes machine output to `out` and diagnostics to `err`, and returns an
 //! error carrying its exit code. Nothing here logs or prints clipboard content except `show`.
 
-use std::io::{self, Write};
+use std::io::{self, BufRead, IsTerminal, Write};
 
-use serde_json::json;
+use serde_json::{Value, json};
 use time::OffsetDateTime;
 
 use super::ExitCode;
@@ -13,6 +13,7 @@ use super::env::Env;
 use super::error::CliError;
 use super::render::{self, Term};
 use super::source;
+use crate::ipc::protocol::Status;
 use crate::ui::copy;
 
 /// Everything a command needs from its surroundings.
@@ -86,6 +87,140 @@ pub fn copy_entry(io: &mut Io<'_>, reference: &str) -> Result<(), CliError> {
         .call("restore", json!({"ref": reference}))
         .map(|_| ())
         .map_err(|e| CliError::from_client(e, Some(reference)))
+}
+
+/// `rstory pin <ref>` or `rstory unpin <ref>`: silent on success.
+///
+/// # Errors
+/// Exit 3 without a daemon, 6 at the pin cap, 2 for an unknown reference.
+pub fn pin(io: &mut Io<'_>, reference: &str, pin: bool) -> Result<(), CliError> {
+    simple_call(io, if pin { "pin" } else { "unpin" }, reference)
+}
+
+/// `rstory rm <ref>`: silent on success; deleting one entry asks nothing.
+///
+/// # Errors
+/// Exit 3 without a daemon, 2 for an unknown reference.
+pub fn rm(io: &mut Io<'_>, reference: &str) -> Result<(), CliError> {
+    simple_call(io, "rm", reference)
+}
+
+fn simple_call(io: &mut Io<'_>, op: &str, reference: &str) -> Result<(), CliError> {
+    let mut client = source::require_daemon(io.env)?;
+    client
+        .call(op, json!({"ref": reference}))
+        .map(|_| ())
+        .map_err(|e| CliError::from_client(e, Some(reference)))
+}
+
+/// `rstory pause [--for <duration>]`: silent on success. The length was checked by the parser.
+///
+/// # Errors
+/// Exit 3 without a daemon.
+pub fn pause(io: &mut Io<'_>, length: Option<&str>) -> Result<(), CliError> {
+    let mut client = source::require_daemon(io.env)?;
+    let args = length.map_or_else(|| json!({}), |l| json!({"for": l}));
+    client
+        .call("pause", args)
+        .map(|_| ())
+        .map_err(|e| CliError::from_client(e, None))
+}
+
+/// `rstory resume`: silent on success.
+///
+/// # Errors
+/// Exit 3 without a daemon.
+pub fn resume(io: &mut Io<'_>) -> Result<(), CliError> {
+    let mut client = source::require_daemon(io.env)?;
+    client
+        .call("resume", json!({}))
+        .map(|_| ())
+        .map_err(|e| CliError::from_client(e, None))
+}
+
+/// The question `clear` asks: `unpinned` and `pinned` are the current counts.
+#[must_use]
+pub fn clear_prompt(unpinned: u32, pinned: u32, all: bool) -> String {
+    if all {
+        copy::format(
+            copy::CLI_CLEAR_ALL_PROMPT,
+            &[
+                ("n", &(unpinned + pinned).to_string()),
+                ("m", &pinned.to_string()),
+            ],
+        )
+    } else {
+        copy::format(copy::CLI_CLEAR_PROMPT, &[("n", &unpinned.to_string())])
+    }
+}
+
+/// Writes `prompt` and reads one line: `y` or `yes` (any case) confirm, anything else, EOF
+/// included, declines.
+pub fn confirm(prompt: &str, input: &mut dyn BufRead, err: &mut dyn Write) -> bool {
+    let _ = write!(err, "{prompt} ");
+    let _ = err.flush();
+    let mut line = String::new();
+    if input.read_line(&mut line).is_err() {
+        return false;
+    }
+    matches!(line.trim().to_ascii_lowercase().as_str(), "y" | "yes")
+}
+
+/// Asks on a terminal: the answer comes from stdin when that is a terminal, else from
+/// `/dev/tty`. `None` when there is no terminal to ask on (stderr is not one, or `/dev/tty`
+/// cannot be opened).
+fn ask_on_terminal(prompt: &str, err: &mut dyn Write) -> Option<bool> {
+    if !std::io::stderr().is_terminal() {
+        return None;
+    }
+    if std::io::stdin().is_terminal() {
+        return Some(confirm(prompt, &mut std::io::stdin().lock(), err));
+    }
+    let tty = std::fs::File::open("/dev/tty").ok()?;
+    Some(confirm(prompt, &mut io::BufReader::new(tty), err))
+}
+
+/// `rstory clear [--all] [--yes]`: asks first on a terminal; prints `Removed N entries.` on stderr.
+///
+/// # Errors
+/// Exit 3 without a daemon; exit 2 when it would have to ask and there is no terminal;
+/// exit 1 when the answer is no.
+pub fn clear(io: &mut Io<'_>, all: bool, yes: bool) -> Result<(), CliError> {
+    let mut client = source::require_daemon(io.env)?;
+    if !yes {
+        let status = client
+            .call("status", json!({}))
+            .map_err(|e| CliError::from_client(e, None))?;
+        let status: Status = serde_json::from_value(status).map_err(|_| {
+            CliError::new(
+                ExitCode::Unexpected,
+                "The daemon sent a status rstory does not understand.",
+            )
+        })?;
+        let unpinned = status.entries.saturating_sub(status.pinned);
+        let nothing_to_delete = if all {
+            status.entries == 0
+        } else {
+            unpinned == 0
+        };
+        if !nothing_to_delete {
+            let prompt = clear_prompt(unpinned, status.pinned, all);
+            match ask_on_terminal(&prompt, io.err) {
+                None => return Err(CliError::usage(copy::CLI_NEEDS_YES)),
+                Some(true) => {}
+                Some(false) => return Err(CliError::new(ExitCode::Unexpected, "Cancelled.")),
+            }
+        }
+    }
+    let result = client
+        .call("clear", json!({"all": all}))
+        .map_err(|e| CliError::from_client(e, None))?;
+    let removed = result.get("removed").and_then(Value::as_u64).unwrap_or(0);
+    note(
+        io.err,
+        &copy::format(copy::CLI_CLEAR_DONE, &[("n", &removed.to_string())]),
+    );
+    Ok(())
 }
 
 #[cfg(test)]

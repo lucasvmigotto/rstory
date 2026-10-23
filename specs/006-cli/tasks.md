@@ -55,11 +55,11 @@ description: "Task list for Command-line interface"
 
 ### Tests for User Story 2 ⚠️
 
-- [ ] T006 [P] [US2] assert_cmd tests incl. pin_limit exit 6, clear prompt/--yes/no-TTY, clear --all prompt, pause without daemon exit 3 in `tests/cli_manage.rs` — Executor: builder · Reviewer: thinker
+- [x] T006 [P] [US2] assert_cmd tests incl. pin_limit exit 6, clear prompt/--yes/no-TTY, clear --all prompt, pause without daemon exit 3 in `tests/cli_manage.rs` — Executor: builder · Reviewer: thinker
 
 ### Implementation for User Story 2
 
-- [ ] T007 [US2] Terminal UI / CLI implementation — see `## Frontend` (appended by `frontend:spec`; `[TUI]`/`[CLI]` tasks built by `frontend:tui`) — Executor: builder · Reviewer: thinker
+- [x] T007 [US2] Terminal UI / CLI implementation — see `## Frontend` (appended by `frontend:spec`; `[TUI]`/`[CLI]` tasks built by `frontend:tui`) — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: User Story 2 passes its tests independently.
 
@@ -152,7 +152,7 @@ Appended by `frontend:spec`. `[TUI]`/`[CLI]` tasks built by `frontend:tui` (tick
 
 ### Frontend US2 — Manage the history
 
-- [ ] T021 [US2] [CLI] pin/unpin/rm/clear/clear --all/pause/resume commands with prompts (TTY, /dev/tty, --yes) and copy-keyed messages in `src/cli/commands.rs` — Executor: builder · Reviewer: thinker
+- [x] T021 [US2] [CLI] pin/unpin/rm/clear/clear --all/pause/resume commands with prompts (TTY, /dev/tty, --yes) and copy-keyed messages in `src/cli/commands.rs` — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: the US2 snapshot/journey tests pass; `cargo insta review` is clean.
 

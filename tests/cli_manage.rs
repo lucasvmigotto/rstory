@@ -18,7 +18,9 @@ async fn with(rig: &Rig, texts: &[&str]) -> Client {
 }
 
 fn previews(list: &[serde_json::Value]) -> Vec<&str> {
-    list.iter().map(|e| e["preview"].as_str().unwrap()).collect()
+    list.iter()
+        .map(|e| e["preview"].as_str().unwrap())
+        .collect()
 }
 
 #[tokio::test]
@@ -41,12 +43,22 @@ async fn pin_and_unpin_by_index_and_by_short_id() {
 async fn pinning_past_the_cap_exits_6() {
     let dirs = Dirs::new();
     let caps = Caps::from_toml("max_pinned = 1").unwrap();
-    let rig = Rig::start(&dirs, Opts { caps, ..Opts::default() }).await;
+    let rig = Rig::start(
+        &dirs,
+        Opts {
+            caps,
+            ..Opts::default()
+        },
+    )
+    .await;
     with(&rig, &["alpha", "beta"]).await;
     assert_eq!(dirs.rstory(&["pin", "0"]).await.code, 0);
     let r = dirs.rstory(&["pin", "1"]).await;
     assert_eq!(r.code, 6, "{}", r.stderr);
-    assert_eq!(r.stderr.trim_end(), "Pin limit reached (1). Unpin an entry first.");
+    assert_eq!(
+        r.stderr.trim_end(),
+        "Pin limit reached (1). Unpin an entry first."
+    );
     rig.stop().await;
 }
 
@@ -100,7 +112,10 @@ async fn clear_without_a_terminal_needs_yes() {
     for args in [&["clear"][..], &["clear", "--all"]] {
         let r = dirs.rstory(args).await;
         assert_eq!(r.code, 2, "{args:?}");
-        assert_eq!(r.stderr.trim_end(), "Refusing to clear without a terminal. Add `--yes`.");
+        assert_eq!(
+            r.stderr.trim_end(),
+            "Refusing to clear without a terminal. Add `--yes`."
+        );
     }
     assert_eq!(c.list().await.len(), 2, "nothing was deleted");
     rig.stop().await;
@@ -125,14 +140,19 @@ async fn pause_for_sets_an_end_time_and_resume_ends_it() {
     assert_eq!((r.code, r.stdout.len(), r.stderr.as_str()), (0, 0, ""));
     let st = c.status().await;
     assert_eq!(st["state"], "paused");
-    assert_eq!(st["paused_until"], "2026-10-21T14:00:50Z");
+    // the fake clock starts at 14:00:00 and advances with real time
+    let until = st["paused_until"].as_str().unwrap();
+    assert!(until.starts_with("2026-10-21T14:00:5"), "{until}");
     let r = dirs.rstory(&["resume"]).await;
     assert_eq!((r.code, r.stderr.as_str()), (0, ""));
     assert_eq!(c.status().await["state"], "recording");
     let r = dirs.rstory(&["pause"]).await;
     assert_eq!(r.code, 0);
     let st = c.status().await;
-    assert_eq!((st["state"].as_str(), st["paused_until"].is_null()), (Some("paused"), true));
+    assert_eq!(
+        (st["state"].as_str(), st["paused_until"].is_null()),
+        (Some("paused"), true)
+    );
     rig.stop().await;
 }
 
