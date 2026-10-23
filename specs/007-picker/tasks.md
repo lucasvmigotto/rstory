@@ -18,7 +18,7 @@ description: "Task list for Terminal picker"
 
 ## Phase 1: Setup
 
-- [ ] T001 [P] Add ratatui/crossterm/nucleo-matcher deps and insta snapshot config — Executor: builder · Reviewer: thinker · Effort: low
+- [x] T001 [P] Add ratatui/crossterm/nucleo-matcher deps and insta snapshot config — Executor: builder · Reviewer: thinker · Effort: low
 
 ---
 
@@ -26,7 +26,7 @@ description: "Task list for Terminal picker"
 
 **⚠️ CRITICAL**: blocks every story in this feature.
 
-- [ ] T002 Define `PickerState`, `Msg`, `Cmd` and pure `update()` skeleton in `src/picker/state.rs` — Executor: thinker · Reviewer: reviewer · Effort: high
+- [x] T002 Define `PickerState`, `Msg`, `Cmd` and pure `update()` skeleton in `src/picker/state.rs` — Executor: thinker · Reviewer: reviewer · Effort: high
 
 **Checkpoint**: foundation ready.
 
@@ -109,7 +109,7 @@ Appended by `frontend:spec`. `[TUI]`/`[CLI]` tasks built by `frontend:tui` (tick
 
 ### Frontend Foundational
 
-- [ ] T014 [TUI] terminal lifecycle: init/restore, panic hook, SIGTERM/SIGHUP restore, TTY check (exit 2) in `src/picker/term.rs` — Executor: builder · Reviewer: reviewer · Effort: high
+- [x] T014 [TUI] terminal lifecycle: init/restore, panic hook, SIGTERM/SIGHUP restore, TTY check (exit 2) in `src/picker/term.rs` — Executor: builder · Reviewer: reviewer · Effort: high
 
 **Checkpoint**: unit tests green.
 

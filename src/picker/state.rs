@@ -207,8 +207,84 @@ impl PickerState {
     /// A state over `snapshot`, newest entry selected.
     #[must_use]
     pub fn new(snapshot: Snapshot, read_only: bool, size: (u16, u16)) -> Self {
-        let _ = (snapshot, read_only, size);
-        todo!()
+        let mut s = Self {
+            query: String::new(),
+            entries: Vec::new(),
+            rows: Vec::new(),
+            selected: None,
+            preview: None,
+            mode: Mode::Normal,
+            read_only,
+            status: None,
+            keymap: false,
+            size,
+            now: snapshot.now,
+            rec: None,
+            contents: HashMap::new(),
+            requested: None,
+        };
+        s.load(snapshot);
+        s
+    }
+
+    /// Replaces the entries, keeping the selection on the same id when it is still listed,
+    /// else on the same position.
+    fn load(&mut self, snapshot: Snapshot) {
+        let old_pos = self.selected_pos();
+        self.now = snapshot.now;
+        self.rec = snapshot.rec;
+        self.entries = snapshot.entries;
+        self.contents
+            .retain(|id, _| self.entries.iter().any(|e| &e.id == id));
+        self.refilter();
+        if self.selected_pos().is_none() {
+            let pos = old_pos.unwrap_or(0).min(self.rows.len().saturating_sub(1));
+            self.select_pos(pos);
+        }
+    }
+
+    /// Recomputes the visible rows for the current query.
+    fn refilter(&mut self) {
+        self.rows = (0..self.entries.len())
+            .map(|idx| Row {
+                idx,
+                score: 0,
+                positions: Vec::new(),
+            })
+            .collect();
+    }
+
+    /// Selects the row at `pos`, or nothing when there are no rows.
+    fn select_pos(&mut self, pos: usize) {
+        self.selected = self.rows.get(pos).map(|r| self.entries[r.idx].id.clone());
+    }
+
+    /// Moves the selection by `delta` rows, clamped to the list.
+    fn move_by(&mut self, delta: isize) {
+        if self.rows.is_empty() {
+            return;
+        }
+        let cur = self.selected_pos().unwrap_or(0);
+        let last = self.rows.len() - 1;
+        let to = cur.saturating_add_signed(delta).min(last);
+        self.select_pos(to);
+    }
+
+    /// Rows a page jump moves.
+    fn page(&self) -> isize {
+        isize::try_from(self.list_rows().max(1)).unwrap_or(1)
+    }
+
+    /// The id whose content the preview needs and nobody has asked for yet.
+    fn wanted_content(&self) -> Option<String> {
+        if self.preview() != Preview::Visible {
+            return None;
+        }
+        let id = self.selected.as_ref()?;
+        if self.contents.contains_key(id) || self.requested.as_ref() == Some(id) {
+            return None;
+        }
+        Some(id.clone())
     }
 
     /// The query as typed.
@@ -251,11 +327,12 @@ impl PickerState {
     /// Whether the preview is shown: Tab's choice, else visible from 80 columns.
     #[must_use]
     pub fn preview(&self) -> Preview {
-        self.preview.unwrap_or(if self.size.0 >= PREVIEW_DEFAULT_WIDTH {
-            Preview::Visible
-        } else {
-            Preview::Hidden
-        })
+        self.preview
+            .unwrap_or(if self.size.0 >= PREVIEW_DEFAULT_WIDTH {
+                Preview::Visible
+            } else {
+                Preview::Hidden
+            })
     }
 
     /// The input mode.
@@ -303,7 +380,9 @@ impl PickerState {
     /// The cached content of the selected entry.
     #[must_use]
     pub fn selected_content(&self) -> Option<&str> {
-        self.contents.get(self.selected.as_deref()?).map(String::as_str)
+        self.contents
+            .get(self.selected.as_deref()?)
+            .map(String::as_str)
     }
 
     /// Whether the terminal is below [`MIN_SIZE`].
@@ -323,8 +402,71 @@ impl PickerState {
 
 /// Applies `msg` to `state` and returns the effects to carry out, in order.
 pub fn update(state: &mut PickerState, msg: Msg) -> Vec<Cmd> {
-    let _ = (state, msg, CONTENT_CACHE);
-    todo!()
+    let mut cmds = match msg {
+        Msg::Key(key) => on_key(state, key),
+        Msg::Resize { width, height } => {
+            state.size = (width, height);
+            Vec::new()
+        }
+        Msg::Loaded(snapshot) => {
+            state.load(snapshot);
+            Vec::new()
+        }
+        Msg::HistoryChanged => vec![Cmd::Reload],
+        Msg::Content { id, text } => {
+            if state.requested.as_ref() == Some(&id) {
+                state.requested = None;
+            }
+            if state.contents.len() >= CONTENT_CACHE {
+                let keep = state.selected.clone();
+                state.contents.retain(|k, _| Some(k) == keep.as_ref());
+            }
+            state.contents.insert(id, text);
+            Vec::new()
+        }
+        Msg::ContentFailed { id } => {
+            if state.requested.as_ref() == Some(&id) {
+                state.requested = None;
+            }
+            Vec::new()
+        }
+        Msg::Done(action, result) => on_done(state, action, result),
+    };
+    let quitting = cmds.iter().any(|c| matches!(c, Cmd::Quit(_)));
+    if !quitting && let Some(id) = state.wanted_content() {
+        state.requested = Some(id.clone());
+        cmds.push(Cmd::Show(id));
+    }
+    cmds
+}
+
+fn on_key(state: &mut PickerState, key: Key) -> Vec<Cmd> {
+    // Ctrl-C always interrupts, whatever the mode.
+    if key == Key::Ctrl('c') {
+        return vec![Cmd::Quit(Exit::code(EXIT_INTERRUPTED))];
+    }
+    match key {
+        Key::Esc => return vec![Cmd::Quit(Exit::code(EXIT_DISMISSED))],
+        Key::Tab => {
+            state.preview = Some(match state.preview() {
+                Preview::Visible => Preview::Hidden,
+                Preview::Hidden => Preview::Visible,
+            });
+        }
+        Key::Up | Key::Ctrl('p') => state.move_by(-1),
+        Key::Down | Key::Ctrl('n') => state.move_by(1),
+        Key::PageUp => state.move_by(-state.page()),
+        Key::PageDown => state.move_by(state.page()),
+        Key::Home => state.select_pos(0),
+        Key::End => state.select_pos(state.rows.len().saturating_sub(1)),
+        _ => {}
+    }
+    Vec::new()
+}
+
+fn on_done(state: &mut PickerState, action: Action, result: Result<(), Failure>) -> Vec<Cmd> {
+    let _ = (state, action, result);
+    Vec::new()
 }
 
 /// Synthetic fixtures shared by the picker's tests. No real clipboard content.
@@ -387,7 +529,9 @@ mod tests {
     use super::*;
 
     fn keys(state: &mut PickerState, ks: &[Key]) -> Vec<Cmd> {
-        ks.iter().flat_map(|k| update(state, Msg::Key(*k))).collect()
+        ks.iter()
+            .flat_map(|k| update(state, Msg::Key(*k)))
+            .collect()
     }
 
     #[test]
@@ -426,7 +570,13 @@ mod tests {
     fn the_preview_is_visible_from_80_columns_and_tab_toggles_it() {
         let mut s = PickerState::new(b_and_a(), false, (80, 24));
         assert_eq!(s.preview(), Preview::Visible);
-        update(&mut s, Msg::Resize { width: 40, height: 10 });
+        update(
+            &mut s,
+            Msg::Resize {
+                width: 40,
+                height: 10,
+            },
+        );
         assert_eq!(s.size(), (40, 10));
         assert_eq!(s.preview(), Preview::Hidden);
         keys(&mut s, &[Key::Tab]);
@@ -474,9 +624,21 @@ mod tests {
     fn too_small_below_20_by_5() {
         let mut s = PickerState::new(b_and_a(), false, (20, 5));
         assert!(!s.too_small());
-        update(&mut s, Msg::Resize { width: 19, height: 5 });
+        update(
+            &mut s,
+            Msg::Resize {
+                width: 19,
+                height: 5,
+            },
+        );
         assert!(s.too_small());
-        update(&mut s, Msg::Resize { width: 20, height: 4 });
+        update(
+            &mut s,
+            Msg::Resize {
+                width: 20,
+                height: 4,
+            },
+        );
         assert!(s.too_small());
     }
 
@@ -485,13 +647,20 @@ mod tests {
         let script = [
             Msg::Key(Key::Down),
             Msg::Key(Key::Tab),
-            Msg::Resize { width: 100, height: 30 },
+            Msg::Resize {
+                width: 100,
+                height: 30,
+            },
             Msg::HistoryChanged,
             Msg::Key(Key::Esc),
         ];
         let run = || {
             let mut s = PickerState::new(b_and_a(), false, (40, 10));
-            let cmds: Vec<Cmd> = script.iter().cloned().flat_map(|m| update(&mut s, m)).collect();
+            let cmds: Vec<Cmd> = script
+                .iter()
+                .cloned()
+                .flat_map(|m| update(&mut s, m))
+                .collect();
             (cmds, s.selected_id().map(str::to_string), s.preview())
         };
         assert_eq!(run(), run());

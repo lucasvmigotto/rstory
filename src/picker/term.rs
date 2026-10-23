@@ -18,8 +18,14 @@ pub const NO_TTY_MESSAGE: &str = "rstory pick needs a terminal";
 /// # Errors
 /// [`super::state::Exit`] with [`super::state::EXIT_NO_TTY`] and [`NO_TTY_MESSAGE`].
 pub fn require_tty(stdout_is_tty: bool) -> Result<(), super::state::Exit> {
-    let _ = stdout_is_tty;
-    todo!()
+    if stdout_is_tty {
+        Ok(())
+    } else {
+        Err(super::state::Exit {
+            code: super::state::EXIT_NO_TTY,
+            message: Some(NO_TTY_MESSAGE.to_string()),
+        })
+    }
 }
 
 /// What the picker does to a terminal, and how it undoes it.
@@ -45,11 +51,27 @@ pub struct CrosstermScreen {
 
 impl Screen for CrosstermScreen {
     fn enter(&mut self) -> io::Result<()> {
-        todo!()
+        use crossterm::{cursor::Hide, execute, terminal};
+        terminal::enable_raw_mode()?;
+        let mut out = io::stdout();
+        if self.alternate {
+            execute!(out, terminal::EnterAlternateScreen, Hide)
+        } else {
+            execute!(out, Hide)
+        }
     }
 
     fn leave(&mut self) -> io::Result<()> {
-        todo!()
+        use crossterm::{cursor::Show, execute, terminal};
+        let mut out = io::stdout();
+        // Every step runs even when an earlier one fails; the first error is reported.
+        let screen = if self.alternate {
+            execute!(out, terminal::LeaveAlternateScreen, Show)
+        } else {
+            execute!(out, Show)
+        };
+        let raw = terminal::disable_raw_mode();
+        screen.and(raw)
     }
 }
 
@@ -68,21 +90,34 @@ impl Restorer {
     ///
     /// # Errors
     /// Entering failed; the screen is left again before returning.
-    pub fn enter(screen: Box<dyn Screen>) -> io::Result<Self> {
-        let _ = screen;
-        todo!()
+    pub fn enter(mut screen: Box<dyn Screen>) -> io::Result<Self> {
+        if let Err(e) = screen.enter() {
+            let _ = screen.leave();
+            return Err(e);
+        }
+        Ok(Self(Arc::new(Mutex::new(Some(screen)))))
     }
 
     /// Leaves the screen if it is still active. Returns true when this call left it.
     pub fn restore(&self) -> bool {
-        let _ = PoisonError::<()>::new;
-        todo!()
+        // A panic while the lock was held must not stop the restore.
+        let taken = self.0.lock().unwrap_or_else(PoisonError::into_inner).take();
+        match taken {
+            Some(mut screen) => {
+                let _ = screen.leave();
+                true
+            }
+            None => false,
+        }
     }
 
     /// Whether the screen is still active.
     #[must_use]
     pub fn active(&self) -> bool {
-        todo!()
+        self.0
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .is_some()
     }
 }
 
@@ -98,8 +133,13 @@ impl Session {
     /// # Errors
     /// Entering the screen failed.
     pub fn start(screen: Box<dyn Screen>) -> io::Result<Self> {
-        let _ = screen;
-        todo!()
+        let restorer = Restorer::enter(screen)?;
+        install_panic_hook(restorer.clone());
+        if let Err(e) = watch_signals(restorer.clone(), exit_process) {
+            restorer.restore();
+            return Err(e);
+        }
+        Ok(Self { restorer })
     }
 
     /// The shared restore handle.
@@ -117,15 +157,17 @@ impl Drop for Session {
 
 /// Chains a panic hook that restores the terminal before the previous hook prints.
 pub fn install_panic_hook(restorer: Restorer) {
-    let _ = restorer;
-    todo!()
+    let previous = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |info| {
+        restorer.restore();
+        previous(info);
+    }));
 }
 
 /// The exit status for a signal: 128 plus its number.
 #[must_use]
 pub fn signal_exit_code(signo: i32) -> u8 {
-    let _ = signo;
-    todo!()
+    u8::try_from(128 + signo).unwrap_or(u8::MAX)
 }
 
 /// Watches SIGTERM, SIGINT and SIGHUP on a background thread. On the first one it restores
@@ -138,8 +180,49 @@ pub fn watch_signals(
     restorer: Restorer,
     on_signal: impl FnOnce(u8) + Send + 'static,
 ) -> io::Result<()> {
-    let _ = (restorer, on_signal);
-    todo!()
+    use tokio::signal::unix::{SignalKind, signal};
+    let (ready_tx, ready_rx) = std::sync::mpsc::channel::<io::Result<()>>();
+    std::thread::Builder::new()
+        .name("rstory-pick-signals".into())
+        .spawn(move || {
+            let rt = match tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+            {
+                Ok(rt) => rt,
+                Err(e) => {
+                    let _ = ready_tx.send(Err(e));
+                    return;
+                }
+            };
+            rt.block_on(async move {
+                let streams = (|| {
+                    Ok::<_, io::Error>((
+                        signal(SignalKind::terminate())?,
+                        signal(SignalKind::interrupt())?,
+                        signal(SignalKind::hangup())?,
+                    ))
+                })();
+                let (mut term, mut int, mut hup) = match streams {
+                    Ok(s) => s,
+                    Err(e) => {
+                        let _ = ready_tx.send(Err(e));
+                        return;
+                    }
+                };
+                let _ = ready_tx.send(Ok(()));
+                let signo = tokio::select! {
+                    _ = term.recv() => 15,
+                    _ = int.recv() => 2,
+                    _ = hup.recv() => 1,
+                };
+                restorer.restore();
+                on_signal(signal_exit_code(signo));
+            });
+        })?;
+    ready_rx
+        .recv()
+        .unwrap_or_else(|_| Err(io::Error::other("the signal thread stopped")))
 }
 
 /// Exits the process with `code`: what the real signal watch does after restoring.
@@ -230,7 +313,9 @@ mod tests {
         let (f, _, leaves) = fake(false);
         let r = {
             let r = Restorer::enter(f).unwrap();
-            let s = Session { restorer: r.clone() };
+            let s = Session {
+                restorer: r.clone(),
+            };
             drop(s);
             r
         };
