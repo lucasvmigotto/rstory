@@ -1,0 +1,32 @@
+---
+source: src/picker/tests.rs
+expression: out
+---
+# 80x24 tier=mono ascii=false
+| > git_                                                          2/6  Recording
+  ~ 1..2 BOLD UL ; 6..7 BOLD UL
+|────────────────────────────────────────────────────────────────────────────────
+| >   3m    git rebase -i HEAD~3                 │ git rebase -i HEAD~3 (full)
+  ~ 0..11 REV ; 11..14 REV BOLD UL ; 14..48 REV
+|     2h 📌 git reset --soft HEAD~1 && git push …│
+  ~ 38..41 BOLD UL
+|                                                │
+|                                                │
+|                                                │
+|                                                │
+|                                                │
+|                                                │
+|                                                │
+|                                                │
+|                                                │
+|                                                │
+|                                                │
+|                                                │
+|                                                │
+|                                                │
+|                                                │
+|                                                │
+|                                                │
+|                                                │ 27 B
+|────────────────────────────────────────────────────────────────────────────────
+| Enter restore  Tab preview  Ctrl-T pin  Ctrl-D delete  Esc quit

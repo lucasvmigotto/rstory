@@ -1,0 +1,15 @@
+---
+source: src/picker/tests.rs
+expression: out
+---
+# 19x10 tier=16 ascii=false
+| Terminal too small
+| (need 20×5).
+|
+|
+|
+|
+|
+|
+|
+|

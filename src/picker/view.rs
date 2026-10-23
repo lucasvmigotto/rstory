@@ -5,12 +5,12 @@
 //! the list with the preview on the right, a rule, the footer (two lines with F1's keymap).
 //! Nothing here reads a clock or the terminal: the state carries the size and "now".
 
-use ratatui::{buffer::Buffer, layout::Rect, widgets::Widget};
+use ratatui::{buffer::Buffer, layout::Rect, style::Modifier, widgets::Widget};
 use time::OffsetDateTime;
 
 use crate::ui::copy;
 use crate::ui::glyphs::Glyph;
-use crate::ui::text::{display_width, one_line};
+use crate::ui::text::{display_width, one_line, segments, truncate};
 use crate::ui::theme::Role;
 use crate::ui::widgets::{
     Banner, Ctx, EntryRow, Footer, FooterKind, PreviewPane, QueryLine, preview_percent,
@@ -43,6 +43,34 @@ fn text_line(buf: &mut Buffer, area: Rect, text: &str, role: Option<Role>, ctx: 
     let out = one_line(&shown, usize::from(area.width) - 1, ctx.glyphs);
     let style = role.map(|r| ctx.style(r)).unwrap_or_default();
     buf.set_string(area.x + 1, area.y, out, style);
+}
+
+/// The too-small message, wrapped to the width (it is the only thing shown).
+fn too_small(area: Rect, buf: &mut Buffer, ctx: Ctx<'_>) {
+    if area.width < 2 {
+        return;
+    }
+    let text = ctx.glyphs.text(copy::PICKER_TOO_SMALL);
+    let width = usize::from(area.width) - 1;
+    let mut lines: Vec<String> = Vec::new();
+    for word in text.split(' ') {
+        match lines.last_mut() {
+            Some(l) if display_width(l) + 1 + display_width(word) <= width => {
+                l.push(' ');
+                l.push_str(word);
+            }
+            _ => lines.push(word.to_string()),
+        }
+    }
+    for (i, l) in lines.iter().take(usize::from(area.height)).enumerate() {
+        let out = one_line(l, width, ctx.glyphs);
+        buf.set_string(
+            area.x + 1,
+            area.y + u16::try_from(i).unwrap_or(0),
+            out,
+            ratatui::style::Style::new(),
+        );
+    }
 }
 
 fn rule(buf: &mut Buffer, area: Rect, ctx: Ctx<'_>) {
@@ -94,7 +122,7 @@ pub fn render(state: &PickerState, area: Rect, buf: &mut Buffer, ctx: Ctx<'_>) {
         return;
     }
     if state.too_small() || area.width < 20 || area.height < 5 {
-        text_line(buf, row(area, 0), copy::PICKER_TOO_SMALL, None, ctx);
+        too_small(area, buf, ctx);
         return;
     }
     let mut y = 0;
@@ -196,7 +224,95 @@ pub fn plain_height(height: u16) -> u16 {
     height.min(12)
 }
 
-/// Draws `state` inline for `--plain`.
+/// The last line of the plain view.
+const PLAIN_FOOTER: &str = "{shown} of {total} shown. Enter restores, Esc quits.";
+
+/// Draws `state` inline for `--plain` (ux-vision "Plain mode"): words instead of glyphs, no
+/// box drawing, one entry per line as `> [index] age  [pinned] preview`.
 pub fn render_plain(state: &PickerState, area: Rect, buf: &mut Buffer, ctx: Ctx<'_>) {
-    render(state, area, buf, ctx);
+    if area.width == 0 || area.height == 0 {
+        return;
+    }
+    let w = usize::from(area.width);
+    let put = |buf: &mut Buffer, y: u16, text: &str, role: Option<Role>| {
+        if y < area.height {
+            let shown = ctx.glyphs.text(text);
+            let out = one_line(&shown, w, ctx.glyphs);
+            let style = role.map(|r| ctx.style(r)).unwrap_or_default();
+            buf.set_string(area.x, area.y + y, out, style);
+        }
+    };
+    if state.too_small() {
+        too_small(area, buf, ctx);
+        return;
+    }
+    let mut y = 0;
+    put(buf, y, &format!("query: {}_", state.query()), None);
+    y += 1;
+    if state.read_only() {
+        put(buf, y, copy::PICKER_READONLY_BANNER, Some(Role::Warning));
+        y += 1;
+    }
+    let list_h = area.height.saturating_sub(y + 1);
+    if state.entries().is_empty() {
+        put(buf, y, copy::PICKER_EMPTY, None);
+    } else {
+        let h = usize::from(list_h);
+        let sel = state.selected_pos().unwrap_or(0);
+        let offset = sel.saturating_sub(h.saturating_sub(1));
+        for (i, r) in state.rows().iter().skip(offset).take(h).enumerate() {
+            let e = &state.entries()[r.idx];
+            let selected = offset + i == sel && state.selected_id().is_some();
+            let head = format!(
+                "{} [{}] {:<3} {}",
+                if selected { ">" } else { " " },
+                e.index,
+                age(state.now(), e.last_copied),
+                if e.pinned { "[pinned] " } else { "" },
+            );
+            let row_y = area.y + y + u16::try_from(i).unwrap_or(0);
+            let base = if selected {
+                ctx.style(Role::Selected)
+            } else {
+                ratatui::style::Style::new()
+            };
+            let hw = display_width(&head);
+            buf.set_stringn(area.x, row_y, &head, w, base);
+            if hw < w {
+                let segs = truncate(
+                    segments(&e.preview, ctx.glyphs, &r.positions),
+                    w - hw,
+                    ctx.glyphs,
+                );
+                let mark = ctx
+                    .style(Role::Accent)
+                    .add_modifier(Modifier::BOLD | Modifier::UNDERLINED);
+                let mut x = area.x + u16::try_from(hw).unwrap_or(0);
+                for seg in &segs {
+                    let st = if seg.matched { base.patch(mark) } else { base };
+                    buf.set_string(x, row_y, &seg.text, st);
+                    x += u16::try_from(seg.width).unwrap_or(0);
+                }
+            }
+        }
+    }
+    let last = area.height - 1;
+    if last >= y {
+        match (state.mode(), state.status()) {
+            (Mode::ConfirmDelete(_), _) => {
+                put(buf, last, copy::PICKER_CONFIRM_DELETE, Some(Role::Danger));
+            }
+            (_, Some(status)) => put(buf, last, status, Some(Role::Warning)),
+            _ => {
+                let text = copy::format(
+                    PLAIN_FOOTER,
+                    &[
+                        ("shown", &state.rows().len().to_string()),
+                        ("total", &state.entries().len().to_string()),
+                    ],
+                );
+                put(buf, last, &text, None);
+            }
+        }
+    }
 }

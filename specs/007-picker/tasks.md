@@ -71,12 +71,12 @@ description: "Task list for Terminal picker"
 
 ### Tests for User Story 3 ⚠️
 
-- [ ] T008 [P] [US3] snapshots plain + NO_COLOR + read-only banner + empty + too small (SC-003) — Executor: builder · Reviewer: thinker
-- [ ] T009 [P] [US3] terminal-restore-on-panic test — Executor: builder · Reviewer: thinker
+- [x] T008 [P] [US3] snapshots plain + NO_COLOR + read-only banner + empty + too small (SC-003) — Executor: builder · Reviewer: thinker
+- [x] T009 [P] [US3] terminal-restore-on-panic test — Executor: builder · Reviewer: thinker
 
 ### Implementation for User Story 3
 
-- [ ] T010 [US3] Terminal UI / CLI implementation — see `## Frontend` (appended by `frontend:spec`; `[TUI]`/`[CLI]` tasks built by `frontend:tui`) — Executor: builder · Reviewer: thinker
+- [x] T010 [US3] Terminal UI / CLI implementation — see `## Frontend` (appended by `frontend:spec`; `[TUI]`/`[CLI]` tasks built by `frontend:tui`) — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: User Story 3 passes its tests independently.
 
@@ -129,7 +129,7 @@ Appended by `frontend:spec`. `[TUI]`/`[CLI]` tasks built by `frontend:tui` (tick
 
 ### Frontend US3 — No color, no daemon, screen readers
 
-- [ ] T019 [US3] [TUI] `--plain` inline renderer, NO_COLOR/ASCII, read-only banner and Enter → exit 3, empty and too-small states — Executor: builder · Reviewer: thinker
+- [x] T019 [US3] [TUI] `--plain` inline renderer, NO_COLOR/ASCII, read-only banner and Enter → exit 3, empty and too-small states — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: the US3 snapshot/journey tests pass; `cargo insta review` is clean.
 

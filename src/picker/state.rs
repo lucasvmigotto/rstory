@@ -605,6 +605,13 @@ fn restore(state: &mut PickerState) -> Vec<Cmd> {
     let Some(id) = state.selected.clone() else {
         return Vec::new();
     };
+    if state.read_only {
+        // BR14: browsing works without the daemon, restoring does not.
+        return vec![Cmd::Quit(Exit {
+            code: EXIT_DAEMON_DOWN,
+            message: Some(copy::PICKER_READONLY_RESTORE.to_string()),
+        })];
+    }
     state.mode = Mode::Restoring;
     state.status = Some(copy::PICKER_RESTORING.to_string());
     vec![Cmd::Restore(id)]
