@@ -29,7 +29,7 @@ use crate::ipc::server::{self, Call, Link};
 use crate::store::Store;
 use crate::store::fs::Fs;
 use crate::store::{Mutation, StoreError};
-use pipeline::{Filter, Pending};
+use pipeline::Pending;
 use state::{BackendInfo, Backoff, Clock};
 
 /// Capture queue bound (FR-004).
@@ -80,7 +80,6 @@ pub struct Daemon<B: Backend, F: Fs> {
     pub(crate) launch: LaunchEnv,
     pub(crate) link: Link,
     pub(crate) queue: VecDeque<Pending>,
-    pub(crate) filter: Filter,
     connector: Option<Connector<B>>,
     backoff: Backoff,
     reconnect_at: Option<OffsetDateTime>,
@@ -127,7 +126,6 @@ impl<B: Backend, F: Fs> Daemon<B, F> {
             launch,
             link,
             queue: VecDeque::new(),
-            filter: pipeline::pass_through(),
             connector: None,
             backoff: Backoff::new(),
             reconnect_at: None,
@@ -147,11 +145,6 @@ impl<B: Backend, F: Fs> Daemon<B, F> {
     #[must_use]
     pub fn probe(&self) -> Probe {
         self.probe.clone()
-    }
-
-    /// Replaces the capture filter (spec 005 hook point).
-    pub fn set_filter(&mut self, filter: Filter) {
-        self.filter = filter;
     }
 
     /// Reconnect policy: after a `Disconnected` the daemon is inactive and calls `connector` at

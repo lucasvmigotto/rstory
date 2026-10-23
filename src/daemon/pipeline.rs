@@ -5,6 +5,7 @@
 
 use crate::backend::{Backend, BackendEvent, ReadError};
 use crate::domain::entry::Content;
+use crate::domain::filter::{CopyFilter, FilterDecision, PreRead};
 use crate::domain::redact::Redacted;
 use crate::store::fs::Fs;
 use crate::store::{Mutation, Outcome};
@@ -18,25 +19,6 @@ pub struct Pending {
     pub types: Vec<String>,
     /// Whether the owner is this daemon (a restore).
     pub self_owned: bool,
-}
-
-/// What the filters decide about a change.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Decision {
-    /// Read and record it.
-    Record,
-    /// Sensitive hint: skip without reading (spec 005).
-    SkipSensitive,
-}
-
-/// The filter hook: spec 005 plugs the sensitive-content filter in here. The pause gate runs
-/// before it and is not part of the hook.
-pub type Filter = Box<dyn FnMut(&Pending) -> Decision + Send>;
-
-/// The default hook: everything passes.
-#[must_use]
-pub fn pass_through() -> Filter {
-    Box::new(|_| Decision::Record)
 }
 
 impl<B: Backend, F: Fs> Daemon<B, F> {
@@ -73,44 +55,60 @@ impl<B: Backend, F: Fs> Daemon<B, F> {
                 // Our own restore: it was moved to the top when ownership was confirmed.
                 continue;
             }
-            if self.rec.is_paused() {
-                self.counters.skipped_paused += 1;
-                tracing::debug!(decision = "skipped_paused", "capture.decision");
-                continue;
-            }
-            if (self.filter)(&change) == Decision::SkipSensitive {
-                self.counters.skipped_sensitive += 1;
-                tracing::debug!(decision = "skipped_sensitive", "capture.decision");
-                continue;
-            }
-            let limit = usize::try_from(self.caps.max_entry_bytes).unwrap_or(usize::MAX);
+            let filter = CopyFilter::new(self.caps.max_entry_bytes);
+            let limit = match filter.decide(&change.types, self.rec.is_paused()) {
+                PreRead::Skip(FilterDecision::SkipPaused) => {
+                    self.counters.skipped_paused += 1;
+                    tracing::debug!(decision = "skipped_paused", "capture.decision");
+                    continue;
+                }
+                PreRead::Skip(_) => {
+                    self.counters.skipped_sensitive += 1;
+                    tracing::debug!(decision = "skipped_sensitive", "capture.decision");
+                    continue;
+                }
+                PreRead::Read { limit } => limit,
+            };
             let Some(backend) = self.backend.as_mut() else {
                 break;
             };
-            match backend.read_text(limit).await {
-                Ok(bytes) => {
-                    let hidden = Redacted(&bytes);
-                    match Content::new(bytes.clone(), self.caps.max_entry_bytes) {
-                        Ok(content) => {
-                            tracing::debug!(
-                                decision = "record",
-                                bytes = hidden.len(),
-                                "capture.decision"
-                            );
-                            batch.push(Mutation::RecordCopy(content));
-                        }
-                        Err(_) => self.counters.skipped_oversize += 1,
-                    }
-                }
-                Err(ReadError::TooLarge) => {
-                    self.counters.skipped_oversize += 1;
-                    tracing::debug!(decision = "skipped_oversize", "capture.decision");
-                }
+            let read = backend.read_text(limit).await;
+            let decision = match read {
+                Ok(bytes) => filter.after_read(bytes),
+                Err(ReadError::TooLarge) => FilterDecision::SkipOversize,
+                Err(ReadError::NoText) => FilterDecision::IgnoreNoText,
                 Err(ReadError::Disconnected) => {
                     self.lose_backend();
                     break;
                 }
-                Err(e) => tracing::debug!(decision = "ignored", reason = %e, "capture.decision"),
+                Err(e) => {
+                    tracing::debug!(decision = "ignored", reason = %e, "capture.decision");
+                    continue;
+                }
+            };
+            match decision {
+                FilterDecision::Record(bytes) => {
+                    tracing::debug!(
+                        decision = "record",
+                        bytes = Redacted(&bytes).len(),
+                        "capture.decision"
+                    );
+                    match Content::new(bytes, self.caps.max_entry_bytes) {
+                        Ok(content) => batch.push(Mutation::RecordCopy(content)),
+                        Err(_) => self.counters.skipped_oversize += 1,
+                    }
+                }
+                FilterDecision::SkipOversize => {
+                    self.counters.skipped_oversize += 1;
+                    tracing::debug!(decision = "skipped_oversize", "capture.decision");
+                }
+                FilterDecision::IgnoreNoText => {
+                    tracing::debug!(decision = "ignored_no_text", "capture.decision");
+                }
+                FilterDecision::IgnoreEmpty => {
+                    tracing::debug!(decision = "ignored_empty", "capture.decision");
+                }
+                FilterDecision::SkipPaused | FilterDecision::SkipSensitive => {}
             }
         }
         if batch.is_empty() {

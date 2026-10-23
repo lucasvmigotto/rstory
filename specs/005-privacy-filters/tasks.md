@@ -38,12 +38,12 @@ No feature-specific setup (crate skeleton comes from 001).
 
 ### Tests for User Story 1 ⚠️
 
-- [ ] T002 [P] [US1] proptest: random jobs incl. hinted ones; assert hinted bytes never reach store, logs, or post-decision memory (SC-001, F8) in `tests/filter_props.rs` — Executor: builder · Reviewer: thinker
-- [ ] T003 [P] [US1] unit: hint with text, hint only, hint via bridge targets — Executor: builder · Reviewer: thinker
+- [x] T002 [P] [US1] proptest: random jobs incl. hinted ones; assert hinted bytes never reach store, logs, or post-decision memory (SC-001, F8) in `tests/filter_props.rs` — Executor: builder · Reviewer: thinker
+- [x] T003 [P] [US1] unit: hint with text, hint only, hint via bridge targets — Executor: builder · Reviewer: thinker
 
 ### Implementation for User Story 1
 
-- [ ] T004 [US1] Backend implementation — see `## Backend` (appended by `backend:spec`) — Executor: builder · Reviewer: thinker
+- [x] T004 [US1] Backend implementation — see `## Backend` (appended by `backend:spec`) — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: User Story 1 passes its tests independently.
 
@@ -55,11 +55,11 @@ No feature-specific setup (crate skeleton comes from 001).
 
 ### Tests for User Story 2 ⚠️
 
-- [ ] T005 [P] [US2] boundary tests cap−1/cap/cap+1 (SC-002) — Executor: builder · Reviewer: thinker
+- [x] T005 [P] [US2] boundary tests cap−1/cap/cap+1 (SC-002) — Executor: builder · Reviewer: thinker
 
 ### Implementation for User Story 2
 
-- [ ] T006 [US2] Backend implementation — see `## Backend` (appended by `backend:spec`) — Executor: builder · Reviewer: thinker
+- [x] T006 [US2] Backend implementation — see `## Backend` (appended by `backend:spec`) — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: User Story 2 passes its tests independently.
 
@@ -71,11 +71,11 @@ No feature-specific setup (crate skeleton comes from 001).
 
 ### Tests for User Story 3 ⚠️
 
-- [ ] T007 [P] [US3] pause-gate unit tests + order-of-checks table test — Executor: builder · Reviewer: thinker
+- [x] T007 [P] [US3] pause-gate unit tests + order-of-checks table test — Executor: builder · Reviewer: thinker
 
 ### Implementation for User Story 3
 
-- [ ] T008 [US3] Backend implementation — see `## Backend` (appended by `backend:spec`) — Executor: builder · Reviewer: thinker
+- [x] T008 [US3] Backend implementation — see `## Backend` (appended by `backend:spec`) — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: User Story 3 passes its tests independently.
 
@@ -108,19 +108,19 @@ Appended by `backend:spec`. Built by `backend:build` (ticks only this section). 
 
 ### Backend US1 — Copies marked sensitive are never stored
 
-- [ ] T012 [US1] `CopyFilter` pre-read gates (pause, sensitive) using `SENSITIVE_HINTS` in `src/domain/filter.rs` — Executor: builder · Reviewer: thinker
+- [x] T012 [US1] `CopyFilter` pre-read gates (pause, sensitive) using `SENSITIVE_HINTS` in `src/domain/filter.rs` — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: the US1 tests in this file's story phase pass (`cargo test`), plus the contract tests where they apply.
 
 ### Backend US2 — Oversize copies are dropped, never truncated
 
-- [ ] T013 [US2] Post-read gates (oversize via limit+1, empty) and drop of rejected bytes — Executor: builder · Reviewer: thinker
+- [x] T013 [US2] Post-read gates (oversize via limit+1, empty) and drop of rejected bytes — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: the US2 tests in this file's story phase pass (`cargo test`), plus the contract tests where they apply.
 
 ### Backend US3 — Nothing recorded while paused
 
-- [ ] T014 [US3] Wire filter into the daemon pipeline with counters (`skipped_*`) in `src/daemon/pipeline.rs` — Executor: builder · Reviewer: thinker
+- [x] T014 [US3] Wire filter into the daemon pipeline with counters (`skipped_*`) in `src/daemon/pipeline.rs` — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: the US3 tests in this file's story phase pass (`cargo test`), plus the contract tests where they apply.
 
