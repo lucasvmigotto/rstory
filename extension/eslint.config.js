@@ -26,10 +26,22 @@ export default [
       'prefer-const': 'error',
       eqeqeq: 'error',
       // GNOME review: extensions must not spawn processes or run shell commands.
+      // GNOME review: the Shell process must not load toolkit libraries meant for apps.
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['gi://Gtk*', 'gi://Gdk*', 'gi://Adw*', 'gi://Soup*'],
+              message: 'Not allowed in the Shell process (GNOME extension review rules).',
+            },
+          ],
+        },
+      ],
       'no-restricted-syntax': [
         'error',
         {
-          selector: "MemberExpression[property.name=/^(spawn|spawn_async|spawn_sync|spawn_command_line_async|spawn_command_line_sync)$/]",
+          selector: "MemberExpression[property.name=/^(spawn|spawn_async|spawn_sync|spawn_command_line_async|spawn_command_line_sync|Subprocess|SubprocessLauncher)$/]",
           message: 'rstory extension must never spawn processes; use the daemon (open_picker).',
         },
       ],
