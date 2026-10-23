@@ -7,6 +7,7 @@
 pub mod args;
 pub mod env;
 pub mod error;
+pub mod render;
 pub mod source;
 
 use clap::Parser;
