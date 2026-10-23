@@ -177,3 +177,9 @@ Appended by `qa:strategy`. Executed by `qa:e2e` / `qa:load` after the builds (ti
 - [ ] T024 `tests/e2e/E2E-K6.rs` (scripting, non-TTY) — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: the journeys and suites in `qa.md` are green in CI; the exit criteria are met → Verified in `specs/README.md`.
+
+---
+
+## Convergence — 2026-10-23
+
+Converged, both layers. The commands in `contracts/cli.md` map to `src/cli/{args,commands,render,env,error,mod}.rs` and `src/ipc/client.rs`. Reads fall back to the read-only store when the daemon is down, and writes exit 3. `--json` output is validated against the protocol schema (`tests/contract/cli_json.rs`). Every exit code from 0 to 7 has a run in `tests/cli_exit_codes.rs`; 130 has a unit test only. `benches/ls.rs` measures `ls` on 500 entries at a 21 ms median read-only and 29 ms through the socket, against a 50 ms budget. After the rebase, `install-autostart` (012) goes through the CLI parser to `install::autostart::run`. `daemon` stays in `src/main.rs`, because the `cli` module may not depend on `daemon` (F1). Readings the spec left open: a cancelled `clear` exits 1 ("Cancelled."); `ls --json` is the contract's `{schema, entries, read_only}` object; `show` through the daemon returns lossy UTF-8 (protocol `content: string`). Unverified until QA: the interactive `clear` prompt on a real TTY and colored snapshots. The QA tasks (T015, T024) are deferred to before Verified.
