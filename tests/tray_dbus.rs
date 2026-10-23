@@ -18,12 +18,10 @@ use std::time::Duration;
 use rstory::backend::fake::FakeBackend;
 use rstory::backend::{BackendKind, Mode};
 use rstory::config::Caps;
-use rstory::daemon::state::{BackendInfo, Clock};
-use rstory::daemon::{Daemon, LaunchEnv, run_with_listener};
+use rstory::daemon::LaunchEnv;
+use rstory::daemon::start::{Extras, Provided, Runtime, serve_process_with};
+use rstory::daemon::state::BackendInfo;
 use rstory::ipc::server;
-use rstory::store::Store;
-use rstory::store::fs::RealFs;
-use rstory::tray;
 use rstory::tray::icons::{self, IconState};
 use support::daemon::{Client, copy};
 use tokio::sync::{mpsc, watch};
@@ -50,33 +48,36 @@ fn child_daemon() {
         .unwrap();
     rt.block_on(async move {
         let runtime = base.join("run");
-        let clock = Clock::system();
-        let store =
-            Store::open_exclusive_at(&base.join("store"), Caps::default(), RealFs, clock.now())
-                .unwrap();
         let (backend, fake) = FakeBackend::new();
         let launch = LaunchEnv {
             picker_command: Some("/bin/true".to_string()),
             terminal: None,
             on_path: Arc::new(|_| true),
         };
-        let mut daemon = Daemon::new(
-            store,
-            Some(backend),
-            BackendInfo::active(BackendKind::X11, Mode::Native),
-            Caps::default(),
-            clock,
+        let rt = Runtime {
+            store_dir: base.join("store"),
+            runtime_dir: runtime.clone(),
+            caps: Caps::default(),
             launch,
-        )
-        .unwrap();
-        let listener = server::bind(&runtime).unwrap();
+            lock_retry: Duration::from_secs(1),
+        };
+        let provide = || async move {
+            Provided {
+                backend: Some(backend),
+                info: BackendInfo::active(BackendKind::X11, Mode::Native),
+                connector: None,
+            }
+        };
         let (stop, shutdown) = watch::channel(false);
-        if tray_on {
-            let (status, _task) = tray::spawn(daemon.link(), shutdown.clone());
-            daemon.set_tray_status(status);
-        }
-        let serving = tokio::spawn(run_with_listener(daemon, listener, shutdown));
-        let mut c = Client::connect(&server::socket_path(&runtime)).await;
+        let serving = tokio::spawn(serve_process_with(
+            rt,
+            provide,
+            shutdown,
+            Extras { tray: tray_on },
+        ));
+        let sock = server::socket_path(&runtime);
+        support::wait_for_async(|| sock.exists()).await;
+        let mut c = Client::connect(&sock).await;
         c.subscribe().await;
         for t in TEXTS {
             copy(&fake, t);
@@ -240,7 +241,6 @@ async fn until<T>(what: &str, mut f: impl AsyncFnMut() -> Option<T>) -> T {
 struct Node {
     id: i32,
     label: String,
-    kind: String,
     enabled: bool,
     children: Vec<Node>,
 }
@@ -273,7 +273,6 @@ fn parse_node(v: &Value<'_>) -> Node {
     Node {
         id,
         label: s_prop(&props, "label"),
-        kind: s_prop(&props, "type"),
         enabled: props
             .get("enabled")
             .and_then(|v| bool::try_from(&**v).ok())
@@ -294,8 +293,14 @@ async fn layout(conn: &zbus::Connection, dest: &str) -> Node {
         .await
         .unwrap();
     let body = m.body();
-    let (_rev, root): (u32, Value<'_>) = body.deserialize().unwrap();
-    parse_node(&root)
+    let (_rev, (id, props, kids)): (u32, (i32, HashMap<String, OwnedValue>, Vec<OwnedValue>)) =
+        body.deserialize().unwrap();
+    Node {
+        id,
+        label: s_prop(&props, "label"),
+        enabled: true,
+        children: kids.iter().map(|k| parse_node(k)).collect(),
+    }
 }
 
 fn find<'a>(n: &'a Node, label: &str) -> Option<&'a Node> {
@@ -349,7 +354,7 @@ fn expected_48(state: IconState) -> Vec<u8> {
 }
 
 struct Rig {
-    bus: Bus,
+    _bus: Bus,
     conn: zbus::Connection,
     _watcher: zbus::Connection,
     item: String,
@@ -367,8 +372,13 @@ async fn rig() -> Rig {
         .expect("the item registers")
         .unwrap();
     let conn = connect(&bus.addr).await;
+    // The child seeds three entries after the tray starts: wait until the menu shows them all.
+    until("the seeded entries in the menu", async || {
+        find(&layout(&conn, &item).await, "tray one").map(|_| ())
+    })
+    .await;
     Rig {
-        bus,
+        _bus: bus,
         conn,
         _watcher: watcher,
         item,

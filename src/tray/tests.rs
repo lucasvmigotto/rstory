@@ -249,3 +249,9 @@ fn status_names_match_the_protocol() {
     let names: Vec<_> = [Active, NoHost, NoBus, Disabled].iter().map(|s| s.as_str()).collect();
     assert_eq!(names, ["active", "no_host", "no_bus", "disabled"]);
 }
+
+#[test]
+fn underscores_are_doubled_for_the_dbus_menu() {
+    assert_eq!(super::dbus_label("snake_case_name"), "snake__case__name");
+    assert_eq!(super::dbus_label("plain"), "plain");
+}

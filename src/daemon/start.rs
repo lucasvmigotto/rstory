@@ -12,7 +12,7 @@ use tokio::sync::watch;
 use crate::backend::wayland::{ConnectError, WaylandBackend, WaylandOptions};
 use crate::backend::x11::{X11Backend, X11Options};
 use crate::backend::{Backend, BackendKind, EventStream, Mode, ReadError, ServeError};
-use crate::config::{Caps, ConfigError, picker_command_from_toml};
+use crate::config::{Caps, ConfigError, picker_command_from_toml, tray_from_toml};
 use crate::ipc::peercred::peer_cred;
 use crate::ipc::server;
 use crate::session::{self, RealProbe, SessionEnv};
@@ -133,6 +133,31 @@ where
     P: FnOnce() -> Fut,
     Fut: Future<Output = Provided<B>>,
 {
+    serve_process_with(rt, provide, shutdown, Extras::default()).await
+}
+
+/// Optional parts of the process that tests of the core leave out.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct Extras {
+    /// Run the tray (spec 009) inside the daemon.
+    pub tray: bool,
+}
+
+/// [`serve_process`] with [`Extras`].
+///
+/// # Errors
+/// [`StartError`] before serving starts.
+pub async fn serve_process_with<B, P, Fut>(
+    rt: Runtime,
+    provide: P,
+    shutdown: watch::Receiver<bool>,
+    extras: Extras,
+) -> Result<(), StartError>
+where
+    B: Backend,
+    P: FnOnce() -> Fut,
+    Fut: Future<Output = Provided<B>>,
+{
     let clock = Clock::system();
     let store = open_store(
         &rt.store_dir,
@@ -164,7 +189,15 @@ where
     if let Some(c) = provided.connector {
         daemon.set_connector(c);
     }
+    let tray = extras.tray.then(|| {
+        let (status, task) = crate::tray::spawn(daemon.link(), shutdown.clone());
+        daemon.set_tray_status(status);
+        task
+    });
     let store = run_with_listener(daemon, listener, shutdown).await;
+    if let Some(task) = tray {
+        let _ = task.await;
+    }
     let _ = std::fs::remove_file(server::socket_path(&rt.runtime_dir));
     drop(store);
     Ok(())
@@ -218,22 +251,23 @@ fn store_dir() -> Result<PathBuf, StartError> {
     Ok(PathBuf::from(home).join(".local/state/rstory"))
 }
 
-/// `config.toml`: the caps and `picker_command`; defaults when the file is absent.
-fn load_config() -> Result<(Caps, Option<String>), StartError> {
+/// `config.toml`: the caps, `picker_command` and `tray`; defaults when the file is absent.
+fn load_config() -> Result<(Caps, Option<String>, bool), StartError> {
     let dir = match env_var("XDG_CONFIG_HOME") {
         Some(c) => PathBuf::from(c),
         None => match env_var("HOME") {
             Some(h) => PathBuf::from(h).join(".config"),
-            None => return Ok((Caps::default(), None)),
+            None => return Ok((Caps::default(), None, true)),
         },
     };
     let Ok(text) = std::fs::read_to_string(dir.join("rstory/config.toml")) else {
-        return Ok((Caps::default(), None));
+        return Ok((Caps::default(), None, true));
     };
     let invalid = |e: ConfigError| StartError::Environment(e.to_string());
     let caps = Caps::from_toml(&text).map_err(invalid)?;
     let picker_command = picker_command_from_toml(&text).map_err(invalid)?;
-    Ok((caps, picker_command))
+    let tray = tray_from_toml(&text).map_err(invalid)?;
+    Ok((caps, picker_command, tray))
 }
 
 /// The backend the session selected: one concrete type for the daemon.
@@ -378,7 +412,7 @@ async fn run_inner(args: DaemonArgs) -> Result<(), StartError> {
         Path::new("/run/user"),
     )
     .map_err(|e| StartError::Environment(e.to_string()))?;
-    let (caps, picker_command) = load_config()?;
+    let (caps, picker_command, tray) = load_config()?;
     let rt = Runtime {
         store_dir: store_dir()?,
         runtime_dir,
@@ -405,5 +439,5 @@ async fn run_inner(args: DaemonArgs) -> Result<(), StartError> {
         tracing::info!("signal received; shutting down");
         let _ = stop.send(true);
     });
-    serve_process(rt, || provide_backend(args, env), shutdown).await
+    serve_process_with(rt, || provide_backend(args, env), shutdown, Extras { tray }).await
 }
