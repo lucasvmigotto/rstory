@@ -26,7 +26,7 @@ No feature-specific setup (crate skeleton comes from 001).
 
 **⚠️ CRITICAL**: blocks every story in this feature.
 
-- [ ] T001 Templates (desktop entry, systemd unit) as consts in `src/install/autostart.rs` — Executor: builder · Reviewer: thinker · Effort: low
+- [x] T001 Templates (desktop entry, systemd unit) as consts in `src/install/autostart.rs` — Executor: builder · Reviewer: thinker · Effort: low
 
 **Checkpoint**: foundation ready.
 
