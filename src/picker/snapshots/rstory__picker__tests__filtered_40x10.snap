@@ -1,0 +1,21 @@
+---
+source: src/picker/tests.rs
+expression: "screen(&s, COLOR)"
+---
+# 40x10 tier=16 ascii=false
+| > git_                  2/6  Recording
+  ~ 1..2 fg=Cyan ; 6..7 fg=Cyan ; 25..28 fg=DarkGray
+|────────────────────────────────────────
+  ~ 0..40 fg=DarkGray
+| >   3m    git rebase -i HEAD~3
+  ~ 0..3 REV ; 3..7 fg=DarkGray REV ; 7..11 REV ; 11..14 fg=Cyan REV BOLD UL ; 14..40 REV
+|     2h 📌 git reset --soft HEAD~1 && g…
+  ~ 3..7 fg=DarkGray ; 8..9 fg=Yellow ; 38..39 fg=Cyan BOLD UL
+|
+|
+|
+|
+|────────────────────────────────────────
+  ~ 0..40 fg=DarkGray
+| Enter restore  Tab preview  Esc quit
+  ~ 1..37 fg=DarkGray

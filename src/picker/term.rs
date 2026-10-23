@@ -225,6 +225,33 @@ pub fn watch_signals(
         .unwrap_or_else(|_| Err(io::Error::other("the signal thread stopped")))
 }
 
+/// The picker's key for a crossterm key event; `None` for releases and keys it ignores.
+#[must_use]
+pub fn key_from(ev: crossterm::event::KeyEvent) -> Option<super::state::Key> {
+    use super::state::Key;
+    use crossterm::event::{KeyCode, KeyEventKind, KeyModifiers};
+    if ev.kind == KeyEventKind::Release {
+        return None;
+    }
+    let ctrl = ev.modifiers.contains(KeyModifiers::CONTROL);
+    Some(match ev.code {
+        KeyCode::Char(c) if ctrl => Key::Ctrl(c.to_ascii_lowercase()),
+        KeyCode::Char(c) => Key::Char(c),
+        KeyCode::Enter => Key::Enter,
+        KeyCode::Esc => Key::Esc,
+        KeyCode::Tab => Key::Tab,
+        KeyCode::Backspace => Key::Backspace,
+        KeyCode::Up => Key::Up,
+        KeyCode::Down => Key::Down,
+        KeyCode::PageUp => Key::PageUp,
+        KeyCode::PageDown => Key::PageDown,
+        KeyCode::Home => Key::Home,
+        KeyCode::End => Key::End,
+        KeyCode::F(n) => Key::F(n),
+        _ => return None,
+    })
+}
+
 /// Exits the process with `code`: what the real signal watch does after restoring.
 pub fn exit_process(code: u8) {
     std::process::exit(i32::from(code));
@@ -267,6 +294,31 @@ mod tests {
             self.leaves.fetch_add(1, Ordering::SeqCst);
             Ok(())
         }
+    }
+
+    #[test]
+    fn crossterm_keys_map_to_picker_keys() {
+        use crate::picker::state::Key;
+        use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
+        let k = |code, m| key_from(KeyEvent::new(code, m));
+        assert_eq!(
+            k(KeyCode::Char('t'), KeyModifiers::CONTROL),
+            Some(Key::Ctrl('t'))
+        );
+        assert_eq!(
+            k(KeyCode::Char('C'), KeyModifiers::CONTROL),
+            Some(Key::Ctrl('c'))
+        );
+        assert_eq!(
+            k(KeyCode::Char('R'), KeyModifiers::SHIFT),
+            Some(Key::Char('R'))
+        );
+        assert_eq!(k(KeyCode::Enter, KeyModifiers::NONE), Some(Key::Enter));
+        assert_eq!(k(KeyCode::F(1), KeyModifiers::NONE), Some(Key::F(1)));
+        assert_eq!(k(KeyCode::Insert, KeyModifiers::NONE), None);
+        let mut release = KeyEvent::new(KeyCode::Char('a'), KeyModifiers::NONE);
+        release.kind = KeyEventKind::Release;
+        assert_eq!(key_from(release), None);
     }
 
     #[test]

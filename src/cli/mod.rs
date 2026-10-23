@@ -82,11 +82,19 @@ pub fn run(args: &[String]) -> u8 {
             return u8::try_from(code).unwrap_or(2);
         }
     };
-    // Owned by specs 012, 009 and 010: they print their own lines and pick their own exit code.
+    // Owned by specs 012, 009, 010 and 007: they print their own lines and pick their own exit code.
     match &cli.command {
         args::Command::InstallAutostart { args } => return crate::install::autostart::run(args),
         args::Command::InstallGnomeExtension { args } => return crate::install::gnome::run(args),
         args::Command::Tray => return crate::tray::client::run_main(),
+        args::Command::Pick { args } => {
+            let env = env::Env::process();
+            let paths = crate::picker::data::Paths {
+                socket: env.socket_path().ok(),
+                store: env.store_dir().ok(),
+            };
+            return crate::picker::run(args, &paths);
+        }
         _ => {}
     }
     let env = env::Env::process();
@@ -128,10 +136,10 @@ fn dispatch(command: args::Command, io: &mut commands::Io<'_>) -> Result<(), err
         }
         // `src/main.rs` runs the daemon itself: the cli module may not depend on it.
         Command::Daemon { .. } => Err(unavailable("daemon")),
-        Command::Pick { .. } => Err(unavailable("pick")),
         Command::Doctor { .. } => Err(unavailable("doctor")),
         Command::InstallAutostart { .. }
         | Command::InstallGnomeExtension { .. }
+        | Command::Pick { .. }
         | Command::Tray => unreachable!("handled in `run`"),
     }
 }

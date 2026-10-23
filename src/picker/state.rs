@@ -12,9 +12,13 @@
 
 use std::collections::HashMap;
 
+use nucleo_matcher::pattern::{AtomKind, CaseMatching, Normalization, Pattern};
+use nucleo_matcher::{Config, Matcher, Utf32Str};
 use time::OffsetDateTime;
+use unicode_segmentation::UnicodeSegmentation;
 
 use crate::ipc::protocol::EntrySummary;
+use crate::ui::copy;
 use crate::ui::widgets::RecState;
 
 /// Exit status when an entry was restored.
@@ -25,6 +29,8 @@ pub const EXIT_DISMISSED: u8 = 1;
 pub const EXIT_NO_TTY: u8 = 2;
 /// Exit status when a restore needed the daemon and it was not running.
 pub const EXIT_DAEMON_DOWN: u8 = 3;
+/// Exit status when neither the daemon nor the store can be read.
+pub const EXIT_ENVIRONMENT: u8 = 5;
 /// Exit status when interrupted (Ctrl-C).
 pub const EXIT_INTERRUPTED: u8 = 130;
 
@@ -184,9 +190,80 @@ pub fn chrome_rows(read_only: bool, keymap: bool) -> u16 {
     4 + u16::from(read_only) + u16::from(keymap)
 }
 
+/// The fuzzy matcher (nucleo, fzf-like scoring). It keeps scratch buffers, so one lives in the
+/// state; a clone starts with fresh buffers.
+struct Fuzzy(Box<Matcher>);
+
+impl Fuzzy {
+    fn new() -> Self {
+        Self(Box::new(Matcher::new(Config::DEFAULT)))
+    }
+
+    /// Scores every preview against `query`: matches only, best first, newer first on ties.
+    /// Case-insensitive unless the query has an uppercase letter (smart case, FR-002).
+    fn rows(&mut self, query: &str, entries: &[EntrySummary]) -> Vec<Row> {
+        let pattern = Pattern::new(
+            query,
+            CaseMatching::Smart,
+            Normalization::Smart,
+            AtomKind::Fuzzy,
+        );
+        if pattern.atoms.is_empty() {
+            return (0..entries.len())
+                .map(|idx| Row {
+                    idx,
+                    score: 0,
+                    positions: Vec::new(),
+                })
+                .collect();
+        }
+        let mut chars = Vec::new();
+        let mut indices = Vec::new();
+        let mut rows = Vec::new();
+        for (idx, e) in entries.iter().enumerate() {
+            // One char per grapheme, so match indexes are grapheme indexes, as the
+            // design system's `segments` expects.
+            chars.clear();
+            chars.extend(
+                e.preview
+                    .graphemes(true)
+                    .map(|g| g.chars().next().unwrap_or(' ')),
+            );
+            indices.clear();
+            if let Some(score) =
+                pattern.indices(Utf32Str::Unicode(&chars), &mut self.0, &mut indices)
+            {
+                indices.sort_unstable();
+                indices.dedup();
+                rows.push(Row {
+                    idx,
+                    score,
+                    positions: indices.iter().map(|&i| i as usize).collect(),
+                });
+            }
+        }
+        // Stable: equal scores keep the newest-first order.
+        rows.sort_by_key(|r| std::cmp::Reverse(r.score));
+        rows
+    }
+}
+
+impl Clone for Fuzzy {
+    fn clone(&self) -> Self {
+        Self::new()
+    }
+}
+
+impl std::fmt::Debug for Fuzzy {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("Fuzzy")
+    }
+}
+
 /// The picker state. Fields are private; the view reads it through accessors.
 #[derive(Debug, Clone)]
 pub struct PickerState {
+    fuzzy: Fuzzy,
     query: String,
     entries: Vec<EntrySummary>,
     rows: Vec<Row>,
@@ -208,6 +285,7 @@ impl PickerState {
     #[must_use]
     pub fn new(snapshot: Snapshot, read_only: bool, size: (u16, u16)) -> Self {
         let mut s = Self {
+            fuzzy: Fuzzy::new(),
             query: String::new(),
             entries: Vec::new(),
             rows: Vec::new(),
@@ -245,13 +323,13 @@ impl PickerState {
 
     /// Recomputes the visible rows for the current query.
     fn refilter(&mut self) {
-        self.rows = (0..self.entries.len())
-            .map(|idx| Row {
-                idx,
-                score: 0,
-                positions: Vec::new(),
-            })
-            .collect();
+        self.rows = self.fuzzy.rows(&self.query, &self.entries);
+    }
+
+    /// After a query edit: refilter and select the best match.
+    fn requery(&mut self) {
+        self.refilter();
+        self.select_pos(0);
     }
 
     /// Selects the row at `pos`, or nothing when there are no rows.
@@ -433,7 +511,10 @@ pub fn update(state: &mut PickerState, msg: Msg) -> Vec<Cmd> {
         Msg::Done(action, result) => on_done(state, action, result),
     };
     let quitting = cmds.iter().any(|c| matches!(c, Cmd::Quit(_)));
-    if !quitting && let Some(id) = state.wanted_content() {
+    if !quitting
+        && state.mode != Mode::Restoring
+        && let Some(id) = state.wanted_content()
+    {
         state.requested = Some(id.clone());
         cmds.push(Cmd::Show(id));
     }
@@ -445,8 +526,34 @@ fn on_key(state: &mut PickerState, key: Key) -> Vec<Cmd> {
     if key == Key::Ctrl('c') {
         return vec![Cmd::Quit(Exit::code(EXIT_INTERRUPTED))];
     }
+    if state.mode == Mode::Restoring {
+        return Vec::new();
+    }
+    state.status = None;
     match key {
         Key::Esc => return vec![Cmd::Quit(Exit::code(EXIT_DISMISSED))],
+        Key::Enter => return restore(state),
+        Key::Char(c) => {
+            state.query.push(c);
+            state.requery();
+        }
+        Key::Backspace => {
+            if state.query.pop().is_some() {
+                state.requery();
+            }
+        }
+        Key::Ctrl('u') => {
+            state.query.clear();
+            state.requery();
+        }
+        Key::Ctrl('w') => {
+            let kept = state
+                .query
+                .trim_end()
+                .trim_end_matches(|c: char| !c.is_whitespace());
+            state.query.truncate(kept.len());
+            state.requery();
+        }
         Key::Tab => {
             state.preview = Some(match state.preview() {
                 Preview::Visible => Preview::Hidden,
@@ -464,9 +571,37 @@ fn on_key(state: &mut PickerState, key: Key) -> Vec<Cmd> {
     Vec::new()
 }
 
+/// Enter: restore the selection and wait for the daemon's answer.
+fn restore(state: &mut PickerState) -> Vec<Cmd> {
+    let Some(id) = state.selected.clone() else {
+        return Vec::new();
+    };
+    state.mode = Mode::Restoring;
+    state.status = Some(copy::PICKER_RESTORING.to_string());
+    vec![Cmd::Restore(id)]
+}
+
 fn on_done(state: &mut PickerState, action: Action, result: Result<(), Failure>) -> Vec<Cmd> {
-    let _ = (state, action, result);
-    Vec::new()
+    if action == Action::Restore {
+        state.mode = Mode::Normal;
+        state.status = None;
+    }
+    match (action, result) {
+        (Action::Restore, Ok(())) => vec![Cmd::Quit(Exit::code(EXIT_RESTORED))],
+        (_, Err(Failure::DaemonDown)) => vec![Cmd::Quit(Exit {
+            code: EXIT_DAEMON_DOWN,
+            message: Some(copy::CLI_DAEMON_DOWN.to_string()),
+        })],
+        (_, Err(Failure::PinLimit)) => {
+            state.status = Some(copy::PICKER_PIN_LIMIT.to_string());
+            Vec::new()
+        }
+        (_, Err(Failure::Other(message))) => {
+            state.status = Some(message);
+            Vec::new()
+        }
+        (_, Ok(())) => vec![Cmd::Reload],
+    }
 }
 
 /// Synthetic fixtures shared by the picker's tests. No real clipboard content.

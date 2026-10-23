@@ -38,12 +38,12 @@ description: "Task list for Terminal picker"
 
 ### Tests for User Story 1 ⚠️
 
-- [ ] T003 [P] [US1] journey tests on `update()` (filter, rank, select, Enter → Restore, Esc 1, Ctrl-C 130) in `src/picker/tests.rs` — Executor: builder · Reviewer: thinker
-- [ ] T004 [P] [US1] snapshots: normal, filtered, preview on/off at 80×24 and 40×10 — Executor: builder · Reviewer: thinker
+- [x] T003 [P] [US1] journey tests on `update()` (filter, rank, select, Enter → Restore, Esc 1, Ctrl-C 130) in `src/picker/tests.rs` — Executor: builder · Reviewer: thinker
+- [x] T004 [P] [US1] snapshots: normal, filtered, preview on/off at 80×24 and 40×10 — Executor: builder · Reviewer: thinker
 
 ### Implementation for User Story 1
 
-- [ ] T005 [US1] Terminal UI / CLI implementation — see `## Frontend` (appended by `frontend:spec`; `[TUI]`/`[CLI]` tasks built by `frontend:tui`) — Executor: builder · Reviewer: thinker
+- [x] T005 [US1] Terminal UI / CLI implementation — see `## Frontend` (appended by `frontend:spec`; `[TUI]`/`[CLI]` tasks built by `frontend:tui`) — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: User Story 1 passes its tests independently.
 
@@ -115,9 +115,9 @@ Appended by `frontend:spec`. `[TUI]`/`[CLI]` tasks built by `frontend:tui` (tick
 
 ### Frontend US1 — Find and restore a recent copy
 
-- [ ] T015 [US1] [TUI] `update()` for query editing, filtering (nucleo), ranking, selection-by-id, Enter → Restore in `src/picker/state.rs` — Executor: builder · Reviewer: reviewer · Effort: high
-- [ ] T016 [US1] [TUI] layout + render (QueryLine, list of EntryRow, PreviewPane, Footer) with responsive splits in `src/picker/view.rs` — Executor: builder · Reviewer: thinker
-- [ ] T017 [US1] [TUI] data: initial list (socket or read-only), debounced `show` for the preview, `subscribe` reader thread — Executor: builder · Reviewer: thinker
+- [x] T015 [US1] [TUI] `update()` for query editing, filtering (nucleo), ranking, selection-by-id, Enter → Restore in `src/picker/state.rs` — Executor: builder · Reviewer: reviewer · Effort: high
+- [x] T016 [US1] [TUI] layout + render (QueryLine, list of EntryRow, PreviewPane, Footer) with responsive splits in `src/picker/view.rs` — Executor: builder · Reviewer: thinker
+- [x] T017 [US1] [TUI] data: initial list (socket or read-only), debounced `show` for the preview, `subscribe` reader thread — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: the US1 snapshot/journey tests pass; `cargo insta review` is clean.
 

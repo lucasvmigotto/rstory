@@ -227,7 +227,10 @@ fn journey_enter_waits_for_the_restore_before_quitting() {
 
 #[test]
 fn journey_esc_exits_1_and_ctrl_c_exits_130_without_a_restore() {
-    for (k, code) in [(Key::Esc, EXIT_DISMISSED), (Key::Ctrl('c'), EXIT_INTERRUPTED)] {
+    for (k, code) in [
+        (Key::Esc, EXIT_DISMISSED),
+        (Key::Ctrl('c'), EXIT_INTERRUPTED),
+    ] {
         let (mut s, mut fake) = open(b_and_a(), (80, 24));
         let mut inputs = typed("reb");
         inputs.push(key(k));
@@ -252,7 +255,10 @@ fn journey_daemon_gone_at_restore_exits_3_with_the_hint() {
     fake.next = Some(Failure::DaemonDown);
     let exit = drive(&mut s, &mut fake, vec![key(Key::Enter)]).unwrap();
     assert_eq!(exit.code, EXIT_DAEMON_DOWN);
-    assert_eq!(exit.message.as_deref(), Some(crate::ui::copy::CLI_DAEMON_DOWN));
+    assert_eq!(
+        exit.message.as_deref(),
+        Some(crate::ui::copy::CLI_DAEMON_DOWN)
+    );
 }
 
 #[test]
@@ -384,7 +390,12 @@ pub(crate) fn screen(state: &PickerState, look: Look) -> String {
     let area = Rect::new(0, 0, w, h);
     let mut buf = Buffer::empty(area);
     view::render(state, area, &mut buf, Ctx::new(&theme, &glyphs));
-    format!("# {w}x{h} tier={} ascii={}\n{}", look.tier.name(), look.ascii, dump(&buf))
+    format!(
+        "# {w}x{h} tier={} ascii={}\n{}",
+        look.tier.name(),
+        look.ascii,
+        dump(&buf)
+    )
 }
 
 pub(crate) const SIZES: [(u16, u16); 2] = [(80, 24), (40, 10)];
@@ -393,8 +404,18 @@ pub(crate) const SIZES: [(u16, u16); 2] = [(80, 24), (40, 10)];
 pub(crate) fn rich() -> Snapshot {
     snapshot(vec![
         entry(6, "git rebase -i HEAD~3", 3, false),
-        entry(5, "git reset --soft HEAD~1 && git push --force-with-lease origin main", 120, true),
-        entry(4, "https://example.org/a/very/long/path/that/keeps/going/on", 1440, false),
+        entry(
+            5,
+            "git reset --soft HEAD~1 && git push --force-with-lease origin main",
+            120,
+            true,
+        ),
+        entry(
+            4,
+            "https://example.org/a/very/long/path/that/keeps/going/on",
+            1440,
+            false,
+        ),
         entry(3, "日本語のテキスト", 2880, false),
         entry(2, "fn main() {⏎    println!(\"synthetic\");⏎}", 4320, false),
         entry(1, "cargo test -p rstory --test daemon_restore", 0, true),
@@ -402,7 +423,12 @@ pub(crate) fn rich() -> Snapshot {
 }
 
 /// A state over `snap` at `size`, with the selection's content loaded as the runtime would.
-pub(crate) fn loaded(snap: Snapshot, read_only: bool, size: (u16, u16), msgs: Vec<Msg>) -> PickerState {
+pub(crate) fn loaded(
+    snap: Snapshot,
+    read_only: bool,
+    size: (u16, u16),
+    msgs: Vec<Msg>,
+) -> PickerState {
     let mut fake = Fake::new(snap.clone());
     fake.read_only = read_only;
     let mut s = PickerState::new(snap, read_only, size);
@@ -439,7 +465,10 @@ fn snapshot_preview_toggled() {
     // Tab flips the default: off at 80 columns, on at 40.
     for size in SIZES {
         let s = loaded(rich(), false, size, vec![key(Key::Tab)]);
-        insta::assert_snapshot!(format!("preview_toggled_{}x{}", size.0, size.1), screen(&s, COLOR));
+        insta::assert_snapshot!(
+            format!("preview_toggled_{}x{}", size.0, size.1),
+            screen(&s, COLOR)
+        );
     }
 }
 
