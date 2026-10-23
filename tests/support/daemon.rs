@@ -87,6 +87,10 @@ pub struct Ran {
 }
 
 impl Ran {
+    pub fn stdout_text(&self) -> String {
+        self.out()
+    }
+
     pub fn out(&self) -> String {
         String::from_utf8(self.stdout.clone()).unwrap()
     }

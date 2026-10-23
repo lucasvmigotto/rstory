@@ -71,11 +71,11 @@ description: "Task list for Command-line interface"
 
 ### Tests for User Story 3 ⚠️
 
-- [ ] T008 [P] [US3] read-only fallback tests in `tests/cli_readonly.rs` — Executor: builder · Reviewer: thinker
+- [x] T008 [P] [US3] read-only fallback tests in `tests/cli_readonly.rs` — Executor: builder · Reviewer: thinker
 
 ### Implementation for User Story 3
 
-- [ ] T009 [US3] Terminal UI / CLI implementation — see `## Frontend` (appended by `frontend:spec`; `[TUI]`/`[CLI]` tasks built by `frontend:tui`) — Executor: builder · Reviewer: thinker
+- [x] T009 [US3] Terminal UI / CLI implementation — see `## Frontend` (appended by `frontend:spec`; `[TUI]`/`[CLI]` tasks built by `frontend:tui`) — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: User Story 3 passes its tests independently.
 
@@ -158,7 +158,7 @@ Appended by `frontend:spec`. `[TUI]`/`[CLI]` tasks built by `frontend:tui` (tick
 
 ### Frontend US3 — Read while the daemon is down
 
-- [ ] T022 [US3] [CLI] read-only fallback messaging (`cli.readonly`) and exit 3 for write commands — Executor: builder · Reviewer: thinker · Effort: low
+- [x] T022 [US3] [CLI] read-only fallback messaging (`cli.readonly`) and exit 3 for write commands — Executor: builder · Reviewer: thinker · Effort: low
 
 **Checkpoint**: the US3 snapshot/journey tests pass; `cargo insta review` is clean.
 
