@@ -140,3 +140,9 @@ Appended by `qa:strategy`. Executed by `qa:e2e` / `qa:load` after the builds (ti
 - [ ] T017 Charter session → `docs/product/qa/charters/005.md` — Executor: thinker · Reviewer: reviewer · Effort: high
 
 **Checkpoint**: the journeys and suites in `qa.md` are green in CI; the exit criteria are met → Verified in `specs/README.md`.
+
+---
+
+## Convergence (Backend) — 2026-10-23
+
+Converged. The FRs map to `src/domain/filter.rs` (`CopyFilter`: the pause and sensitive-hint gates before the read, the size and empty gates after it; `SENSITIVE_HINTS`) and its wiring in `src/daemon/pipeline.rs`, which replaces 004's pass-through hook. Reads are limited to `max_entry_bytes + 1`, so oversize is dropped whole, never truncated. The no-text gate stays in the backends (`ReadError::NoText` maps to `ignored_no_text`, with no counter), so each backend keeps its own text-type list. A 10,000-case proptest checks that no decision or log carries the content. `fmt-check`, `lint` and `test` are green. Unverified until QA: the manual `wl-copy --type x-kde-passwordManagerHint` check and journeys K3/K3b (T011, T016, T017).
