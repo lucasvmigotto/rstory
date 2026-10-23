@@ -1,0 +1,240 @@
+//! Terminal lifecycle (FR-008, FR-009): the TTY check, entering and leaving raw mode, and
+//! restoring the terminal on every way out: return, error, panic, SIGTERM, SIGINT, SIGHUP.
+//!
+//! The one restore path is [`Restorer`]: a shared, idempotent handle to the active
+//! [`Screen`]. The session guard's `Drop`, the panic hook and the signal thread all call
+//! [`Restorer::restore`]; whichever runs first leaves the screen, the others do nothing.
+//! [`Screen`] is a trait so tests drive the lifecycle with a fake and never touch a real
+//! terminal.
+
+use std::io;
+use std::sync::{Arc, Mutex, PoisonError};
+
+/// The stderr line when stdout is not a terminal (exit 2).
+pub const NO_TTY_MESSAGE: &str = "rstory pick needs a terminal";
+
+/// Fails with exit 2 when stdout is not a terminal.
+///
+/// # Errors
+/// [`super::state::Exit`] with [`super::state::EXIT_NO_TTY`] and [`NO_TTY_MESSAGE`].
+pub fn require_tty(stdout_is_tty: bool) -> Result<(), super::state::Exit> {
+    let _ = stdout_is_tty;
+    todo!()
+}
+
+/// What the picker does to a terminal, and how it undoes it.
+pub trait Screen: Send {
+    /// Raw mode on, cursor hidden, and the alternate screen when the screen uses one.
+    ///
+    /// # Errors
+    /// The terminal refused a mode change.
+    fn enter(&mut self) -> io::Result<()>;
+    /// The exact reverse of [`Screen::enter`]: cursor shown, raw mode off.
+    ///
+    /// # Errors
+    /// The terminal refused a mode change.
+    fn leave(&mut self) -> io::Result<()>;
+}
+
+/// The real terminal through crossterm.
+#[derive(Debug, Clone, Copy)]
+pub struct CrosstermScreen {
+    /// Full-screen mode uses the alternate screen; `--plain` draws inline.
+    pub alternate: bool,
+}
+
+impl Screen for CrosstermScreen {
+    fn enter(&mut self) -> io::Result<()> {
+        todo!()
+    }
+
+    fn leave(&mut self) -> io::Result<()> {
+        todo!()
+    }
+}
+
+/// A shared, idempotent restore of the active screen.
+#[derive(Clone)]
+pub struct Restorer(Arc<Mutex<Option<Box<dyn Screen>>>>);
+
+impl std::fmt::Debug for Restorer {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("Restorer")
+    }
+}
+
+impl Restorer {
+    /// Enters `screen` and returns the handle that will leave it.
+    ///
+    /// # Errors
+    /// Entering failed; the screen is left again before returning.
+    pub fn enter(screen: Box<dyn Screen>) -> io::Result<Self> {
+        let _ = screen;
+        todo!()
+    }
+
+    /// Leaves the screen if it is still active. Returns true when this call left it.
+    pub fn restore(&self) -> bool {
+        let _ = PoisonError::<()>::new;
+        todo!()
+    }
+
+    /// Whether the screen is still active.
+    #[must_use]
+    pub fn active(&self) -> bool {
+        todo!()
+    }
+}
+
+/// Owns the terminal for the picker's lifetime; restores it when dropped.
+#[derive(Debug)]
+pub struct Session {
+    restorer: Restorer,
+}
+
+impl Session {
+    /// Enters `screen`, installs the panic hook and starts the signal watch.
+    ///
+    /// # Errors
+    /// Entering the screen failed.
+    pub fn start(screen: Box<dyn Screen>) -> io::Result<Self> {
+        let _ = screen;
+        todo!()
+    }
+
+    /// The shared restore handle.
+    #[must_use]
+    pub fn restorer(&self) -> &Restorer {
+        &self.restorer
+    }
+}
+
+impl Drop for Session {
+    fn drop(&mut self) {
+        self.restorer.restore();
+    }
+}
+
+/// Chains a panic hook that restores the terminal before the previous hook prints.
+pub fn install_panic_hook(restorer: Restorer) {
+    let _ = restorer;
+    todo!()
+}
+
+/// The exit status for a signal: 128 plus its number.
+#[must_use]
+pub fn signal_exit_code(signo: i32) -> u8 {
+    let _ = signo;
+    todo!()
+}
+
+/// Watches SIGTERM, SIGINT and SIGHUP on a background thread. On the first one it restores
+/// the terminal and calls `on_signal` with [`signal_exit_code`]. Returns once the handlers
+/// are registered.
+///
+/// # Errors
+/// The handlers could not be registered.
+pub fn watch_signals(
+    restorer: Restorer,
+    on_signal: impl FnOnce(u8) + Send + 'static,
+) -> io::Result<()> {
+    let _ = (restorer, on_signal);
+    todo!()
+}
+
+/// Exits the process with `code`: what the real signal watch does after restoring.
+pub fn exit_process(code: u8) {
+    std::process::exit(i32::from(code));
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    use super::*;
+    use crate::picker::state::EXIT_NO_TTY;
+
+    /// Counts enters and leaves; optionally fails to enter.
+    struct Fake {
+        enters: Arc<AtomicUsize>,
+        leaves: Arc<AtomicUsize>,
+        fail_enter: bool,
+    }
+
+    fn fake(fail_enter: bool) -> (Box<Fake>, Arc<AtomicUsize>, Arc<AtomicUsize>) {
+        let enters = Arc::new(AtomicUsize::new(0));
+        let leaves = Arc::new(AtomicUsize::new(0));
+        let f = Fake {
+            enters: enters.clone(),
+            leaves: leaves.clone(),
+            fail_enter,
+        };
+        (Box::new(f), enters, leaves)
+    }
+
+    impl Screen for Fake {
+        fn enter(&mut self) -> io::Result<()> {
+            self.enters.fetch_add(1, Ordering::SeqCst);
+            if self.fail_enter {
+                return Err(io::Error::other("no raw mode"));
+            }
+            Ok(())
+        }
+        fn leave(&mut self) -> io::Result<()> {
+            self.leaves.fetch_add(1, Ordering::SeqCst);
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn a_terminal_passes_the_tty_check() {
+        assert!(require_tty(true).is_ok());
+    }
+
+    #[test]
+    fn no_terminal_is_exit_2_with_the_message() {
+        let exit = require_tty(false).unwrap_err();
+        assert_eq!(exit.code, EXIT_NO_TTY);
+        assert_eq!(exit.message.as_deref(), Some(NO_TTY_MESSAGE));
+    }
+
+    #[test]
+    fn restore_leaves_once_however_often_it_is_called() {
+        let (f, enters, leaves) = fake(false);
+        let r = Restorer::enter(f).unwrap();
+        assert_eq!(enters.load(Ordering::SeqCst), 1);
+        assert!(r.active());
+        let clone = r.clone();
+        assert!(clone.restore());
+        assert!(!r.restore());
+        assert!(!r.active());
+        assert_eq!(leaves.load(Ordering::SeqCst), 1);
+    }
+
+    #[test]
+    fn a_failed_enter_is_undone_and_reported() {
+        let (f, _, leaves) = fake(true);
+        assert!(Restorer::enter(f).is_err());
+        assert_eq!(leaves.load(Ordering::SeqCst), 1);
+    }
+
+    #[test]
+    fn signals_exit_128_plus_their_number() {
+        assert_eq!(signal_exit_code(1), 129); // SIGHUP
+        assert_eq!(signal_exit_code(2), 130); // SIGINT
+        assert_eq!(signal_exit_code(15), 143); // SIGTERM
+    }
+
+    #[test]
+    fn dropping_the_session_restores() {
+        let (f, _, leaves) = fake(false);
+        let r = {
+            let r = Restorer::enter(f).unwrap();
+            let s = Session { restorer: r.clone() };
+            drop(s);
+            r
+        };
+        assert!(!r.active());
+        assert_eq!(leaves.load(Ordering::SeqCst), 1);
+    }
+}
