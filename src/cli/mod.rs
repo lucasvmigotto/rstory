@@ -10,6 +10,7 @@ pub mod env;
 pub mod error;
 pub mod render;
 pub mod source;
+pub mod status;
 
 use clap::Parser;
 
