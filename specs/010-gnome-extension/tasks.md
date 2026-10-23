@@ -118,3 +118,9 @@ Appended by `qa:strategy`. Executed by `qa:e2e` / `qa:load` after the builds (ti
 - [ ] T015 Charter session per Shell version → `docs/product/qa/charters/010.md` — Executor: thinker · Reviewer: reviewer · Effort: high
 
 **Checkpoint**: the journeys and suites in `qa.md` are green in CI; the exit criteria are met → Verified in `specs/README.md`.
+
+---
+
+## Convergence — 2026-10-23
+
+Converged, both layers, except the CI wiring in T008, which waits for spec 013. `extension/` (`client.js`, `menu.js`, `controller.js`, `panel.js`, `extension.js`) is plain ESM JS with `// @ts-check`, type-checked by TypeScript 7.0.2 against `@girs/gnome-shell` 50.0.4 (ADR-0008 amendment). It is linted by eslint 10.12.0 from the npm volume, because Debian's eslint 6.4 can't parse current JS. 39 gjs fixture tests run against a fake socket server, including `disable()` cleanup over 20 cycles. `src/install/gnome.rs` embeds the files with `include_dir`, installs them atomically, and exposes `inspect()` for doctor. Its data dir, `gnome-extensions` and desktop are injected, and 19 tests use temp dirs and a fake `gnome-extensions`. A test fails if `extension/node_modules` would be embedded. After the rebase, `install-gnome-extension` goes through the CLI parser. The clear-confirm flow matches the tray's (009). Readings the spec left open: a failed `--enable` right after install prints a re-login hint and exits 0; failed actions show a Shell notification chosen by error code, never the daemon's text. Unverified: nothing has run in a real GNOME Shell yet. The owner's Shell 48–51 manual matrix (the W4 gate) and the QA tasks (T010, T014, T015) remain.
