@@ -55,14 +55,11 @@ test('connected: the menu follows contracts/menu.md and the icon is the recordin
     const {daemon, panel, button} = setup();
     try {
         await waitFor(() => iconFile(button) === 'recording-symbolic.svg', 'recording icon');
-        const l = labels(button);
-        assertEquals(l.slice(0, 2).length, 2);
-        const tail = l.slice(-6);
-        assertEquals(tail[0], '---');
-        assertEquals(l.includes('Pause recording'), true);
-        assertEquals(l.includes('Pause for 1 minute'), true);
-        assertEquals(l.includes('Open picker'), true);
-        assertEquals(l[l.length - 1], 'Clear history…');
+        assertEquals(labels(button), [
+            'https://github.com/lucasvmigotto/rstory', '📌 git rebase -i HEAD~3', '---',
+            'Recording', 'Pause recording', 'Pause for 1 minute', 'Open picker', '---',
+            'Clear history…',
+        ]);
         assertEquals(button.accessible_name, 'rstory — Recording');
     } finally {
         panel.destroy();

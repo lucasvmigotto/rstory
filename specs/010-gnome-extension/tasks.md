@@ -54,12 +54,12 @@ description: "Task list for GNOME Shell extension"
 
 ### Tests for User Story 2 ⚠️
 
-- [ ] T005 [P] [US2] gjs fixture test of client + menu model in `extension/tests/client.test.js` (SC-002) — Executor: builder · Reviewer: thinker
+- [x] T005 [P] [US2] gjs fixture test of client + menu model in `extension/tests/client.test.js` (SC-002) — Executor: builder · Reviewer: thinker
 - [ ] T006 [US2] Manual matrix procedure for Shell 48–51 in `docs/release.md` (SC-001) — Executor: builder · Reviewer: thinker
 
 ### Implementation for User Story 2
 
-- [ ] T007 [US2] Terminal UI / CLI implementation — see `## Frontend` (appended by `frontend:spec`; `[TUI]`/`[CLI]` tasks built by `frontend:tui`) — Executor: builder · Reviewer: thinker
+- [x] T007 [US2] Terminal UI / CLI implementation — see `## Frontend` (appended by `frontend:spec`; `[TUI]`/`[CLI]` tasks built by `frontend:tui`) — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: User Story 2 passes its tests independently.
 
@@ -104,7 +104,7 @@ Appended by `frontend:spec`. `[TUI]`/`[CLI]` tasks built by `frontend:tui` (tick
 
 ### Frontend US2 — Panel icon and menu on GNOME
 
-- [ ] T013 [US2] [TUI] `extension.js`: PanelMenu.Button, symbolic icons per state, menu from the model, actions → client requests, full `disable()` cleanup — Executor: builder · Reviewer: reviewer · Effort: high
+- [x] T013 [US2] [TUI] `extension.js`: PanelMenu.Button, symbolic icons per state, menu from the model, actions → client requests, full `disable()` cleanup — Executor: builder · Reviewer: reviewer · Effort: high
 
 **Checkpoint**: the US2 snapshot/journey tests pass; `cargo insta review` is clean.
 
