@@ -54,6 +54,7 @@ impl Fixture {
     }
 
     fn run(&self, opts: Options) -> (u8, String, String) {
+        let _g = spawn_guard();
         let (mut out, mut err) = (Vec::new(), Vec::new());
         let code = execute(&self.env, opts, &mut out, &mut err);
         (
@@ -64,7 +65,16 @@ impl Fixture {
     }
 }
 
+/// Serialises script creation and process spawning: a fork in one test while another test holds
+/// a script open for writing makes the exec fail with "text file busy".
+static SPAWN_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+fn spawn_guard() -> std::sync::MutexGuard<'static, ()> {
+    SPAWN_LOCK.lock().unwrap_or_else(|e| e.into_inner())
+}
+
 fn write_script(path: &Path, body: &str) {
+    let _g = spawn_guard();
     fs::write(path, format!("#!/bin/sh\n{body}")).unwrap();
     fs::set_permissions(path, fs::Permissions::from_mode(0o755)).unwrap();
 }
@@ -307,6 +317,7 @@ fn xdg_now_spawns_the_daemon_detached() {
         systemctl: dir.path().join("no-such-systemctl"),
         temp_roots: vec![],
     };
+    let _g = spawn_guard();
     let (mut out, mut err) = (Vec::new(), Vec::new());
     let code = execute(
         &env,

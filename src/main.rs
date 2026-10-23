@@ -19,7 +19,12 @@ fn main() -> std::process::ExitCode {
                 rt.block_on(rstory::daemon::start::run_main(&args[1..])),
             );
         }
-        _ => println!("usage: rstory [--version] | daemon [--backend x11|wayland]"),
+        Some("install-autostart") => {
+            return std::process::ExitCode::from(rstory::install::autostart::run(&args[1..]));
+        }
+        _ => println!(
+            "usage: rstory [--version] | daemon [--backend x11|wayland] | install-autostart [--systemd] [--now] [--uninstall]"
+        ),
     }
     std::process::ExitCode::SUCCESS
 }

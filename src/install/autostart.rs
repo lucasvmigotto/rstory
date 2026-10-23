@@ -252,12 +252,91 @@ pub fn execute(env: &Env, opts: Options, out: &mut dyn Write, err: &mut dyn Writ
 }
 
 fn execute_inner(
-    _env: &Env,
-    _opts: Options,
-    _out: &mut dyn Write,
-    _err: &mut dyn Write,
+    env: &Env,
+    opts: Options,
+    out: &mut dyn Write,
+    err: &mut dyn Write,
 ) -> io::Result<u8> {
-    todo!("install and uninstall flows")
+    let xdg = xdg_path(&env.config_home);
+    let unit = unit_path(&env.config_home);
+
+    if opts.uninstall {
+        let mut removed = false;
+        if unit.is_file() {
+            // Best effort: the unit may never have been enabled, or systemd may be gone.
+            let _ = systemctl(env, &["disable", "--now", UNIT_NAME]);
+            removed |= remove_if_exists(&unit)?;
+            let _ = systemctl(env, &["daemon-reload"]);
+        }
+        removed |= remove_if_exists(&xdg)?;
+        writeln!(
+            out,
+            "{}",
+            if removed {
+                "Autostart removed."
+            } else {
+                "Nothing to remove."
+            }
+        )?;
+        return Ok(0);
+    }
+
+    if is_temporary_path(&env.exe, &env.temp_roots) {
+        writeln!(
+            err,
+            "Warning: rstory is running from {}; autostart will point there. Install the binary to ~/.local/bin first.",
+            env.exe.display()
+        )?;
+    }
+
+    if opts.systemd {
+        if !matches!(systemctl(env, &["show-environment"]), Ok(true)) {
+            writeln!(
+                err,
+                "systemd user instance not available. Run rstory install-autostart without --systemd."
+            )?;
+            return Ok(EXIT_ENVIRONMENT);
+        }
+        atomic_write(&unit, unit_file(&env.exe).as_bytes())?;
+        remove_if_exists(&xdg)?;
+        let _ = systemctl(env, &["daemon-reload"]);
+        let enable: &[&str] = if opts.now {
+            &["enable", "--now", UNIT_NAME]
+        } else {
+            &["enable", UNIT_NAME]
+        };
+        if !matches!(systemctl(env, enable), Ok(true)) {
+            writeln!(
+                err,
+                "systemctl --user enable failed; the unit file was written to {}.",
+                unit.display()
+            )?;
+            return Ok(EXIT_UNEXPECTED);
+        }
+        writeln!(
+            out,
+            "Autostart installed: {} (systemd user unit).",
+            unit.display()
+        )?;
+        if opts.now {
+            writeln!(out, "Daemon started.")?;
+        }
+    } else {
+        atomic_write(&xdg, desktop_entry(&env.exe).as_bytes())?;
+        writeln!(
+            out,
+            "{}",
+            crate::ui::copy::format(
+                crate::ui::copy::INSTALL_AUTOSTART_DONE,
+                &[("path", &xdg.display().to_string())]
+            )
+        )?;
+        if opts.now {
+            spawn_detached_daemon(env)?;
+            writeln!(out, "Daemon started.")?;
+        }
+    }
+    Ok(0)
 }
 
 /// Entry point for `rstory install-autostart <args>`; uses the real session.
