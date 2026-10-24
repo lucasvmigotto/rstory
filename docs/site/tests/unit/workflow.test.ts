@@ -30,12 +30,15 @@ describe("docs workflow", () => {
     expect(body).toContain("make docs-build");
   });
 
-  it("deploys only after a successful release run for a tag push, never from a push or PR", () => {
+  it("deploys only after a successful release run for a tag push or a dispatch, never from a push or PR", () => {
     expect(body).not.toMatch(/^\s{2}push:/m);
     expect(body).toMatch(/workflow_run:\s*\n\s*workflows: \[release\]/);
     expect(deploy).toContain("github.event_name == 'workflow_run'");
     expect(deploy).toContain("github.event.workflow_run.conclusion == 'success'");
     expect(deploy).toContain("github.event.workflow_run.event == 'push'");
+    expect(deploy).toContain("github.event.workflow_run.event == 'repository_dispatch'");
+    expect(deploy).toContain("github.event.workflow_run.display_title");
+    expect(deploy).not.toContain("head_branch");
     expect(deploy).toContain("name: rstory-docs");
     expect(deploy).toContain("[0-9]*.[0-9]*.[0-9]*");
   });
