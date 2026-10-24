@@ -24,6 +24,11 @@ allow = [
     "CC0-1.0",
     "GPL-3.0-or-later",
 ]
+# ksni (tray, spec 009) is Unlicense-only; the FSF lists the Unlicense as GPL-compatible.
+# Scoped to this one crate until the owner confirms the licence policy (spec 013 report).
+exceptions = [
+    { crate = "ksni", allow = ["Unlicense"] },
+]
 
 [bans]
 multiple-versions = "warn"

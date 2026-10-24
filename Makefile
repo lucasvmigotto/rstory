@@ -27,8 +27,12 @@ RUN := $(ENGINE) run --rm --init $(USERNS) \
 	-v rstory-tools-cargo:/home/dev/.cargo \
 	-v $(TARGET_VOLUME):/target \
 	$(RUNDIR) \
-	-e TZ=UTC -e LANG=C.UTF-8 -e RUST_BACKTRACE=1 -e CARGO_TERM_COLOR=always
+	-e TZ=UTC -e LANG=C.UTF-8 -e RUST_BACKTRACE=1 -e CARGO_TERM_COLOR=always \
+	$(if $(PROPTEST_CASES),-e PROPTEST_CASES=$(PROPTEST_CASES))
 OFFLINE := --network=none
+# Test runner profile (.config/nextest.toml): default locally, ci / ci-dev in CI (flaky-test policy).
+NEXTEST_PROFILE ?= default
+NEXTEST := cargo nextest run --locked --offline --no-tests=pass --profile $(NEXTEST_PROFILE)
 # Test-only feature: FaultFs for the crash and power-loss suites (never in release builds).
 FEATURES := --features fault-injection
 # Lint and check also compile the session tests (Xvfb / mutter), which `make test` skips.
@@ -38,7 +42,7 @@ NPM_VOLUME ?= rstory-tools-npm
 EXT_MOUNT := -v $(NPM_VOLUME):/src/extension/node_modules
 TTY := $(shell [ -t 0 ] && echo -it)
 
-.PHONY: help image fetch fmt fmt-check lint check test bench test-integration build build-static test-launch ext-lint ext-test ext-deps ext-typecheck doctor shell clean-cache
+.PHONY: help image fetch fmt fmt-check lint check test test-quarantine bench test-integration build build-static test-launch ext-lint ext-test ext-deps ext-typecheck deny audit secret-scan publish-dry-run publish doctor shell clean-cache
 
 help: ## List recipes
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-17s %s\n", $$1, $$2}'
@@ -64,14 +68,18 @@ check: image ## Type-check, offline
 test-launch: image ## Picker-launch tests only (quickstart: cargo test launch::), offline
 	$(RUN) $(OFFLINE) $(IMAGE) cargo test --locked --offline $(FEATURES) launch::
 
-test: image ## Unit, property, snapshot and contract tests, offline
-	$(RUN) $(OFFLINE) $(IMAGE) cargo test --locked --offline $(FEATURES)
+test: image ## Unit, property, snapshot, contract and fitness tests (nextest + doctests), offline; TEST_ARGS='--test x' narrows
+	$(RUN) $(OFFLINE) $(IMAGE) $(NEXTEST) $(FEATURES) $(TEST_ARGS)
+	$(if $(TEST_ARGS),,$(RUN) $(OFFLINE) $(IMAGE) cargo test --locked --offline $(FEATURES) --doc)
+
+test-quarantine: image ## Quarantined tests only (#[ignore = "quarantine: ..."]), run nightly, offline
+	$(RUN) $(OFFLINE) $(IMAGE) $(NEXTEST) $(FEATURES) --run-ignored only $(TEST_ARGS)
 
 bench: image ## Store benchmarks (std harness); fails if a p95 is over 2x its budget, offline
 	$(RUN) $(OFFLINE) $(IMAGE) cargo bench --locked --offline $(FEATURES) --bench store
 
 test-integration: image ## Session tests (Xvfb, headless sway/mutter, bridge mode), offline; TEST_ARGS='--test x11_capture' narrows
-	$(RUN) $(OFFLINE) $(IMAGE) cargo test --locked --offline --features session-tests $(TEST_ARGS) -- --test-threads=2
+	$(RUN) $(OFFLINE) $(IMAGE) $(NEXTEST) --features session-tests --test-threads 2 $(TEST_ARGS)
 
 build: image ## Debug build, offline
 	$(RUN) $(OFFLINE) $(IMAGE) cargo build --locked --offline
@@ -94,11 +102,28 @@ ext-typecheck: image ## Type-check the extension (tsc --checkJs, JSDoc), offline
 ext-test: image ## Run the extension's gjs fixture tests (fake socket server), offline
 	$(RUN) $(OFFLINE) $(IMAGE) sh -c 'for t in extension/tests/*.test.js; do echo "== $$t"; gjs -m "$$t" || exit 1; done'
 
+deny: image ## cargo-deny bans, licences, sources (fitness F3, F4), offline
+	$(RUN) $(OFFLINE) $(IMAGE) cargo deny --locked --offline check bans licenses sources
+
+audit: image ## RustSec advisories via cargo-deny: vulnerabilities fail, unmaintained warns (fetches the advisory DB: networked)
+	$(RUN) $(IMAGE) cargo deny --locked check --warn unmaintained advisories
+
+secret-scan: image ## gitleaks over the working tree (redacted output), offline
+	$(RUN) $(OFFLINE) $(IMAGE) gitleaks dir --redact --no-banner --exit-code 1 .
+
+publish-dry-run: image ## cargo publish --dry-run (packages and verifies the crate; networked)
+	$(RUN) $(IMAGE) cargo publish --locked --dry-run
+
+publish: image ## cargo publish; reads CARGO_REGISTRY_TOKEN from the caller's environment, never from a file (networked)
+	@[ -n "$$CARGO_REGISTRY_TOKEN" ] || { echo "CARGO_REGISTRY_TOKEN is not set (see docs/release.md)"; exit 1; }
+	$(RUN) -e CARGO_REGISTRY_TOKEN $(IMAGE) cargo publish --locked
+
 doctor: image ## Print tool versions per layer; fail on drift from rust-toolchain.toml
 	@echo "rust-toolchain.toml: $(RUST_VERSION)"
 	@$(RUN) $(OFFLINE) $(IMAGE) sh -c 'v=$$(rustc --version | cut -d" " -f2); echo "tools rustc: $$v"; \
 	  echo "tools cargo: $$(cargo --version | cut -d" " -f2)"; rustup target list --installed | sed "s/^/tools target: /"; \
-	  echo "sway: $$(sway --version)"; echo "gjs: $$(gjs --version)"; [ "$$v" = "$(RUST_VERSION)" ] || { echo "DRIFT: tools rustc $$v != $(RUST_VERSION)"; exit 1; }'
+	  echo "sway: $$(sway --version)"; echo "gjs: $$(gjs --version)"; \
+	  echo "cargo-deny: $$(cargo deny --version)"; echo "nextest: $$(cargo nextest --version | head -1)"; echo "gitleaks: $$(gitleaks version)"; [ "$$v" = "$(RUST_VERSION)" ] || { echo "DRIFT: tools rustc $$v != $(RUST_VERSION)"; exit 1; }'
 	@if command -v rustc >/dev/null 2>&1; then echo "host rustc: $$(cd $(CURDIR) && RUSTUP_AUTO_INSTALL=0 rustc --version 2>/dev/null | cut -d' ' -f2) (informational)"; fi
 
 shell: image ## Interactive shell in the tools image (networked)

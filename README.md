@@ -35,10 +35,12 @@ make image              # build the tools image (Containerfile, target tools)
 make fetch              # resolve crates into the cache volume (the only networked step)
 make fmt | fmt-check    # rustfmt
 make lint               # clippy -D warnings, offline
-make test               # unit, property, snapshot and contract tests, offline
+make test               # unit, property, snapshot, contract and fitness tests (cargo-nextest), offline
 make test-integration   # Xvfb, headless sway and headless mutter session tests, offline
 make build-static       # static musl release build + static-binary and size checks
 make ext-lint ext-test  # GNOME extension: eslint + gjs fixture tests
+make deny audit         # cargo-deny: bans/licences/sources (F3, F4) offline; RustSec advisories (networked)
+make secret-scan        # gitleaks over the working tree
 make doctor             # tool versions per layer; fails on drift from rust-toolchain.toml
 make shell              # interactive shell in the tools image
 ```

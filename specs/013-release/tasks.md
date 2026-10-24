@@ -26,7 +26,7 @@ No feature-specific setup (crate skeleton comes from 001).
 
 **⚠️ CRITICAL**: blocks every story in this feature.
 
-- [ ] T001 Decide job graph with `devsecops:pipeline` (CI + release), environments (`release` protected), runners (x86_64, arm64) — Executor: thinker · Reviewer: reviewer · Effort: high
+- [x] T001 Decide job graph with `devsecops:pipeline` (CI + release), environments (`release` protected), runners (x86_64, arm64) — Executor: thinker · Reviewer: reviewer · Effort: high
 
 **Checkpoint**: foundation ready.
 
@@ -38,11 +38,11 @@ No feature-specific setup (crate skeleton comes from 001).
 
 ### Tests for User Story 1 ⚠️
 
-- [ ] T002 [US1] CI workflow validation: actionlint + a deliberate-failure PR checklist in `docs/release.md` — Executor: builder · Reviewer: thinker
+- [x] T002 [US1] CI workflow validation: actionlint + a deliberate-failure PR checklist in `docs/release.md` — Executor: builder · Reviewer: thinker
 
 ### Implementation for User Story 1
 
-- [ ] T003 [US1] Backend implementation — see `## Backend` (appended by `backend:spec`) — Executor: builder · Reviewer: thinker
+- [x] T003 [US1] Backend implementation — see `## Backend` (appended by `backend:spec`) — Executor: builder · Reviewer: thinker
 - [ ] T004 [US1] QA tasks — see `## QA` (appended by `qa:strategy`) — Executor: thinker · Reviewer: reviewer · Effort: high
 
 **Checkpoint**: User Story 1 passes its tests independently.
@@ -55,11 +55,11 @@ No feature-specific setup (crate skeleton comes from 001).
 
 ### Tests for User Story 2 ⚠️
 
-- [ ] T005 [US2] release dry-run job + assertion step: no `secrets.*` publishing token referenced (SC-001) — Executor: builder · Reviewer: thinker
+- [x] T005 [US2] release dry-run job + assertion step: no `secrets.*` publishing token referenced (SC-001) — Executor: builder · Reviewer: thinker
 
 ### Implementation for User Story 2
 
-- [ ] T006 [US2] Backend implementation — see `## Backend` (appended by `backend:spec`) — Executor: builder · Reviewer: thinker
+- [x] T006 [US2] Backend implementation — see `## Backend` (appended by `backend:spec`) — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: User Story 2 passes its tests independently.
 
@@ -71,11 +71,11 @@ No feature-specific setup (crate skeleton comes from 001).
 
 ### Tests for User Story 3 ⚠️
 
-- [ ] T007 [US3] `docs/release.md` runbook review against brief K9 and ADR-0009 — Executor: builder · Reviewer: thinker
+- [x] T007 [US3] `docs/release.md` runbook review against brief K9 and ADR-0009 — Executor: builder · Reviewer: thinker
 
 ### Implementation for User Story 3
 
-- [ ] T008 [US3] Backend implementation — see `## Backend` (appended by `backend:spec`) — Executor: builder · Reviewer: thinker
+- [x] T008 [US3] Backend implementation — see `## Backend` (appended by `backend:spec`) — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: User Story 3 passes its tests independently.
 
@@ -107,19 +107,19 @@ Appended by `backend:spec`. Built by `backend:build` (ticks only this section). 
 
 ### Backend US1 — Every change is checked on Tier-1 sessions
 
-- [ ] T011 [US1] `.github/workflows/ci.yml` per spec FR-001/002 — via `devsecops:pipeline` — Executor: thinker · Reviewer: reviewer · Effort: high
+- [x] T011 [US1] `.github/workflows/ci.yml` per spec FR-001/002 — via `devsecops:pipeline` — Executor: thinker · Reviewer: reviewer · Effort: high
 
 **Checkpoint**: the US1 tests in this file's story phase pass (`cargo test`), plus the contract tests where they apply.
 
 ### Backend US2 — A tag publishes everything without a stored token
 
-- [ ] T012 [US2] `.github/workflows/release.yml` per FR-003/004 — via `devsecops:pipeline` — Executor: thinker · Reviewer: reviewer · Effort: high
+- [x] T012 [US2] `.github/workflows/release.yml` per FR-003/004 — via `devsecops:pipeline` — Executor: thinker · Reviewer: reviewer · Effort: high
 
 **Checkpoint**: the US2 tests in this file's story phase pass (`cargo test`), plus the contract tests where they apply.
 
 ### Backend US3 — First release by hand, then token retirement
 
-- [ ] T013 [US3] `docs/release.md` runbook + Tier-1 manual matrix — Executor: builder · Reviewer: thinker
+- [x] T013 [US3] `docs/release.md` runbook + Tier-1 manual matrix — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: the US3 tests in this file's story phase pass (`cargo test`), plus the contract tests where they apply.
 
@@ -129,7 +129,13 @@ Appended by `backend:spec`. Built by `backend:build` (ticks only this section). 
 
 Appended by `qa:strategy`. Executed by `qa:e2e` / `qa:load` after the builds (ticks only this section).
 
-- [ ] T014 Gate wiring spec for `devsecops:pipeline` from `test-strategy.md` §6 (PR, dev, main, tag, nightly) — Executor: thinker · Reviewer: reviewer · Effort: high
-- [ ] T015 Flaky-test policy wiring (nextest config, quarantine label) — Executor: builder · Reviewer: thinker
+- [x] T014 Gate wiring spec for `devsecops:pipeline` from `test-strategy.md` §6 (PR, dev, main, tag, nightly) — Executor: thinker · Reviewer: reviewer · Effort: high
+- [x] T015 Flaky-test policy wiring (nextest config, quarantine label) — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: the journeys and suites in `qa.md` are green in CI; the exit criteria are met → Verified in `specs/README.md`.
+
+---
+
+## Convergence — 2026-10-24
+
+Converged. FR-001/FR-002 map to `.github/workflows/ci.yml` and the local `tools` action, which run the same `make` recipes as locally on x86_64 and aarch64, with `ci-ok` as the single required check. FR-003/FR-004 map to `.github/workflows/release.yml`: SemVer tags on `main`, reproducible tarballs and `SHA256SUMS`, and crates.io Trusted Publishing in a protected `release` environment with no stored token (SC-001 is checked by `.github/scripts/no-publish-token.sh`). `nightly.yml` and Dependabot are included. The tools image gains cargo-deny, cargo-nextest and gitleaks; `make test` runs nextest. The first GitHub run of PR #71 was green on both architectures in about 4 minutes. actionlint is clean. Owner decisions pending: the `ksni` Unlicense exception in `deny.toml`. Owner setup before the first tag (environment, rulesets, Trusted Publisher, the manual 0.1.0 publish) is in `docs/release.md`. Still open: T009 (release dry run via `workflow_dispatch`, which needs the workflow on the default branch) and the QA tasks (T004, T010).

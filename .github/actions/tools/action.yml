@@ -1,0 +1,31 @@
+name: rstory tools image
+description: >-
+  Build the tools image and point the make recipes at runner-local caches, so every CI job runs
+  the same `make` recipes as a developer (README "Development", docs/release.md "Pipelines").
+inputs:
+  fetch:
+    description: Resolve crates into the cargo cache volume (make fetch), the networked step.
+    required: false
+    default: "true"
+runs:
+  using: composite
+  steps:
+    - name: Point the recipes at runner-local caches
+      shell: bash
+      run: |
+        set -euo pipefail
+        # Docker on GitHub's runners: rootful, so --cpus/--memory apply without cgroup delegation.
+        # Bind-mounted host dirs (not named volumes) so later steps can read JUnit and binaries.
+        install -d -m 0777 "$RUNNER_TEMP/target" "$RUNNER_TEMP/npm"
+        {
+          echo "CONTAINER_ENGINE=docker"
+          echo "TARGET_VOLUME=$RUNNER_TEMP/target"
+          echo "NPM_VOLUME=$RUNNER_TEMP/npm"
+        } >> "$GITHUB_ENV"
+    - name: Build the tools image (make image)
+      shell: bash
+      run: make image
+    - name: Resolve crates (make fetch)
+      if: inputs.fetch == 'true'
+      shell: bash
+      run: make fetch
