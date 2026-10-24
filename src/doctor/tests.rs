@@ -219,11 +219,11 @@ fn rows() -> Vec<Row> {
         },
         Row {
             name: "5_shell_unsupported",
-            mutate: |f| f.gnome.as_mut().unwrap().shell_version = Some("52.1".into()),
+            mutate: |f| f.gnome.as_mut().unwrap().shell_version = Some("51.1".into()),
             id: "gnome_shell",
             status: Status::Warn,
-            message: "panel icon not supported on GNOME Shell 52; CLI and picker work",
-            hint: "GNOME Shell 48 to 51",
+            message: "panel icon not supported on GNOME Shell 51; CLI and picker work",
+            hint: "GNOME Shell 48 to 50",
         },
         Row {
             name: "6_no_tray_host",
@@ -1275,4 +1275,19 @@ mod probes {
         let args: Vec<String> = args.iter().map(|s| (*s).to_string()).collect();
         run_with(&args, &rig.env, &mut bridge(), term, out, err)
     }
+}
+
+/// Doctor's supported range is the one the extension declares to GNOME (one source of truth).
+#[test]
+fn the_supported_shell_range_matches_the_extension_metadata() {
+    let meta: serde_json::Value =
+        serde_json::from_str(include_str!("../../extension/metadata.json")).unwrap();
+    let declared: Vec<u32> = meta["shell-version"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|v| v.as_str().unwrap().parse().unwrap())
+        .collect();
+    let range: Vec<u32> = super::checks::SHELL_SUPPORTED.collect();
+    assert_eq!(declared, range);
 }

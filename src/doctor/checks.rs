@@ -17,7 +17,7 @@ use crate::launch::{LaunchPlan, Source};
 use crate::session::{BackendSelection, Reason};
 
 /// The GNOME Shell majors the panel icon supports.
-pub const SHELL_SUPPORTED: std::ops::RangeInclusive<u32> = 48..=51;
+pub const SHELL_SUPPORTED: std::ops::RangeInclusive<u32> = 48..=50;
 
 /// What kind of graphical session the environment describes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -321,7 +321,7 @@ fn shell(g: &GnomeFacts) -> Option<Check> {
         "gnome_shell",
         Status::Warn,
         format!("panel icon not supported on GNOME Shell {major}; CLI and picker work"),
-        "the panel icon needs GNOME Shell 48 to 51",
+        "the panel icon needs GNOME Shell 48 to 50",
     ))
 }
 

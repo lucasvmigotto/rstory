@@ -2,7 +2,7 @@
   "uuid": "rstory@lucasvmigotto.github.io",
   "name": "rstory",
   "description": "Panel icon and menu for the rstory clipboard history. Talks only to the rstory daemon over its control socket.",
-  "shell-version": ["48", "49", "50", "51"],
+  "shell-version": ["48", "49", "50"],
   "version-name": "0.1.0",
   "url": "https://github.com/lucasvmigotto/rstory"
 }

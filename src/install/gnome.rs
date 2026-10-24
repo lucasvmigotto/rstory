@@ -306,7 +306,7 @@ fn execute_inner(
 
 /// Entry point for `rstory install-gnome-extension <args>`; uses the real session.
 /// `rstory install-gnome-extension --help`.
-pub const HELP: &str = "Install the rstory GNOME Shell extension (Shell 48 to 51) from this binary.
+pub const HELP: &str = "Install the rstory GNOME Shell extension (Shell 48 to 50) from this binary.
 
 Usage: rstory install-gnome-extension [--enable | --uninstall]
 
@@ -345,6 +345,21 @@ pub fn run(args: &[String]) -> u8 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_extensions_gnome_org_zip_excludes_the_same_files() {
+        // `make ext-pack` (scripts/ext-pack.py) ships what this installer installs.
+        let script = include_str!("../../scripts/ext-pack.py");
+        let line = script
+            .lines()
+            .find(|l| l.starts_with("DEV_ONLY = {"))
+            .expect("DEV_ONLY in scripts/ext-pack.py");
+        let mut listed: Vec<&str> = line.split('"').skip(1).step_by(2).collect();
+        listed.sort_unstable();
+        let mut ours = DEV_ONLY.to_vec();
+        ours.sort_unstable();
+        assert_eq!(listed, ours);
+    }
 
     #[test]
     fn the_binary_never_embeds_node_modules() {
