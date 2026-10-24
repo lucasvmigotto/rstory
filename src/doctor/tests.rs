@@ -127,7 +127,12 @@ fn healthy() -> Facts {
         }),
         picker: LaunchPlan::Found {
             source: Source::List,
-            argv: vec!["ghostty".into(), "-e".into(), "rstory".into(), "pick".into()],
+            argv: vec![
+                "ghostty".into(),
+                "-e".into(),
+                "rstory".into(),
+                "pick".into(),
+            ],
         },
         autostart: vec![(
             AutostartKind::Xdg,
@@ -491,14 +496,20 @@ mod checks {
         assert!(a.hint.as_deref().unwrap().contains("install-autostart"));
         assert_eq!(exit_code(&checks), 0);
         f.autostart = vec![
-            (AutostartKind::Xdg, PathBuf::from("/c/autostart/rstory.desktop")),
+            (
+                AutostartKind::Xdg,
+                PathBuf::from("/c/autostart/rstory.desktop"),
+            ),
             (
                 AutostartKind::Systemd,
                 PathBuf::from("/c/systemd/user/rstory.service"),
             ),
         ];
         let m = find(&evaluate(&f), "autostart").message.clone();
-        assert!(m.contains("rstory.desktop") && m.contains("rstory.service"), "{m}");
+        assert!(
+            m.contains("rstory.desktop") && m.contains("rstory.service"),
+            "{m}"
+        );
     }
 
     #[test]
@@ -507,7 +518,12 @@ mod checks {
         for (store, status) in [
             (StoreFact::Unknown, Status::Fail),
             (StoreFact::Missing(PathBuf::from(STORE)), Status::Ok),
-            (StoreFact::Unreadable { dir: PathBuf::from(STORE) }, Status::Fail),
+            (
+                StoreFact::Unreadable {
+                    dir: PathBuf::from(STORE),
+                },
+                Status::Fail,
+            ),
             (StoreFact::Private { entries: None }, Status::Ok),
         ] {
             f.store = store.clone();
@@ -585,7 +601,10 @@ mod render {
     #[test]
     fn text_ends_with_the_summary() {
         let healthy_text = render::text(&evaluate(&healthy()), &term(false));
-        assert!(healthy_text.ends_with("\nEverything looks good.\n"), "{healthy_text}");
+        assert!(
+            healthy_text.ends_with("\nEverything looks good.\n"),
+            "{healthy_text}"
+        );
         let mut f = healthy();
         (rows()[3].mutate)(&mut f);
         assert!(render::text(&evaluate(&f), &term(false)).ends_with("\n1 warning.\n"));
@@ -614,7 +633,15 @@ mod render {
     #[test]
     fn every_line_names_what_it_is_about() {
         let t = render::text(&evaluate(&healthy()), &term(false));
-        for label in ["Session", "Backend", "Store", "Daemon", "Extension", "Picker", "Autostart"] {
+        for label in [
+            "Session",
+            "Backend",
+            "Store",
+            "Daemon",
+            "Extension",
+            "Picker",
+            "Autostart",
+        ] {
             assert!(t.contains(label), "{label} in {t}");
         }
     }
