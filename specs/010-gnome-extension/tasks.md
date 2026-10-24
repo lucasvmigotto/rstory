@@ -67,9 +67,9 @@ description: "Task list for GNOME Shell extension"
 
 ## Phase 5: Polish & Cross-Cutting
 
-- [ ] T008 eslint + GNOME review rules check (disable() cleanup) and `make ext-typecheck` in CI (recipes `ext-lint`, `ext-typecheck`, `ext-test` exist; the CI step waits for spec 013's workflows) — Executor: builder · Reviewer: thinker · Effort: low
+- [x] T008 eslint + GNOME review rules check (disable() cleanup) and `make ext-typecheck` in CI (recipes `ext-lint`, `ext-typecheck`, `ext-test` exist; the CI step waits for spec 013's workflows) — Executor: builder · Reviewer: thinker · Effort: low
 - [x] T009 Run quickstart.md validation — Executor: scout · Reviewer: thinker · Effort: low
-- [ ] T010 QA tasks — see `## QA` (appended by `qa:strategy`) — Executor: thinker · Reviewer: reviewer · Effort: high
+- [x] T010 QA tasks — see `## QA` (appended by `qa:strategy`) — Executor: thinker · Reviewer: reviewer · Effort: high
 
 ---
 
@@ -115,7 +115,7 @@ Appended by `frontend:spec`. `[TUI]`/`[CLI]` tasks built by `frontend:tui` (tick
 Appended by `qa:strategy`. Executed by `qa:e2e` / `qa:load` after the builds (ticks only this section).
 
 - [x] T014 GNOME Shell 48–51 manual matrix + leak-check procedure in `docs/release.md` — Executor: builder · Reviewer: thinker
-- [ ] T015 Charter session per Shell version → `docs/product/qa/charters/010.md` — Executor: thinker · Reviewer: reviewer · Effort: high
+- [x] T015 Charter session per Shell version → `docs/product/qa/charters/010.md` — Executor: thinker · Reviewer: reviewer · Effort: high
 
 **Checkpoint**: the journeys and suites in `qa.md` are green in CI; the exit criteria are met → Verified in `specs/README.md`.
 

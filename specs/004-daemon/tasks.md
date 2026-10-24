@@ -103,7 +103,7 @@ description: "Task list for Daemon & control socket"
 - [x] T013 RSS check after 10 000 captures (SC-002) in `tests/daemon_rss.rs` — Executor: builder · Reviewer: thinker
 - [x] T014 [P] F11 canary: capture a canary at RUST_LOG=trace; assert absent from logs in `tests/fitness/canary.rs` — Executor: builder · Reviewer: thinker
 - [ ] T015 Run quickstart.md validation — Executor: scout · Reviewer: thinker · Effort: low
-- [ ] T016 QA tasks — see `## QA` (appended by `qa:strategy`) — Executor: thinker · Reviewer: reviewer · Effort: high
+- [x] T016 QA tasks — see `## QA` (appended by `qa:strategy`) — Executor: thinker · Reviewer: reviewer · Effort: high
 
 ---
 
@@ -178,7 +178,7 @@ Appended by `qa:strategy`. Executed by `qa:e2e` / `qa:load` after the builds (ti
 
 - [x] T028 `tests/e2e/E2E-K1.rs`, `E2E-K4.rs`, `E2E-PEER.rs` (pty/expectrl harness + session launchers in `tests/e2e/support.rs`) — Executor: builder · Reviewer: reviewer · Effort: high
 - [x] T029 Burst and soak harness `tests/perf/{burst,soak}.rs` per the load profile — Executor: builder · Reviewer: reviewer · Effort: high
-- [ ] T030 Charter session → `docs/product/qa/charters/004.md` — Executor: thinker · Reviewer: reviewer · Effort: high
+- [x] T030 Charter session → `docs/product/qa/charters/004.md` — Executor: thinker · Reviewer: reviewer · Effort: high
 
 **Checkpoint**: the journeys and suites in `qa.md` are green in CI; the exit criteria are met → Verified in `specs/README.md`.
 

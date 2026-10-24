@@ -90,7 +90,7 @@ description: "Task list for Store & history"
 
 - [x] T015 [P] `benches/store.rs`: open+list 500 < 10 ms, insert ≤ 20 ms (SC-003) — Executor: builder · Reviewer: thinker
 - [x] T016 Run quickstart.md validation — Executor: scout · Reviewer: thinker · Effort: low
-- [ ] T017 QA tasks — see `## QA` (appended by `qa:strategy`) — Executor: thinker · Reviewer: reviewer · Effort: high
+- [x] T017 QA tasks — see `## QA` (appended by `qa:strategy`) — Executor: thinker · Reviewer: reviewer · Effort: high
 
 ---
 
@@ -157,7 +157,7 @@ Appended by `backend:spec`. Built by `backend:build` (ticks only this section). 
 
 Appended by `qa:strategy`. Executed by `qa:e2e` / `qa:load` after the builds (ticks only this section).
 
-- [ ] T028 Exploratory charter session for the store (SIGKILL during bursts) → notes in `docs/product/qa/charters/001.md` — Executor: thinker · Reviewer: reviewer · Effort: high
+- [x] T028 Exploratory charter session for the store (SIGKILL during bursts) → notes in `docs/product/qa/charters/001.md` — Executor: thinker · Reviewer: reviewer · Effort: high
 - [x] T029 Nightly property job with 100 000 cases (gate wiring for `devsecops:pipeline`) — Executor: builder · Reviewer: thinker · Effort: low
 
 **Checkpoint**: the journeys and suites in `qa.md` are green in CI; the exit criteria are met → Verified in `specs/README.md`.
