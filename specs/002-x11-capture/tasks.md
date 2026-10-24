@@ -146,7 +146,7 @@ Appended by `backend:spec`. Built by `backend:build` (ticks only this section). 
 
 Appended by `qa:strategy`. Executed by `qa:e2e` / `qa:load` after the builds (ticks only this section).
 
-- [ ] T022 Bridge-mode CI environment (headless mutter) in `tests/support/mutter.rs` validated by `qa:e2e` — Executor: builder · Reviewer: thinker
+- [x] T022 Bridge-mode CI environment (headless mutter) in `tests/support/mutter.rs` validated by `qa:e2e` — Executor: builder · Reviewer: thinker
 - [ ] T023 GNOME 48–51 manual matrix rows in `docs/release.md` (GUI-app copies, restore into Wayland apps) — Executor: builder · Reviewer: thinker
 - [ ] T024 Charter session → `docs/product/qa/charters/002.md` — Executor: thinker · Reviewer: reviewer · Effort: high
 

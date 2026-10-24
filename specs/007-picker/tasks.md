@@ -86,7 +86,7 @@ description: "Task list for Terminal picker"
 
 - [x] T011 [P] `benches/picker_first_frame.rs` 20 and 500 entries (F6, SC-001/002) — Executor: builder · Reviewer: thinker
 - [ ] T012 Run quickstart.md validation — Executor: scout · Reviewer: thinker · Effort: low
-- [ ] T013 QA tasks — see `## QA` (appended by `qa:strategy`) — Executor: thinker · Reviewer: reviewer · Effort: high
+- [x] T013 QA tasks — see `## QA` (appended by `qa:strategy`) — Executor: thinker · Reviewer: reviewer · Effort: high
 
 ---
 
@@ -145,7 +145,7 @@ Appended by `frontend:spec`. `[TUI]`/`[CLI]` tasks built by `frontend:tui` (tick
 
 Appended by `qa:strategy`. Executed by `qa:e2e` / `qa:load` after the builds (ticks only this section).
 
-- [ ] T021 `tests/e2e/E2E-K2.rs` (keyboard-only recall through a pty, X11 and sway; negative read-only path) — Executor: builder · Reviewer: reviewer · Effort: high
+- [x] T021 `tests/e2e/E2E-K2.rs` (keyboard-only recall through a pty, X11 and sway; negative read-only path) — Executor: builder · Reviewer: reviewer · Effort: high
 
 **Checkpoint**: the journeys and suites in `qa.md` are green in CI; the exit criteria are met → Verified in `specs/README.md`.
 

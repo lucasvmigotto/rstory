@@ -13,16 +13,17 @@ means the same as a green job in CI.
 
 | Workflow | Runs on | Jobs |
 |---|---|---|
-| `.github/workflows/ci.yml` | PRs into `dev` and `main`; pushes to `dev` and `main`; called by `release.yml` | `plan`, `checks`, `lint`, `test`, `integration`, `static`, `perf`, `ci-ok`, `report-failure` |
+| `.github/workflows/ci.yml` | PRs into `dev` and `main`; pushes to `dev` and `main`; called by `release.yml` | `plan`, `checks`, `lint`, `test`, `integration`, `e2e`, `static`, `perf`, `ci-ok`, `report-failure` |
 | `.github/workflows/release.yml` | tags `X.Y.Z` (plain SemVer, no `v`); manual `workflow_dispatch` (dry run only) | `verify`, `ci` (the main set), `package`, `SHA256SUMS`, `cargo publish --dry-run`, `publish`, `GitHub release`, `report-failure` |
 | `.github/workflows/nightly.yml` | every day 03:17 UTC; manual | `property`, `audit`, `quarantine`, `report-failure` |
 
-Job graph of `ci.yml` (the `lint`, `test`, `integration`, `static` and `perf` jobs run once per
+Job graph of `ci.yml` (the `lint`, `test`, `integration`, `e2e`, `static` and `perf` jobs run once per
 architecture: x86_64 on `ubuntu-24.04`, aarch64 on `ubuntu-24.04-arm`):
 
 ```text
 plan ──┬─ test (x86_64, aarch64) ─────────┐
        ├─ integration (x86_64, aarch64) ──┤
+       ├─ e2e (x86_64, aarch64) ──────────┤
        └─ perf (x86_64, aarch64)* ────────┤
 checks (x86_64) ──────────────────────────┼─ ci-ok ── report-failure (branch pushes only, on failure)
 lint (x86_64, aarch64) ───────────────────┤
@@ -36,6 +37,7 @@ static (x86_64, aarch64) ─────────────────┘
 | `lint` | `lint` (clippy `-D warnings`, session tests compiled too) |
 | `test` | `test` (unit, property, snapshot, contract, fitness F1, F9, F10, F11, RSS and burst tests; doctests) |
 | `integration` | `test-integration` (Xvfb, headless sway with XWayland, headless mutter bridge mode) |
+| `e2e` | `test-e2e-smoke` (K2, K3, K6) on PRs into `dev`; `test-e2e` (K1 to K7, PEER, launch table) on pushes to `dev` and for the main set |
 | `static` | `build-static` (musl static build, F2 static, F5 at most 15 MiB) |
 | `perf` | `bench` (store benchmarks, p95 within 2x budget on shared runners) |
 | `ci-ok` | none: fails unless every gate above succeeded (`perf` may be skipped). **The one required status check.** |
@@ -116,15 +118,15 @@ artifacts for 30 days); PR CI under 15 minutes.
 
 Gaps against §6, not wired because the suites do not exist yet:
 
-- e2e smoke (K2, K3, K6) on PRs and full e2e (K1 to K7) on `dev`: there is no `tests/e2e_*`
-  suite. When `qa:e2e` adds one, it runs inside `make test-integration` or a new recipe added to
-  the `integration` job.
+- E2E-PEER runs the real daemon against a second uid only where the job can switch uid
+  (`setpriv --reuid`); the unprivileged tools container cannot, so it checks the daemon's accept
+  loop in-process there (`tests/e2e/E2E-PEER.rs`).
 - Perf smoke F6 (picker first frame) and F7 (capture latency) at 200 ms: `make bench` runs the
   store benchmark only.
 - Nightly idle soak (daemon for 30 minutes, RSS flat): no soak test exists. F10 is covered by the
   idle-wake-up tests in `make test`.
-- FR-002's headless mutter `--no-x11` case (no capture path): no session test starts mutter
-  with `--no-x11` yet; the job runs whatever `make test-integration` holds.
+- FR-002's headless mutter `--no-x11` case (no capture path) is covered by E2E-K4 in the `e2e`
+  job (`Mutter::start_no_x11`).
 - `filter_props` hardcodes 10 000 cases, so `PROPTEST_CASES` does not change it; `store_crash`
   and tests on proptest's default config follow the variable.
 

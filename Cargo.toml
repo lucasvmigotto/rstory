@@ -77,6 +77,12 @@ required-features = ["session-tests"]
 name = "wayland_serve"
 required-features = ["session-tests"]
 
+# End-to-end journeys: the real binary in headless sessions, driven through a pty (`make test-e2e`).
+[[test]]
+name = "e2e"
+path = "tests/e2e/main.rs"
+required-features = ["session-tests"]
+
 [[bench]]
 name = "store"
 harness = false
@@ -129,6 +135,8 @@ assert_cmd = "2"
 insta = "1"
 proptest = "1.12.0"
 tempfile = "3.27.0"
+# Pty-driven end-to-end journeys (tests/e2e): spawn the real binary under a terminal.
+expectrl = "0.8"
 
 # insta: snapshot diffs stay fast in debug test builds.
 [profile.dev.package.insta]
