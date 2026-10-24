@@ -26,6 +26,16 @@ pub struct Mutter {
 
 impl Mutter {
     pub fn start() -> Result<Self, Box<dyn std::error::Error>> {
+        Self::start_with(true)
+    }
+
+    /// `mutter --no-x11`: no data-control and no XWayland, so nothing can capture the clipboard.
+    /// [`Mutter::display`] stays empty.
+    pub fn start_no_x11() -> Result<Self, Box<dyn std::error::Error>> {
+        Self::start_with(false)
+    }
+
+    fn start_with(x11: bool) -> Result<Self, Box<dyn std::error::Error>> {
         let id = format!(
             "{}-{}",
             std::process::id(),
@@ -48,8 +58,12 @@ impl Mutter {
 
         let log_path = dir.join("mutter.log");
         let log = File::create(&log_path)?;
-        let child = Command::new("mutter")
-            .args(["--headless", "--wayland", "--virtual-monitor", "1280x720"])
+        let mut mutter = Command::new("mutter");
+        mutter.args(["--headless", "--wayland", "--virtual-monitor", "1280x720"]);
+        if !x11 {
+            mutter.arg("--no-x11");
+        }
+        let child = mutter
             .arg(format!("--wayland-display={wayland_display}"))
             .env("XDG_RUNTIME_DIR", &dir)
             .env("DBUS_SESSION_BUS_ADDRESS", &address)
@@ -67,6 +81,12 @@ impl Mutter {
             display: String::new(),
         };
 
+        if !x11 {
+            let wl = m.dir.join(&m.wayland_display);
+            wait_for(Duration::from_secs(20), || wl.exists().then_some(()))
+                .ok_or("mutter did not become ready")?;
+            return Ok(m);
+        }
         let display = wait_for(Duration::from_secs(20), || {
             let log = std::fs::read_to_string(&log_path).ok()?;
             let rest = log.split("Using public X11 display :").nth(1)?;
