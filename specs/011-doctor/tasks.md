@@ -26,7 +26,7 @@ No feature-specific setup (crate skeleton comes from 001).
 
 **⚠️ CRITICAL**: blocks every story in this feature.
 
-- [ ] T001 Define `Check`, statuses, text/JSON renderers and exit scale in `src/doctor/mod.rs` — Executor: builder · Reviewer: thinker
+- [x] T001 Define `Check`, statuses, text/JSON renderers and exit scale in `src/doctor/mod.rs` — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: foundation ready.
 
@@ -38,12 +38,12 @@ No feature-specific setup (crate skeleton comes from 001).
 
 ### Tests for User Story 1 ⚠️
 
-- [ ] T002 [P] [US1] healthy-baseline test + JSON schema test in `src/doctor/tests.rs` — Executor: builder · Reviewer: thinker
+- [x] T002 [P] [US1] healthy-baseline test + JSON schema test in `src/doctor/tests.rs` — Executor: builder · Reviewer: thinker
 
 ### Implementation for User Story 1
 
-- [ ] T003 [US1] Terminal UI / CLI implementation — see `## Frontend` (appended by `frontend:spec`; `[TUI]`/`[CLI]` tasks built by `frontend:tui`) — Executor: builder · Reviewer: thinker
-- [ ] T004 [US1] Backend implementation — see `## Backend` (appended by `backend:spec`) — Executor: builder · Reviewer: thinker
+- [x] T003 [US1] Terminal UI / CLI implementation — see `## Frontend` (appended by `frontend:spec`; `[TUI]`/`[CLI]` tasks built by `frontend:tui`) — Executor: builder · Reviewer: thinker
+- [x] T004 [US1] Backend implementation — see `## Backend` (appended by `backend:spec`) — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: User Story 1 passes its tests independently.
 
@@ -55,11 +55,11 @@ No feature-specific setup (crate skeleton comes from 001).
 
 ### Tests for User Story 2 ⚠️
 
-- [ ] T005 [P] [US2] table-driven failure tests (8 rows, status/message/hint; SC-001) — Executor: builder · Reviewer: thinker
+- [x] T005 [P] [US2] table-driven failure tests (8 rows, status/message/hint; SC-001) — Executor: builder · Reviewer: thinker
 
 ### Implementation for User Story 2
 
-- [ ] T006 [US2] Backend implementation — see `## Backend` (appended by `backend:spec`) — Executor: builder · Reviewer: thinker
+- [x] T006 [US2] Backend implementation — see `## Backend` (appended by `backend:spec`) — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: User Story 2 passes its tests independently.
 
@@ -67,8 +67,8 @@ No feature-specific setup (crate skeleton comes from 001).
 
 ## Phase 5: Polish & Cross-Cutting
 
-- [ ] T007 Assert doctor never prints content (canary) — Executor: builder · Reviewer: thinker
-- [ ] T008 Run quickstart.md validation — Executor: scout · Reviewer: thinker · Effort: low
+- [x] T007 Assert doctor never prints content (canary) — Executor: builder · Reviewer: thinker
+- [x] T008 Run quickstart.md validation — Executor: scout · Reviewer: thinker · Effort: low
 - [ ] T009 QA tasks — see `## QA` (appended by `qa:strategy`) — Executor: thinker · Reviewer: reviewer · Effort: high
 
 ---
@@ -92,7 +92,7 @@ Appended by `backend:spec`. Built by `backend:build` (ticks only this section). 
 
 ### Backend US2 — Every detectable failure is explained
 
-- [ ] T010 [US2] Probe adapters with timeouts (session, store, daemon status, extension, shell version, launch, autostart) in `src/doctor/probes.rs` — Executor: builder · Reviewer: thinker
+- [x] T010 [US2] Probe adapters with timeouts (session, store, daemon status, extension, shell version, launch, autostart) in `src/doctor/probes.rs` — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: the US2 tests in this file's story phase pass (`cargo test`), plus the contract tests where they apply.
 
@@ -105,7 +105,7 @@ Appended by `frontend:spec`. `[TUI]`/`[CLI]` tasks built by `frontend:tui` (tick
 
 ### Frontend US1 — See what works and what's missing
 
-- [ ] T011 [US1] [CLI] text renderer (CheckLine, summary line) and `--json` in `src/doctor/render.rs` — Executor: builder · Reviewer: thinker
+- [x] T011 [US1] [CLI] text renderer (CheckLine, summary line) and `--json` in `src/doctor/render.rs` — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: the US1 snapshot/journey tests pass; `cargo insta review` is clean.
 
@@ -118,3 +118,9 @@ Appended by `qa:strategy`. Executed by `qa:e2e` / `qa:load` after the builds (ti
 - [ ] T012 Reuse E2E-K1/K4 assertions on doctor output — Executor: builder · Reviewer: thinker · Effort: low
 
 **Checkpoint**: the journeys and suites in `qa.md` are green in CI; the exit criteria are met → Verified in `specs/README.md`.
+
+---
+
+## Convergence — 2026-10-24
+
+Converged, both layers. `rstory doctor [--json]` maps to `src/doctor/{checks,probes,mod}.rs`. A pure `evaluate(Facts)` covers the whole failure table on made-up facts. `ProbeEnv` is the single injected input: env, PATH, socket, store, config and data paths, `gnome-shell`/`gnome-extensions`, and a 300 ms cap per external program. Only `doctor::run` reads the process environment. The checks are session, backend, store, daemon, pause, tray, gnome_shell, gnome_extension, picker and autostart. JSON is `{"schema":1,"checks":[{id,status,message,hint}]}`, and the exit codes are 0 ok, 1 warn, 2 fail. Doctor writes nothing (a before/after tree test), and a planted canary never appears in its output. 48 unit tests (22 snapshots) and 7 process tests with a cleared environment. `fmt-check`, `lint` and `test` are green after the rebase onto 007. Readings the spec left open: rows that would only say "fine" are omitted (gnome_shell when supported, tray on GNOME, pause when recording); missing autostart is `info`. Open: real backend selection can take about 3 s on Wayland without XWayland, against a 1 s budget; there's no D-Bus `ShellVersion` fallback; nothing has run on a real session. The QA tasks (T009, T012) remain.

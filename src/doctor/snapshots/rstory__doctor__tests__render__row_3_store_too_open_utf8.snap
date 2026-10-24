@@ -1,0 +1,14 @@
+---
+source: src/doctor/tests.rs
+expression: "render::text(&evaluate(&f), &term(ascii))"
+---
+✓ Session    Wayland (GNOME Shell 48.7)
+✓ Backend    x11 via XWayland bridge (no data-control on this compositor)
+✗ Store      permissions are too open: other users could read your history in /home/u/.local/state/rstory
+  → chmod 700 /home/u/.local/state/rstory && chmod 600 /home/u/.local/state/rstory/*
+✓ Daemon     running, recording
+✓ Extension  installed 0.1.0, enabled
+✓ Picker     ghostty
+✓ Autostart  /home/u/.config/autostart/rstory.desktop
+
+1 failure.

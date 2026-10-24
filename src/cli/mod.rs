@@ -95,6 +95,8 @@ pub fn run(args: &[String]) -> u8 {
             };
             return crate::picker::run(args, &paths);
         }
+        // Spec 011: doctor has its own exit scale (0 ok, 1 warnings, 2 failures).
+        args::Command::Doctor { args } => return crate::doctor::run(args),
         _ => {}
     }
     let env = env::Env::process();
@@ -136,8 +138,8 @@ fn dispatch(command: args::Command, io: &mut commands::Io<'_>) -> Result<(), err
         }
         // `src/main.rs` runs the daemon itself: the cli module may not depend on it.
         Command::Daemon { .. } => Err(unavailable("daemon")),
-        Command::Doctor { .. } => Err(unavailable("doctor")),
-        Command::InstallAutostart { .. }
+        Command::Doctor { .. }
+        | Command::InstallAutostart { .. }
         | Command::InstallGnomeExtension { .. }
         | Command::Pick { .. }
         | Command::Tray => unreachable!("handled in `run`"),

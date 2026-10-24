@@ -1,0 +1,14 @@
+---
+source: src/doctor/tests.rs
+expression: "render::text(&evaluate(&f), &term(ascii))"
+---
+✓ Session    Wayland (GNOME Shell 48.7)
+✗ Backend    This compositor offers no clipboard-monitoring protocol and no XWayland, so rstory cannot see what you copy.
+  → enable XWayland in your compositor, or use a compositor with data-control
+✓ Store      private (0700/0600), 8 entries
+✓ Daemon     running, recording
+✓ Extension  installed 0.1.0, enabled
+✓ Picker     ghostty
+✓ Autostart  /home/u/.config/autostart/rstory.desktop
+
+1 failure.
