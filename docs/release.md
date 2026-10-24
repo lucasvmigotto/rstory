@@ -53,10 +53,20 @@ any failure on a tag ── report-failure
 
 - `verify` refuses a tag that is not `X.Y.Z`, not on `main`, or not equal to the `Cargo.toml`
   version, before anything is built. It also runs the SC-001 assertion
-  (`.github/scripts/no-publish-token.sh`).
+  (`.github/scripts/no-publish-token.sh`), which rejects any use of the `secrets` context
+  (including `toJSON(secrets)` and `secrets: inherit`), credential-like `vars.*`, and any
+  `CARGO_REGISTRY_TOKEN` or `CARGO_REGISTRIES_*_TOKEN` not set from the OIDC exchange;
+  `make sc001-test` proves each pattern is caught.
+- The published crate ships only what the build needs (`include` in `Cargo.toml`: `src/`,
+  `build.rs`, `assets/`, `extension/` without its dev-only files, `scripts/ext-pack.py`, the
+  licence and README), not `specs/`, `docs/` or `tests/`. Check it with `cargo package --list`.
 - `publish` is the only job with `id-token: write`, and the only one in the `release` environment.
   It exchanges the job's OIDC identity for a short-lived crates.io token
-  (`rust-lang/crates-io-auth-action`, revoked when the job ends) and runs `make publish`. When the
+  (`rust-lang/crates-io-auth-action`, revoked when the job ends) and runs `make publish`, which
+  is `cargo publish --locked --no-verify`. It must not verify: verification builds the packaged
+  crate, so every dependency's `build.rs` and proc macro would run with the token in its
+  environment and the network on. The `cargo publish --dry-run` job (`make publish-dry-run`)
+  does verify the same commit, and `publish` needs it. When the
   version is already on crates.io (a re-run after the GitHub release step failed), it skips the
   publish.
 - `GitHub release` runs only after `publish` succeeded, so a failed publish never creates a
@@ -197,8 +207,10 @@ The workflows cannot configure these; the owner does, once. Nothing here is a st
      (only release tags reach it);
    - no environment secrets and no variables.
 4. **Rulesets for `dev` and `main`**: require a pull request; require the status check `ci-ok`
-   (it appears after the first CI run); block force pushes and deletions. Optionally a tag
-   ruleset that lets only the owner create tags matching `*.*.*`.
+   (it appears after the first CI run); block force pushes and deletions.
+   **Also required: a tag ruleset** that lets only the owner create tags matching `*.*.*`.
+   Without it any collaborator with write access can push a release tag, and the environment's
+   reviewer would be the only gate before publish.
 5. **Labels**: create `quarantine` (flaky-test policy). The failure reporter needs no label; it
    finds its issue by title.
 6. **Security settings**: secret scanning with push protection, Dependabot alerts.

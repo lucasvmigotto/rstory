@@ -42,7 +42,7 @@ NPM_VOLUME ?= rstory-tools-npm
 EXT_MOUNT := -v $(NPM_VOLUME):/src/extension/node_modules
 TTY := $(shell [ -t 0 ] && echo -it)
 
-.PHONY: help image fetch fmt fmt-check lint check test test-quarantine bench test-integration test-e2e test-e2e-smoke test-perf test-soak build build-static test-launch ext-lint ext-test ext-pack ext-deps ext-typecheck deny audit secret-scan publish-dry-run publish doctor shell clean-cache
+.PHONY: help image fetch fmt fmt-check lint check test test-quarantine bench test-integration test-e2e test-e2e-smoke test-perf test-soak build build-static test-launch ext-lint ext-test ext-pack ext-deps ext-typecheck deny audit secret-scan publish-dry-run publish sc001-test doctor shell clean-cache
 
 help: ## List recipes
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-17s %s\n", $$1, $$2}'
@@ -133,9 +133,12 @@ secret-scan: image ## gitleaks over the working tree (redacted output), offline
 publish-dry-run: image ## cargo publish --dry-run (packages and verifies the crate; networked)
 	$(RUN) $(IMAGE) cargo publish --locked --dry-run
 
-publish: image ## cargo publish; reads CARGO_REGISTRY_TOKEN from the caller's environment, never from a file (networked)
+publish: image ## cargo publish --no-verify (publish-dry-run verified the same commit; no build code runs with the token); reads CARGO_REGISTRY_TOKEN from the caller's environment, never from a file (networked)
 	@[ -n "$$CARGO_REGISTRY_TOKEN" ] || { echo "CARGO_REGISTRY_TOKEN is not set (see docs/release.md)"; exit 1; }
-	$(RUN) -e CARGO_REGISTRY_TOKEN $(IMAGE) cargo publish --locked
+	$(RUN) -e CARGO_REGISTRY_TOKEN $(IMAGE) cargo publish --locked --no-verify
+
+sc001-test: ## Fixture test of the SC-001 token check (.github/scripts/no-publish-token.sh); pure bash, no container
+	scripts/test-no-publish-token.sh
 
 doctor: image ## Print tool versions per layer; fail on drift from rust-toolchain.toml
 	@echo "rust-toolchain.toml: $(RUST_VERSION)"
