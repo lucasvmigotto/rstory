@@ -109,6 +109,7 @@ fn healthy() -> Facts {
                 reason: Reason::NoDataControl,
             },
         },
+        config_error: None,
         store: StoreFact::Private { entries: Some(8) },
         daemon: DaemonFact::Up(Box::new(daemon_status(
             StateKind::Recording,
@@ -545,6 +546,72 @@ mod checks {
         };
         let m = find(&evaluate(&f), "picker").message.clone();
         assert_eq!(m, "mine (picker_command in config.toml)");
+    }
+}
+
+mod config_and_tiers {
+    use super::*;
+    use crate::doctor::render;
+    use crate::ui::glyphs::LocaleEnv;
+    use crate::ui::theme::{TermEnv, ThemePref};
+
+    #[test]
+    fn a_configured_backend_is_named_in_the_backend_check() {
+        let mut f = healthy();
+        f.session.selection = BackendSelection {
+            backend: BackendKind::X11,
+            mode: Mode::Native,
+            reason: Reason::Override,
+        };
+        let checks = evaluate(&f);
+        let b = checks.iter().find(|c| c.id == "backend").unwrap();
+        assert_eq!(b.message, "x11 (chosen with backend in config.toml)");
+        assert!(checks.iter().all(|c| c.id != "config"));
+    }
+
+    #[test]
+    fn a_rejected_config_value_is_a_failing_config_check_with_a_hint() {
+        let mut f = healthy();
+        f.config_error = Some("backend = \"xorg\" is invalid: use \"x11\" or \"wayland\"".into());
+        let checks = evaluate(&f);
+        let ids: Vec<_> = checks.iter().map(|c| c.id).collect();
+        assert_eq!(&ids[..4], ["session", "backend", "config", "store"]);
+        let c = &checks[2];
+        assert_eq!(c.status, Status::Fail);
+        assert!(c.message.contains("backend = \"xorg\""));
+        assert!(c.hint.is_some());
+        assert_eq!(exit_code(&checks), 2);
+    }
+
+    fn tiered(pref: ThemePref, term: &str, colorterm: &str) -> String {
+        let env = TermEnv {
+            no_color: false,
+            term: Some(term.into()),
+            colorterm: (!colorterm.is_empty()).then(|| colorterm.into()),
+        };
+        let locale = LocaleEnv {
+            lang: Some("C.UTF-8".into()),
+            ..LocaleEnv::default()
+        };
+        let t = Term::resolve(true, 80, pref, &env, &locale, false);
+        let mut f = healthy();
+        f.config_error = Some("theme = \"neon\" is invalid".into());
+        render::text(&evaluate(&f)[2..3], &t)
+    }
+
+    #[test]
+    fn the_rstory_theme_colors_the_report_in_256_colors() {
+        insta::assert_debug_snapshot!(tiered(ThemePref::Rstory, "xterm-256color", ""), @r#""\u{1b}[38;5;160m✗\u{1b}[0m Config  config.toml: theme = \"neon\" is invalid\n\u{1b}[38;5;245m  → fix or remove that key (run `rstory config` to see the file and its path)\u{1b}[0m\n\n1 failure.\n""#);
+    }
+
+    #[test]
+    fn the_rstory_theme_colors_the_report_in_truecolor() {
+        insta::assert_debug_snapshot!(tiered(ThemePref::Rstory, "xterm", "truecolor"), @r#""\u{1b}[38;2;215;0;0m✗\u{1b}[0m Config  config.toml: theme = \"neon\" is invalid\n\u{1b}[38;2;138;138;138m  → fix or remove that key (run `rstory config` to see the file and its path)\u{1b}[0m\n\n1 failure.\n""#);
+    }
+
+    #[test]
+    fn the_default_theme_stays_in_16_colors() {
+        insta::assert_debug_snapshot!(tiered(ThemePref::Terminal, "xterm-256color", "truecolor"), @r#""\u{1b}[31m✗\u{1b}[0m Config  config.toml: theme = \"neon\" is invalid\n\u{1b}[90m  → fix or remove that key (run `rstory config` to see the file and its path)\u{1b}[0m\n\n1 failure.\n""#);
     }
 }
 
@@ -1225,8 +1292,20 @@ mod probes {
     #[test]
     fn arguments_are_json_or_nothing() {
         let a = |v: &[&str]| v.iter().map(|s| (*s).to_string()).collect::<Vec<_>>();
-        assert_eq!(parse_args(&a(&[])), Ok(Options { json: false }));
-        assert_eq!(parse_args(&a(&["--json"])), Ok(Options { json: true }));
+        assert_eq!(
+            parse_args(&a(&[])),
+            Ok(Options {
+                json: false,
+                ascii: false
+            })
+        );
+        assert_eq!(
+            parse_args(&a(&["--json"])),
+            Ok(Options {
+                json: true,
+                ascii: false
+            })
+        );
         assert!(parse_args(&a(&["--yaml"])).unwrap_err().contains("--yaml"));
         assert!(parse_args(&a(&["--json", "extra"])).is_err());
     }

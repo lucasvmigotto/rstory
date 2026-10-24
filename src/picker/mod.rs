@@ -30,13 +30,15 @@ use self::data::{Paths, Source};
 use self::state::{Cmd, EXIT_NO_TTY, Exit, Msg, PickerState, update};
 
 /// `rstory pick` usage.
-pub const USAGE: &str = "Usage: rstory pick [--plain]";
+pub const USAGE: &str = "Usage: rstory pick [--plain] [--ascii]";
 
 /// The parsed `pick` options.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct Options {
     /// Inline, ASCII, no box drawing (screen readers, simple terminals).
     pub plain: bool,
+    /// ASCII glyphs only (`--ascii`; a non-UTF-8 locale does the same).
+    pub ascii: bool,
 }
 
 /// Parses the arguments after `pick`. `Ok(None)` means `--help` was asked for.
@@ -48,6 +50,7 @@ pub fn parse_args(args: &[String]) -> Result<Option<Options>, String> {
     for a in args {
         match a.as_str() {
             "--plain" => opts.plain = true,
+            "--ascii" => opts.ascii = true,
             "-h" | "--help" => return Ok(None),
             other => return Err(format!("rstory pick: unknown argument {other}\n{USAGE}")),
         }
@@ -55,11 +58,23 @@ pub fn parse_args(args: &[String]) -> Result<Option<Options>, String> {
     Ok(Some(opts))
 }
 
+/// The picker's colors and glyphs: the tier follows the config `theme` and the environment;
+/// ASCII glyphs follow `--plain`, `--ascii` or a non-UTF-8 locale.
+fn look(opts: &Options, pref: ThemePref, env: &TermEnv, locale: &LocaleEnv) -> (Theme, Glyphs) {
+    (
+        Theme::detect(pref, env, Background::Dark),
+        Glyphs::new(ascii_mode(opts.plain || opts.ascii, locale)),
+    )
+}
+
 /// Runs `rstory pick` and returns the exit status (FR-009).
 #[must_use]
-pub fn run(args: &[String], paths: &Paths) -> u8 {
+pub fn run(args: &[String], paths: &Paths, ascii: bool) -> u8 {
     let opts = match parse_args(args) {
-        Ok(Some(o)) => o,
+        Ok(Some(o)) => Options {
+            ascii: o.ascii || ascii,
+            ..o
+        },
         Ok(None) => {
             println!("Open the interactive picker\n\n{USAGE}");
             return 0;
@@ -145,12 +160,12 @@ fn interactive(opts: Options, paths: &Paths) -> Result<Exit, String> {
         return Ok(exit);
     }
 
-    let theme = Theme::detect(
-        ThemePref::Terminal,
+    let (theme, glyphs) = look(
+        &opts,
+        ThemePref::from_user_config(),
         &TermEnv::from_process(),
-        Background::Dark,
+        &LocaleEnv::from_process(),
     );
-    let glyphs = Glyphs::new(opts.plain || ascii_mode(false, &LocaleEnv::from_process()));
     let ctx = Ctx::new(&theme, &glyphs);
 
     let (tx, rx) = mpsc::channel::<Msg>();

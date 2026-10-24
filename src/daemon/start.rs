@@ -12,7 +12,9 @@ use tokio::sync::watch;
 use crate::backend::wayland::{ConnectError, WaylandBackend, WaylandOptions};
 use crate::backend::x11::{X11Backend, X11Options};
 use crate::backend::{Backend, BackendKind, EventStream, Mode, ReadError, ServeError};
-use crate::config::{Caps, ConfigError, picker_command_from_toml, tray_from_toml};
+use crate::config::{
+    BackendName, Caps, ConfigError, backend_from_toml, picker_command_from_toml, tray_from_toml,
+};
 use crate::ipc::peercred::peer_cred;
 use crate::ipc::server;
 use crate::session::{self, RealProbe, SessionEnv};
@@ -203,11 +205,32 @@ where
     Ok(())
 }
 
+/// `rstory daemon --help`.
+pub const HELP: &str = "Run the clipboard daemon in the foreground.
+
+Usage: rstory daemon [--backend x11|wayland]
+
+  --backend x11|wayland  capture with this backend instead of the one the session selects
+                         (also --backend=x11); wins over `backend` in config.toml
+  -h, --help             print this help
+
+The daemon records what you copy, serves `rstory` and the tray over a private socket, and
+logs to stderr (RUST_LOG, default info). Exit codes: 0 clean stop, 4 already running,
+5 environment error, 1 unexpected.
+
+Examples:
+  rstory daemon
+  rstory daemon --backend x11
+  RUST_LOG=debug rstory daemon
+";
+
 /// Command-line options of `rstory daemon`.
 #[derive(Debug, Clone, Default)]
 pub struct DaemonArgs {
     /// `--backend x11|wayland`.
     pub backend: Option<BackendKind>,
+    /// `-h` or `--help`.
+    pub help: bool,
 }
 
 /// Parses the arguments after `daemon`.
@@ -216,6 +239,10 @@ pub struct DaemonArgs {
 /// A usage message.
 pub fn parse_args(args: &[String]) -> Result<DaemonArgs, String> {
     let mut out = DaemonArgs::default();
+    if args.iter().any(|a| a == "-h" || a == "--help") {
+        out.help = true;
+        return Ok(out);
+    }
     let mut it = args.iter();
     while let Some(a) = it.next() {
         let value = if let Some(v) = a.strip_prefix("--backend=") {
@@ -251,23 +278,57 @@ fn store_dir() -> Result<PathBuf, StartError> {
     Ok(PathBuf::from(home).join(".local/state/rstory"))
 }
 
-/// `config.toml`: the caps, `picker_command` and `tray`; defaults when the file is absent.
-fn load_config() -> Result<(Caps, Option<String>, bool), StartError> {
+/// What the daemon reads from `config.toml`.
+struct Settings {
+    caps: Caps,
+    picker_command: Option<String>,
+    tray: bool,
+    backend: Option<BackendKind>,
+}
+
+impl Default for Settings {
+    fn default() -> Self {
+        Self {
+            caps: Caps::default(),
+            picker_command: None,
+            tray: true,
+            backend: None,
+        }
+    }
+}
+
+/// The backend to force: `--backend` wins over the `backend` config key.
+fn resolve_backend(flag: Option<BackendKind>, config: Option<BackendKind>) -> Option<BackendKind> {
+    flag.or(config)
+}
+
+/// `config.toml`: the caps, `picker_command`, `tray` and `backend`; defaults when the file is
+/// absent.
+fn load_config() -> Result<Settings, StartError> {
     let dir = match env_var("XDG_CONFIG_HOME") {
         Some(c) => PathBuf::from(c),
         None => match env_var("HOME") {
             Some(h) => PathBuf::from(h).join(".config"),
-            None => return Ok((Caps::default(), None, true)),
+            None => return Ok(Settings::default()),
         },
     };
     let Ok(text) = std::fs::read_to_string(dir.join("rstory/config.toml")) else {
-        return Ok((Caps::default(), None, true));
+        return Ok(Settings::default());
     };
     let invalid = |e: ConfigError| StartError::Environment(e.to_string());
     let caps = Caps::from_toml(&text).map_err(invalid)?;
     let picker_command = picker_command_from_toml(&text).map_err(invalid)?;
     let tray = tray_from_toml(&text).map_err(invalid)?;
-    Ok((caps, picker_command, tray))
+    let backend = backend_from_toml(&text).map_err(invalid)?.map(|b| match b {
+        BackendName::X11 => BackendKind::X11,
+        BackendName::Wayland => BackendKind::Wayland,
+    });
+    Ok(Settings {
+        caps,
+        picker_command,
+        tray,
+        backend,
+    })
 }
 
 /// The backend the session selected: one concrete type for the daemon.
@@ -386,7 +447,6 @@ async fn provide_backend(args: DaemonArgs, env: SessionEnv) -> Provided<SessionB
 
 /// `rstory daemon`: returns the process exit code.
 pub async fn run_main(args: &[String]) -> u8 {
-    super::log::init_logging();
     let args = match parse_args(args) {
         Ok(a) => a,
         Err(m) => {
@@ -394,6 +454,11 @@ pub async fn run_main(args: &[String]) -> u8 {
             return 2;
         }
     };
+    if args.help {
+        print!("{HELP}");
+        return 0;
+    }
+    super::log::init_logging();
     let result = run_inner(args).await;
     match result {
         Ok(()) => 0,
@@ -412,7 +477,16 @@ async fn run_inner(args: DaemonArgs) -> Result<(), StartError> {
         Path::new("/run/user"),
     )
     .map_err(|e| StartError::Environment(e.to_string()))?;
-    let (caps, picker_command, tray) = load_config()?;
+    let Settings {
+        caps,
+        picker_command,
+        tray,
+        backend,
+    } = load_config()?;
+    let args = DaemonArgs {
+        backend: resolve_backend(args.backend, backend),
+        ..args
+    };
     let rt = Runtime {
         store_dir: store_dir()?,
         runtime_dir,
@@ -440,4 +514,38 @@ async fn run_inner(args: DaemonArgs) -> Result<(), StartError> {
         let _ = stop.send(true);
     });
     serve_process_with(rt, || provide_backend(args, env), shutdown, Extras { tray }).await
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn args(a: &[&str]) -> Vec<String> {
+        a.iter().map(ToString::to_string).collect()
+    }
+
+    #[test]
+    fn help_flags_win_over_everything_else() {
+        for a in [&["--help"][..], &["-h"], &["--backend", "nope", "--help"]] {
+            assert!(parse_args(&args(a)).unwrap().help, "{a:?}");
+        }
+        assert!(!parse_args(&args(&["--backend", "x11"])).unwrap().help);
+    }
+
+    #[test]
+    fn help_lists_the_flag_the_config_key_and_examples() {
+        assert!(HELP.contains("Usage: rstory daemon [--backend x11|wayland]"));
+        assert!(HELP.contains("--backend x11|wayland"));
+        assert!(HELP.contains("config.toml"));
+        assert!(HELP.contains("Examples:"));
+    }
+
+    #[test]
+    fn the_flag_wins_over_the_config_key() {
+        use BackendKind::{Wayland, X11};
+        assert_eq!(resolve_backend(None, None), None);
+        assert_eq!(resolve_backend(None, Some(Wayland)), Some(Wayland));
+        assert_eq!(resolve_backend(Some(X11), Some(Wayland)), Some(X11));
+        assert_eq!(resolve_backend(Some(X11), None), Some(X11));
+    }
 }

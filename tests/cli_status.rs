@@ -114,7 +114,7 @@ async fn config_without_a_file_prints_the_defaults_and_where_the_file_would_be()
     assert_eq!(r.code, 0, "{}", r.stderr);
     let path = dirs.config_file();
     let expected = format!(
-        "# {} (not found, showing the defaults)\nmax_entries = 20\nmax_pinned = 10\nmax_entry_bytes = 1048576\nttl = \"7d\"\n",
+        "# {} (not found, showing the defaults)\nmax_entries = 20\nmax_pinned = 10\nmax_entry_bytes = 1048576\nttl = \"7d\"\ntheme = \"terminal\"\n",
         path.display()
     );
     assert_eq!(r.out(), expected);

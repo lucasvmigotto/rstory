@@ -151,6 +151,110 @@ pub fn tray_from_toml(text: &str) -> Result<bool, ConfigError> {
     Ok(raw.tray.unwrap_or(true))
 }
 
+/// The `theme` key: how much color the terminal output gets (`specs/000-design-system`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum ThemeName {
+    /// The user's own 16-color palette (the default).
+    #[default]
+    Terminal,
+    /// rstory's palette in 256 colors or truecolor, by `COLORTERM` and `TERM`.
+    Rstory,
+    /// No color at all.
+    Mono,
+}
+
+impl ThemeName {
+    /// The value as written in `config.toml`.
+    #[must_use]
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Terminal => "terminal",
+            Self::Rstory => "rstory",
+            Self::Mono => "mono",
+        }
+    }
+}
+
+/// The `backend` key: forces the capture backend, like `rstory daemon --backend`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BackendName {
+    /// X11 (or XWayland).
+    X11,
+    /// Wayland data-control.
+    Wayland,
+}
+
+impl BackendName {
+    /// The value as written in `config.toml`.
+    #[must_use]
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::X11 => "x11",
+            Self::Wayland => "wayland",
+        }
+    }
+}
+
+/// `theme` from `config.toml`: `terminal` when unset.
+///
+/// # Errors
+/// [`ConfigError::Syntax`] when the text is not TOML or the key is not a string;
+/// [`ConfigError::BadValue`] for a value other than `terminal`, `rstory` or `mono`.
+pub fn theme_from_toml(text: &str) -> Result<ThemeName, ConfigError> {
+    #[derive(Deserialize)]
+    struct Theme {
+        theme: Option<String>,
+    }
+    let raw: Theme =
+        toml::from_str(text).map_err(|e| ConfigError::Syntax(e.message().to_string()))?;
+    match raw.theme.as_deref() {
+        None | Some("terminal") => Ok(ThemeName::Terminal),
+        Some("rstory") => Ok(ThemeName::Rstory),
+        Some("mono") => Ok(ThemeName::Mono),
+        Some(other) => Err(ConfigError::BadValue {
+            key: "theme",
+            value: other.to_string(),
+            reason: "use \"terminal\", \"rstory\" or \"mono\"".to_string(),
+        }),
+    }
+}
+
+/// `backend` from `config.toml`: `None` when unset (the backend follows the session).
+///
+/// # Errors
+/// [`ConfigError::Syntax`] when the text is not TOML or the key is not a string;
+/// [`ConfigError::BadValue`] for a value other than `x11` or `wayland`.
+pub fn backend_from_toml(text: &str) -> Result<Option<BackendName>, ConfigError> {
+    #[derive(Deserialize)]
+    struct Backend {
+        backend: Option<String>,
+    }
+    let raw: Backend =
+        toml::from_str(text).map_err(|e| ConfigError::Syntax(e.message().to_string()))?;
+    match raw.backend.as_deref() {
+        None => Ok(None),
+        Some("x11") => Ok(Some(BackendName::X11)),
+        Some("wayland") => Ok(Some(BackendName::Wayland)),
+        Some(other) => Err(ConfigError::BadValue {
+            key: "backend",
+            value: other.to_string(),
+            reason: "use \"x11\" or \"wayland\", or leave it unset".to_string(),
+        }),
+    }
+}
+
+/// The text of the user's `config.toml` (`$XDG_CONFIG_HOME`, else `~/.config`); `None` when
+/// the file is absent or unreadable. For display code that must never fail on a bad config.
+#[must_use]
+pub fn user_config_text() -> Option<String> {
+    let var = |k: &str| std::env::var(k).ok().filter(|v| !v.is_empty());
+    let dir = match var("XDG_CONFIG_HOME") {
+        Some(c) => std::path::PathBuf::from(c),
+        None => std::path::PathBuf::from(var("HOME")?).join(".config"),
+    };
+    std::fs::read_to_string(dir.join("rstory/config.toml")).ok()
+}
+
 #[derive(Debug, Deserialize)]
 struct Raw {
     max_entries: Option<u32>,
@@ -249,6 +353,47 @@ mod tests {
         assert_eq!(get("picker_command = \"  \""), None);
         assert!(matches!(
             picker_command_from_toml("picker_command = 3"),
+            Err(ConfigError::Syntax(_))
+        ));
+    }
+
+    #[test]
+    fn theme_defaults_to_terminal_and_parses_the_three_values() {
+        assert_eq!(theme_from_toml(""), Ok(ThemeName::Terminal));
+        assert_eq!(
+            theme_from_toml("theme = \"terminal\""),
+            Ok(ThemeName::Terminal)
+        );
+        assert_eq!(theme_from_toml("theme = \"rstory\""), Ok(ThemeName::Rstory));
+        assert_eq!(theme_from_toml("theme = \"mono\""), Ok(ThemeName::Mono));
+        let e = theme_from_toml("theme = \"neon\"").unwrap_err();
+        assert_eq!(key_of(&e), "theme");
+        assert!(
+            e.to_string().starts_with("theme = \"neon\" is invalid"),
+            "{e}"
+        );
+        assert!(matches!(
+            theme_from_toml("theme = 3"),
+            Err(ConfigError::Syntax(_))
+        ));
+    }
+
+    #[test]
+    fn backend_is_unset_by_default_and_takes_x11_or_wayland() {
+        assert_eq!(backend_from_toml(""), Ok(None));
+        assert_eq!(
+            backend_from_toml("backend = \"x11\""),
+            Ok(Some(BackendName::X11))
+        );
+        assert_eq!(
+            backend_from_toml("backend = \"wayland\""),
+            Ok(Some(BackendName::Wayland))
+        );
+        let e = backend_from_toml("backend = \"xorg\"").unwrap_err();
+        assert_eq!(key_of(&e), "backend");
+        assert!(e.to_string().contains("backend"), "{e}");
+        assert!(matches!(
+            backend_from_toml("backend = true"),
             Err(ConfigError::Syntax(_))
         ));
     }

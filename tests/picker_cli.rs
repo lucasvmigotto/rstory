@@ -34,11 +34,13 @@ fn plain_needs_a_terminal_too() {
 #[test]
 fn an_unknown_argument_is_a_usage_error() {
     let out = pick(&["--fancy"]).code(2).get_output().clone();
-    assert!(String::from_utf8_lossy(&out.stderr).contains("Usage: rstory pick [--plain]"));
+    assert!(
+        String::from_utf8_lossy(&out.stderr).contains("Usage: rstory pick [--plain] [--ascii]")
+    );
 }
 
 #[test]
 fn help_prints_the_usage() {
     let out = pick(&["--help"]).code(0).get_output().clone();
-    assert!(String::from_utf8_lossy(&out.stdout).contains("rstory pick [--plain]"));
+    assert!(String::from_utf8_lossy(&out.stdout).contains("rstory pick [--plain] [--ascii]"));
 }

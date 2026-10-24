@@ -24,6 +24,9 @@ use super::EntryRef;
     after_long_help = "Entries are addressed by index (0 is the newest) or by a short id of at least 4 characters.\n\nExit codes: 0 ok, 1 unexpected, 2 usage or not found, 3 daemon not running, 4 daemon already running, 5 environment error, 6 limit reached, 7 inactive."
 )]
 pub struct Cli {
+    /// Use only ASCII glyphs (also the default in a non-UTF-8 locale)
+    #[arg(long, global = true)]
+    pub ascii: bool,
     /// What to do.
     #[command(subcommand)]
     pub command: Command,
@@ -58,8 +61,9 @@ pub struct RefArg {
 #[derive(Debug, Subcommand)]
 pub enum Command {
     /// Run the clipboard daemon in the foreground
+    #[command(disable_help_flag = true)]
     Daemon {
-        /// Passed to the daemon (`--backend x11|wayland`)
+        /// Passed to the daemon (`--backend x11|wayland`, `--help`)
         #[arg(trailing_var_arg = true, allow_hyphen_values = true, num_args = 0..)]
         args: Vec<String>,
     },
@@ -151,14 +155,14 @@ pub enum Command {
     /// Open the interactive picker
     #[command(disable_help_flag = true)]
     Pick {
-        /// Passed to the picker (`--plain`)
+        /// Passed to the picker (`--plain --ascii`)
         #[arg(trailing_var_arg = true, allow_hyphen_values = true, num_args = 0..)]
         args: Vec<String>,
     },
     /// Check the setup and explain what is wrong
     #[command(disable_help_flag = true)]
     Doctor {
-        /// Passed to doctor (`--json`)
+        /// Passed to doctor (`--json --ascii`)
         #[arg(trailing_var_arg = true, allow_hyphen_values = true, num_args = 0..)]
         args: Vec<String>,
     },
@@ -233,6 +237,11 @@ mod tests {
         for args in [
             &["daemon"][..],
             &["daemon", "--backend", "x11"],
+            &["daemon", "--help"],
+            &["--ascii", "ls"],
+            &["ls", "--ascii"],
+            &["pick", "--plain", "--ascii"],
+            &["doctor", "--ascii"],
             &["ls"],
             &["ls", "--json", "--limit", "5"],
             &["show", "0"],

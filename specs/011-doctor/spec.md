@@ -71,3 +71,9 @@ Each known failure has a specific message and hint.
 
 - **SC-001**: All 8 failure rows have passing tests (brief §14 target 7/7, plus the pause info).
 - **SC-002**: Doctor completes in under 1 s (with the daemon running).
+
+## Notes (docs-gaps, 2026-10-24)
+
+- A `backend` set in `config.toml` is reported by the `backend` check: `x11 (chosen with backend in config.toml)`.
+- A `config.toml` value rstory rejects (`theme`, `backend`, the caps) adds a `config` check with status `fail`, a message naming the key and a hint. The check appears only then, so a healthy report keeps its ten checks.
+- `rstory doctor --ascii` (or `--ascii` before the command) limits the report to ASCII glyphs. The report's colors follow the `theme` key.

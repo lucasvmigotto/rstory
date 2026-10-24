@@ -118,3 +118,8 @@ The user pins, unpins, removes and clears entries, and pauses or resumes recordi
 ## Assumptions
 
 - `rm` doesn't prompt (single entry), and `clear` does (bulk).
+
+## Notes (docs-gaps, 2026-10-24)
+
+- `--ascii` is a global flag (clap `global`), accepted before or after the subcommand. For `pick` and `doctor`, which parse their own arguments, it is also accepted in their argument list.
+- `rstory config` prints the effective `theme` (`terminal` unless set) and, only when set, `backend`, between the caps and `picker_command`. A `theme` or `backend` value it does not know is exit 5, with the path and the key in the message. `config` has no JSON form.

@@ -818,3 +818,89 @@ fn snapshot_keymap() {
         insta::assert_snapshot!(format!("keymap_{}x{}", size.0, size.1), screen(&s, COLOR));
     }
 }
+
+// ---------------------------------------------------------------- theme and --ascii
+
+mod look {
+    use super::super::{Options, look, parse_args};
+    use crate::ui::glyphs::{Glyph, LocaleEnv};
+    use crate::ui::theme::{TermEnv, ThemePref, Tier};
+
+    fn env(term: &str, colorterm: &str) -> TermEnv {
+        TermEnv {
+            no_color: false,
+            term: Some(term.to_string()),
+            colorterm: (!colorterm.is_empty()).then(|| colorterm.to_string()),
+        }
+    }
+
+    fn utf8() -> LocaleEnv {
+        LocaleEnv {
+            lang: Some("C.UTF-8".into()),
+            ..LocaleEnv::default()
+        }
+    }
+
+    #[test]
+    fn ascii_is_a_picker_option() {
+        let args = |a: &[&str]| a.iter().map(ToString::to_string).collect::<Vec<_>>();
+        let o = parse_args(&args(&["--ascii"])).unwrap().unwrap();
+        assert!(o.ascii && !o.plain);
+        let o = parse_args(&args(&["--plain", "--ascii"])).unwrap().unwrap();
+        assert!(o.ascii && o.plain);
+    }
+
+    #[test]
+    fn the_theme_and_environment_pick_the_tier() {
+        let tier = |pref, e: &TermEnv| look(&Options::default(), pref, e, &utf8()).0.tier();
+        let e = env("xterm-256color", "truecolor");
+        assert_eq!(tier(ThemePref::Terminal, &e), Tier::Ansi16);
+        assert_eq!(tier(ThemePref::Rstory, &e), Tier::TrueColor);
+        assert_eq!(
+            tier(ThemePref::Rstory, &env("xterm-256color", "")),
+            Tier::Ansi256
+        );
+        let no_color = TermEnv {
+            no_color: true,
+            ..e
+        };
+        assert_eq!(tier(ThemePref::Rstory, &no_color), Tier::Mono);
+    }
+
+    #[test]
+    fn ascii_glyphs_follow_the_flag_plain_or_the_locale() {
+        let e = env("xterm", "");
+        let ascii = |o: Options, l: &LocaleEnv| look(&o, ThemePref::Terminal, &e, l).1.is_ascii();
+        assert!(!ascii(Options::default(), &utf8()));
+        assert!(ascii(
+            Options {
+                ascii: true,
+                ..Options::default()
+            },
+            &utf8()
+        ));
+        assert!(ascii(
+            Options {
+                plain: true,
+                ..Options::default()
+            },
+            &utf8()
+        ));
+        let c = LocaleEnv {
+            lang: Some("C".into()),
+            ..LocaleEnv::default()
+        };
+        assert!(ascii(Options::default(), &c));
+        let g = look(
+            &Options {
+                ascii: true,
+                ..Options::default()
+            },
+            ThemePref::Terminal,
+            &e,
+            &utf8(),
+        )
+        .1;
+        assert_eq!(g.get(Glyph::Pin), "[p]");
+    }
+}

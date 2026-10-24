@@ -130,3 +130,8 @@ Clients can ask for the daemon state and counters, and the daemon expires entrie
 ## Assumptions
 
 - The tray (spec 009) runs inside the daemon process and uses the same internal API as socket requests.
+
+## Notes (docs-gaps, 2026-10-24)
+
+- `rstory daemon --help` and `-h` print the usage, the `--backend x11|wayland` flag, a short description and examples on stdout, and exit 0, before the config is read or the daemon starts. Any other unknown argument is still a usage error (exit 2).
+- The `backend` config key (`"x11"` or `"wayland"`, unset by default) forces the capture backend like `--backend`. The flag wins over the key. An unknown value is a config error naming the key: the daemon exits 5 (FR-011) and `rstory config` exits 5.
