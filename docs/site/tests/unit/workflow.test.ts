@@ -40,7 +40,7 @@ describe("docs workflow", () => {
     expect(deploy).toContain("github.event.workflow_run.display_title");
     expect(deploy).not.toContain("head_branch");
     expect(deploy).toContain("name: rstory-docs");
-    expect(deploy).toContain("[0-9]*.[0-9]*.[0-9]*");
+    expect(deploy).toContain("[0-9]+\\.[0-9]+\\.[0-9]+) ([0-9a-f]{40})");
   });
 
   it("scopes every R2 sync to the project prefix and reads only the R2 secret", () => {

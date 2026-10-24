@@ -5,7 +5,7 @@
 #   the specs, the source whose --help is documented, Cargo.toml). It regenerates the CLI reference and
 #   fails when the committed copy is stale, then lints, type-checks, tests and builds.
 # deploy: nothing goes live before 0.1.0 (owner decision 2026-10-24). It runs only when the release
-#   workflow, triggered by a plain X.Y.Z tag push, ends successfully; it never runs for pull requests,
+#   workflow, triggered by a plain X.Y.Z tag push or by tag.yml's repository_dispatch, ends successfully; it never runs for pull requests,
 #   branch pushes or the release workflow's manual dry runs.
 name: docs
 
@@ -96,11 +96,12 @@ jobs:
 
   deploy:
     name: Sync static site to Cloudflare R2
-    # Gate: a successful release run caused by a tag push. The tag itself is checked in the first step.
+    # Gate: a successful release run caused by a tag push or by tag.yml's dispatch (a manual dry run is
+    # workflow_dispatch and never matches). The tag itself is checked in the first step.
     if: >-
       github.event_name == 'workflow_run' &&
       github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.event == 'push'
+      (github.event.workflow_run.event == 'push' || github.event.workflow_run.event == 'repository_dispatch')
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
@@ -118,25 +119,34 @@ jobs:
       R2_ENDPOINT: ${{ vars.CLOUDFLARE_R2_ENDPOINT_S3_CLIENT }}
       R2_BUCKET: ${{ vars.CLOUDFLARE_R2_BUCKET_ID }}
       R2_PREFIX: /rstory/
-      # The release run's tag and commit; event data reaches shell steps only through env.
-      TAG: ${{ github.event.workflow_run.head_branch }}
+      # Event data reaches shell steps only through env.
+      RUN_TITLE: ${{ github.event.workflow_run.display_title }}
     steps:
-      - name: The release was for a plain X.Y.Z tag
+      # A dispatch run's head_branch/head_sha are the default branch's, not the release's, so both
+      # come from the run's title, which release.yml sets to "release X.Y.Z <40-hex sha>" for either
+      # trigger. The run succeeded, so its verify job already checked this tag and commit.
+      - name: The release run was for a plain X.Y.Z tag at a full commit
+        id: release
         run: |
           set -euo pipefail
-          case "$TAG" in
-            [0-9]*.[0-9]*.[0-9]*) ;;
-            *) echo "::error::not a release tag: '$TAG'; nothing is deployed"; exit 1 ;;
-          esac
-          printf '%s\n' "$TAG" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' || { echo "::error::not X.Y.Z: '$TAG'"; exit 1; }
+          re='^release ([0-9]+\.[0-9]+\.[0-9]+) ([0-9a-f]{40})$'
+          if ! [[ "$RUN_TITLE" =~ $re ]]; then
+            echo "::error::the release run is not for a plain X.Y.Z tag; nothing is deployed"; exit 1
+          fi
+          {
+            echo "tag=${BASH_REMATCH[1]}"
+            echo "sha=${BASH_REMATCH[2]}"
+          } >> "$GITHUB_OUTPUT"
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
+          ref: ${{ steps.release.outputs.sha }}
           fetch-depth: 0 # tags: the footer shows rstory@vX.Y.Z, linked to the tag
           persist-credentials: false
 
       - name: The tag is on this commit and equals the crate version
+        env:
+          TAG: ${{ steps.release.outputs.tag }}
         run: |
           set -euo pipefail
           [ "$(git rev-parse "refs/tags/$TAG^{commit}")" = "$(git rev-parse HEAD)" ] || { echo "::error::tag $TAG is not the release commit"; exit 1; }
