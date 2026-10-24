@@ -118,3 +118,9 @@ Appended by `qa:strategy`. Executed by `qa:e2e` / `qa:load` after the builds (ti
 - [ ] T012 Reuse E2E-K1/K4 assertions on doctor output — Executor: builder · Reviewer: thinker · Effort: low
 
 **Checkpoint**: the journeys and suites in `qa.md` are green in CI; the exit criteria are met → Verified in `specs/README.md`.
+
+---
+
+## Convergence — 2026-10-24
+
+Converged, both layers. `rstory doctor [--json]` maps to `src/doctor/{checks,probes,mod}.rs`. A pure `evaluate(Facts)` covers the whole failure table on made-up facts. `ProbeEnv` is the single injected input: env, PATH, socket, store, config and data paths, `gnome-shell`/`gnome-extensions`, and a 300 ms cap per external program. Only `doctor::run` reads the process environment. The checks are session, backend, store, daemon, pause, tray, gnome_shell, gnome_extension, picker and autostart. JSON is `{"schema":1,"checks":[{id,status,message,hint}]}`, and the exit codes are 0 ok, 1 warn, 2 fail. Doctor writes nothing (a before/after tree test), and a planted canary never appears in its output. 48 unit tests (22 snapshots) and 7 process tests with a cleared environment. `fmt-check`, `lint` and `test` are green after the rebase onto 007. Readings the spec left open: rows that would only say "fine" are omitted (gnome_shell when supported, tray on GNOME, pause when recording); missing autostart is `info`. Open: real backend selection can take about 3 s on Wayland without XWayland, against a 1 s budget; there's no D-Bus `ShellVersion` fallback; nothing has run on a real session. The QA tasks (T009, T012) remain.
