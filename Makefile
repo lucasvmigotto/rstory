@@ -58,7 +58,7 @@ LINT_FEATURES := --features fault-injection,session-tests,perf-tests
 EXT_MOUNT := -v $(NPM_VOLUME):/src/extension/node_modules
 TTY := $(shell [ -t 0 ] && echo -it)
 
-.PHONY: help image fetch fmt fmt-check lint check test test-quarantine bench test-integration test-e2e test-e2e-smoke test-perf test-soak build build-static test-launch ext-lint ext-test ext-pack ext-deps ext-typecheck deny audit secret-scan publish-dry-run publish sc001-test doctor shell clean clean-cache docs-install docs-dev docs-check docs-build docs-reference docs-fmt
+.PHONY: help image fetch fmt fmt-check lint check test test-quarantine bench test-integration test-e2e test-e2e-smoke test-perf test-soak build build-static dist test-launch ext-lint ext-test ext-pack ext-deps ext-typecheck deny audit secret-scan publish-dry-run publish sc001-test doctor shell clean clean-cache docs-install docs-dev docs-check docs-build docs-reference docs-fmt
 
 help: ## List recipes
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-17s %s\n", $$1, $$2}'
@@ -121,6 +121,10 @@ build-static: image ## Static musl release build for this host's arch + F2/F5 ch
 	  cargo build --locked --offline --release --target $$t && \
 	  b=/target/$$t/release/rstory && file $$b && file $$b | grep -Eq "static(-pie)? linked|statically linked" && \
 	  s=$$(stat -c %s $$b) && echo "size $$s bytes" && [ $$s -le 15728640 ]'
+
+dist: build-static ## Copy the static binary to dist/rstory (then: install -m 0755 dist/rstory ~/.local/bin/)
+	$(RUN) $(OFFLINE) $(IMAGE) sh -c 'mkdir -p dist && cp /target/$$(uname -m)-unknown-linux-musl/release/rstory dist/rstory'
+	@ls -l dist/rstory
 
 ext-lint: image ## Lint the GNOME extension (eslint from the npm volume), offline
 	$(RUN) $(OFFLINE) $(EXT_MOUNT) -w /src/extension $(IMAGE) npx --no-install eslint .

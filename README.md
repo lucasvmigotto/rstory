@@ -38,6 +38,7 @@ make lint               # clippy -D warnings, offline
 make test               # unit, property, snapshot, contract and fitness tests (cargo-nextest), offline
 make test-integration   # Xvfb, headless sway and headless mutter session tests, offline
 make build-static       # static musl release build + static-binary and size checks
+make dist               # the same, copied to dist/rstory
 make ext-lint ext-test  # GNOME extension: eslint + gjs fixture tests
 make deny audit         # cargo-deny: bans/licences/sources (F3, F4) offline; RustSec advisories (networked)
 make secret-scan        # gitleaks over the working tree

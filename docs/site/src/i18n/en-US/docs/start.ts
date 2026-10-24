@@ -70,7 +70,7 @@ export const start: Record<"overview" | "install" | "first-run" | "desktops", Pa
         t: "table",
         head: ["Channel", "Status"],
         rows: [
-          ["Build from source with `make build-static`", "[[implemented]]"],
+          ["Build from source with `make dist`", "[[implemented]]"],
           ["`cargo install rstory` from crates.io", "[[planned]] from 0.1.0"],
           ["GitHub Release tarballs and `SHA256SUMS`", "[[planned]] from 0.1.0"],
           ["GNOME panel icon from extensions.gnome.org", "[[planned]] after 0.1.0"],
@@ -85,11 +85,11 @@ export const start: Record<"overview" | "install" | "first-run" | "desktops", Pa
       {
         t: "code",
         lang: "sh",
-        text: "make image         # build the tools image\nmake fetch         # resolve crates into the cache volume (the only networked step)\nmake build-static  # static musl release build, with the static-binary and size checks",
+        text: "make image         # build the tools image\nmake fetch         # resolve crates into the cache volume (the only networked step)\nmake dist          # static musl release build (static-binary and size checks), copied to dist/rstory\ninstall -m 0755 dist/rstory ~/.local/bin/rstory",
       },
       {
         t: "p",
-        text: "`make build-static` builds `<arch>-unknown-linux-musl` for your machine's architecture, checks that the binary is statically linked and at most 15 MiB, and leaves it in the build cache volume. No recipe copies it to the host yet.",
+        text: "`make build-static` builds `<arch>-unknown-linux-musl` for your machine's architecture, checks that the binary is statically linked and at most 15 MiB, and `make dist` copies it to `dist/rstory` in the checkout (git-ignored).",
       },
       { t: "h2", text: "From 0.1.0" },
       {
