@@ -1,0 +1,277 @@
+# CI (spec 013 US1, FR-001/002; gates from docs/product/test-strategy.md §6).
+# Every job runs the project's `make` recipes in the tools image, exactly as a developer does
+# (README "Development"), on x86_64 and aarch64. Job graph and gates: docs/release.md "Pipelines".
+name: ci
+
+on:
+  pull_request:
+    branches: [dev, main]
+  push:
+    branches: [dev, main]
+  workflow_call:
+    inputs:
+      stage:
+        description: Gate set to run; the release workflow passes "release" (the main set).
+        type: string
+        required: true
+
+permissions: {}
+
+concurrency:
+  group: ci-${{ github.ref }}-${{ inputs.stage || github.event_name }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  # The GitHub-hosted runners have 4 vCPUs and 16 GiB; the recipes' local defaults are smaller.
+  CPUS: "4"
+  MEMORY: 12g
+
+jobs:
+  plan:
+    name: plan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions: {}
+    outputs:
+      full: ${{ steps.stage.outputs.full }}
+      perf: ${{ steps.stage.outputs.perf }}
+      nextest_profile: ${{ steps.stage.outputs.nextest_profile }}
+      proptest_cases: ${{ steps.stage.outputs.proptest_cases }}
+    steps:
+      - name: Pick the gate set (test-strategy §6)
+        id: stage
+        env:
+          EVENT: ${{ github.event_name }}
+          REF: ${{ github.ref }}
+          BASE: ${{ github.base_ref }}
+          STAGE: ${{ inputs.stage }}
+        run: |
+          set -euo pipefail
+          full=false; perf=false; profile=ci; cases=1000
+          # PR into main, push to main, release tag: the main set (10 000 property cases, perf smoke).
+          if [ "$BASE" = main ] || [ "$REF" = refs/heads/main ] || [ "$STAGE" = release ]; then
+            full=true; perf=true; cases=10000
+          fi
+          # Push to dev: the PR set plus perf smoke; one reported rerun for flaky tests.
+          if [ "$EVENT" = push ] && [ "$REF" = refs/heads/dev ]; then
+            perf=true; profile=ci-dev
+          fi
+          {
+            echo "full=$full"
+            echo "perf=$perf"
+            echo "nextest_profile=$profile"
+            echo "proptest_cases=$cases"
+          } >> "$GITHUB_OUTPUT"
+          echo "gate set: full=$full perf=$perf nextest=$profile proptest=$cases" >> "$GITHUB_STEP_SUMMARY"
+
+  checks:
+    name: checks (fmt, deny, audit, secrets, extension)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: No publishing token referenced (SC-001)
+        run: .github/scripts/no-publish-token.sh .github
+      - uses: ./.github/actions/tools
+      - name: Format (make fmt-check)
+        run: make fmt-check
+      - name: Bans, licences, sources, F3/F4 (make deny)
+        run: make deny
+      - name: RustSec advisories (make audit)
+        run: make audit
+      - name: Secret scan (make secret-scan)
+        run: make secret-scan
+      - name: Extension dev tools (make ext-deps)
+        run: make ext-deps
+      - name: Extension lint (make ext-lint)
+        run: make ext-lint
+      - name: Extension type-check (make ext-typecheck)
+        run: make ext-typecheck
+      - name: Extension tests (make ext-test)
+        run: make ext-test
+
+  lint:
+    name: lint (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { arch: x86_64, runner: ubuntu-24.04 }
+          - { arch: aarch64, runner: ubuntu-24.04-arm }
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/tools
+      - name: Clippy -D warnings (make lint)
+        run: make lint
+
+  test:
+    name: test (${{ matrix.arch }})
+    needs: plan
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { arch: x86_64, runner: ubuntu-24.04 }
+          - { arch: aarch64, runner: ubuntu-24.04-arm }
+    env:
+      NEXTEST_PROFILE: ${{ needs.plan.outputs.nextest_profile }}
+      PROPTEST_CASES: ${{ needs.plan.outputs.proptest_cases }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/tools
+      - name: Unit, property, snapshot, contract, fitness F1/F9/F10/F11 (make test)
+        run: make test
+      - name: Report flaky tests
+        if: always()
+        run: python3 -I .github/scripts/flaky-report.py "$RUNNER_TEMP/target/nextest/$NEXTEST_PROFILE/junit.xml"
+      - name: Keep the JUnit report (flake rate over 30 days)
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: junit-test-${{ matrix.arch }}
+          path: ${{ runner.temp }}/target/nextest/${{ needs.plan.outputs.nextest_profile }}/junit.xml
+          if-no-files-found: ignore
+          retention-days: 30
+
+  integration:
+    name: integration (${{ matrix.arch }})
+    needs: plan
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { arch: x86_64, runner: ubuntu-24.04 }
+          - { arch: aarch64, runner: ubuntu-24.04-arm }
+    env:
+      NEXTEST_PROFILE: ${{ needs.plan.outputs.nextest_profile }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/tools
+      - name: Xvfb, headless sway + XWayland, headless mutter bridge mode (make test-integration)
+        run: make test-integration
+      - name: Report flaky tests
+        if: always()
+        run: python3 -I .github/scripts/flaky-report.py "$RUNNER_TEMP/target/nextest/$NEXTEST_PROFILE/junit.xml"
+      - name: Keep the JUnit report (flake rate over 30 days)
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: junit-integration-${{ matrix.arch }}
+          path: ${{ runner.temp }}/target/nextest/${{ needs.plan.outputs.nextest_profile }}/junit.xml
+          if-no-files-found: ignore
+          retention-days: 30
+
+  static:
+    name: static build (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { arch: x86_64, runner: ubuntu-24.04 }
+          - { arch: aarch64, runner: ubuntu-24.04-arm }
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/tools
+      - name: Static musl release build, F2 static + F5 size (make build-static)
+        run: make build-static
+
+  perf:
+    name: perf smoke (${{ matrix.arch }})
+    needs: plan
+    if: needs.plan.outputs.perf == 'true'
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { arch: x86_64, runner: ubuntu-24.04 }
+          - { arch: aarch64, runner: ubuntu-24.04-arm }
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/tools
+      - name: Store benchmarks, p95 within 2x budget (make bench)
+        run: make bench
+
+  # The one required status check: stable name, always reports, red if any gate failed.
+  ci-ok:
+    name: ci-ok
+    needs: [plan, checks, lint, test, integration, static, perf]
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - name: Every gate passed (perf may be skipped on PRs into dev)
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          set -euo pipefail
+          echo "$RESULTS" | python3 -I -c '
+          import json, sys
+          needs = json.load(sys.stdin)
+          bad = {k: v["result"] for k, v in needs.items() if v["result"] not in ("success", "skipped")}
+          skipped = [k for k, v in needs.items() if v["result"] == "skipped" and k != "perf"]
+          for k, r in bad.items():
+              print(f"::error::{k}: {r}")
+          for k in skipped:
+              print(f"::error::{k}: skipped")
+          sys.exit(1 if bad or skipped else 0)
+          '
+
+  report-failure:
+    name: report failure
+    needs: [ci-ok]
+    if: failure() && github.event_name == 'push' && startsWith(github.ref, 'refs/heads/')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      issues: write # open or update the "CI failing" issue
+    steps:
+      - name: Open or update the "CI failing" issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TITLE: "CI failing: ${{ github.workflow }} on ${{ github.ref_name }}"
+          RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          n=$(gh issue list --state open --search "\"$TITLE\" in:title" --json number -q '.[0].number')
+          if [ -n "$n" ]; then
+            gh issue comment "$n" --body "Failed again: $RUN (commit $SHA)"
+          else
+            gh issue create --title "$TITLE" --body "Run: $RUN (commit $SHA). Failed jobs are listed on the run page."
+          fi
