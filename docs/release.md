@@ -253,9 +253,10 @@ the shell history.
 The extension does nothing without the daemon, so it goes up only once 0.1.0 is released (owner
 decision 2026-10-24). The first upload is manual, and later versions use the same form.
 
-1. `make ext-pack`: writes `dist/rstory@lucasvmigotto.github.io.shell-extension.zip`, the files
-   `install-gnome-extension` installs, with fixed timestamps.
-2. Run the site's analyzer in a throwaway container. It must report `clean`:
+1. Take the zip from the GitHub release: every version tag's release workflow builds
+   `rstory@lucasvmigotto.github.io.shell-extension.zip`, checks it with Shexli, and attaches it next to the tarballs
+   (listed in `SHA256SUMS`). Locally, `make ext-shexli` does the same: `make ext-pack`, then Shexli, failing unless clean.
+2. To run the analyzer by hand instead, in a throwaway container. It must report `clean`:
    `podman run --rm --name scratch-rstory-shexli -v "$PWD/dist":/ego:ro,Z docker.io/library/python:3.13-slim sh -c 'pip install -q shexli && shexli /ego/rstory@lucasvmigotto.github.io.shell-extension.zip'`
 3. Upload the zip at <https://extensions.gnome.org/upload/> and accept both terms (the GNOME Shell
    license clause, and that site staff may remove, modify or reassign the extension).

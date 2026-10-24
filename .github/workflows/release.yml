@@ -130,9 +130,33 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+  extension:
+    name: GNOME extension zip (Shexli clean)
+    needs: verify
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/tools
+      # The container user (uid 1000) writes dist/ into the runner-owned checkout.
+      - name: Let the container user write dist/
+        run: install -d -m 0777 dist
+      - name: Pack the extension and run extensions.gnome.org's analyzer (make ext-shexli)
+        run: make ext-shexli
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ext-zip
+          path: dist/*.shell-extension.zip
+          if-no-files-found: error
+          retention-days: 14
+
   checksums:
     name: SHA256SUMS
-    needs: [verify, build]
+    needs: [verify, build, extension]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions: {}
@@ -142,13 +166,18 @@ jobs:
           pattern: dist-*
           path: dist
           merge-multiple: true
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: ext-zip
+          path: dist
       - name: Write SHA256SUMS
         run: |
           set -euo pipefail
           cd dist
           n=$(find . -maxdepth 1 -name 'rstory-*-unknown-linux-musl.tar.gz' | wc -l)
           [ "$n" -eq 2 ] || { echo "::error::expected 2 tarballs, found $n"; exit 1; }
-          sha256sum rstory-*-unknown-linux-musl.tar.gz > SHA256SUMS
+          ls ./*.shell-extension.zip >/dev/null || { echo "::error::the extension zip is missing"; exit 1; }
+          sha256sum rstory-*-unknown-linux-musl.tar.gz ./*.shell-extension.zip > SHA256SUMS
           cat SHA256SUMS | tee -a "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
@@ -224,7 +253,7 @@ jobs:
         with:
           name: release-assets
           path: dist
-      - name: Create the release with the tarballs and SHA256SUMS
+      - name: Create the release with the tarballs, the extension zip and SHA256SUMS
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
@@ -234,9 +263,9 @@ jobs:
           cd dist
           sha256sum -c SHA256SUMS
           if gh release view "$VERSION" >/dev/null 2>&1; then
-            gh release upload "$VERSION" rstory-*-unknown-linux-musl.tar.gz SHA256SUMS --clobber
+            gh release upload "$VERSION" rstory-*-unknown-linux-musl.tar.gz ./*.shell-extension.zip SHA256SUMS --clobber
           else
-            gh release create "$VERSION" rstory-*-unknown-linux-musl.tar.gz SHA256SUMS \
+            gh release create "$VERSION" rstory-*-unknown-linux-musl.tar.gz ./*.shell-extension.zip SHA256SUMS \
               --verify-tag --title "rstory $VERSION" --generate-notes
           fi
 

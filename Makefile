@@ -58,7 +58,7 @@ LINT_FEATURES := --features fault-injection,session-tests,perf-tests
 EXT_MOUNT := -v $(NPM_VOLUME):/src/extension/node_modules
 TTY := $(shell [ -t 0 ] && echo -it)
 
-.PHONY: help image fetch fmt fmt-check lint check test test-quarantine bench test-integration test-e2e test-e2e-smoke test-perf test-soak build build-static dist test-launch ext-lint ext-test ext-pack ext-deps ext-typecheck deny audit secret-scan publish-dry-run publish sc001-test doctor shell clean clean-cache docs-install docs-dev docs-check docs-build docs-reference docs-fmt
+.PHONY: help image fetch fmt fmt-check lint check test test-quarantine bench test-integration test-e2e test-e2e-smoke test-perf test-soak build build-static dist test-launch ext-lint ext-test ext-pack ext-shexli ext-deps ext-typecheck deny audit secret-scan publish-dry-run publish sc001-test doctor shell clean clean-cache docs-install docs-dev docs-check docs-build docs-reference docs-fmt
 
 help: ## List recipes
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-17s %s\n", $$1, $$2}'
@@ -141,6 +141,12 @@ ext-test: image ## Run the extension's gjs fixture tests (fake socket server), o
 EXT_ZIP := dist/rstory@lucasvmigotto.github.io.shell-extension.zip
 ext-pack: image ## Zip the extension for extensions.gnome.org (dev-only files excluded, as the installer does) into dist/, offline
 	$(RUN) $(OFFLINE) $(IMAGE) python3 -I scripts/ext-pack.py extension $(EXT_ZIP)
+
+# extensions.gnome.org's static analyzer. Shexli exits 0 even with findings, so the recipe requires "clean".
+SHEXLI_IMAGE   := docker.io/library/python:3.13-slim@sha256:70729b46c69b4f1e97c4822c1af3df53a1476cf5ddc6c087c0c10bc3a5678c2f
+SHEXLI_VERSION := 0.2.1
+ext-shexli: ext-pack ## Check the zip with Shexli (extensions.gnome.org's analyzer); must be clean, networked (pip)
+	$(ENGINE) run --rm $(OWN) -v "$(CURDIR)/dist":/ego:ro,Z $(SHEXLI_IMAGE) sh -c 'pip install -q --disable-pip-version-check --root-user-action=ignore shexli==$(SHEXLI_VERSION) && shexli /ego/$(notdir $(EXT_ZIP)) > /tmp/out; cat /tmp/out; grep -q "^shexli: clean" /tmp/out'
 
 deny: image ## cargo-deny bans, licences, sources (fitness F3, F4), offline
 	$(RUN) $(OFFLINE) $(IMAGE) cargo deny --locked --offline check bans licenses sources
