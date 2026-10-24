@@ -13,6 +13,44 @@ pub mod render;
 #[cfg(test)]
 mod tests;
 
+/// What the arguments after `doctor` ask for.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Options {
+    pub json: bool,
+}
+
+/// Parses the arguments after `doctor` (only `--json`).
+///
+/// # Errors
+/// A message for any other argument.
+pub fn parse_args(args: &[String]) -> Result<Options, String> {
+    let _ = args;
+    todo!()
+}
+
+/// The command against injected inputs: parses `args`, gathers, evaluates, writes the report
+/// to `out` and usage errors to `err`. Returns the exit code.
+#[must_use]
+pub fn run_with(
+    args: &[String],
+    env: &probes::ProbeEnv,
+    probe: &mut dyn crate::session::Probe,
+    term: &crate::cli::render::Term,
+    out: &mut dyn std::io::Write,
+    err: &mut dyn std::io::Write,
+) -> u8 {
+    let _ = (args, env, probe, term, out, err);
+    todo!()
+}
+
+/// `rstory doctor [--json]`: probes the real session, prints the report on stdout and returns
+/// the doctor exit code (0, 1 or 2; 2 also for a usage error).
+#[must_use]
+pub fn run(args: &[String]) -> u8 {
+    let _ = args;
+    todo!()
+}
+
 /// How a check came out. The order is the severity order.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Status {

@@ -666,3 +666,613 @@ mod render {
         }
     }
 }
+
+mod probes {
+    use std::collections::HashMap;
+    use std::fs;
+    use std::io::{BufRead, BufReader, Write};
+    use std::os::unix::fs::PermissionsExt;
+    use std::os::unix::net::UnixListener;
+    use std::path::Path;
+    use std::time::{Duration, Instant};
+
+    use tempfile::TempDir;
+
+    use super::*;
+    use crate::doctor::probes::{self, ProbeEnv};
+    use crate::session::{DataControl, Probe as SessionProbe, SessionEnv};
+
+    const T: Duration = Duration::from_millis(300);
+
+    /// A session probe that answers from fixed values.
+    struct FakeProbe {
+        data_control: DataControl,
+        x11: bool,
+    }
+
+    impl SessionProbe for FakeProbe {
+        fn data_control(&mut self) -> DataControl {
+            self.data_control
+        }
+        fn x11_reachable(&mut self) -> bool {
+            self.x11
+        }
+    }
+
+    fn bridge() -> FakeProbe {
+        FakeProbe {
+            data_control: DataControl::None,
+            x11: true,
+        }
+    }
+
+    /// An executable script in `dir`.
+    fn script(dir: &Path, name: &str, body: &str) -> PathBuf {
+        let p = dir.join(name);
+        fs::write(&p, format!("#!/bin/sh\n{body}\n")).unwrap();
+        fs::set_permissions(&p, fs::Permissions::from_mode(0o755)).unwrap();
+        p
+    }
+
+    /// Everything under one temp dir; nothing of the real host is reachable.
+    struct Rig {
+        tmp: TempDir,
+        env: ProbeEnv,
+    }
+
+    impl Rig {
+        fn new() -> Self {
+            let tmp = tempfile::tempdir().unwrap();
+            let r = tmp.path();
+            for d in ["bin", "run/rstory", "state", "config/rstory", "data"] {
+                fs::create_dir_all(r.join(d)).unwrap();
+            }
+            let env = ProbeEnv {
+                now: NOW,
+                session: SessionEnv {
+                    wayland_display: Some("wayland-0".into()),
+                    display: Some(":0".into()),
+                    session_type: Some("wayland".into()),
+                    xdg_runtime_dir: Some(r.join("run").display().to_string()),
+                },
+                xauthority: None,
+                current_desktop: Some("GNOME".into()),
+                terminal: None,
+                path: r.join("bin").display().to_string(),
+                socket: Some(r.join("run/rstory/control.sock")),
+                store_dir: Some(r.join("state/rstory")),
+                config_path: Some(r.join("config/rstory/config.toml")),
+                config_home: Some(r.join("config")),
+                data_home: Some(r.join("data")),
+                gnome_shell: r.join("bin/gnome-shell"),
+                gnome_extensions: r.join("bin/gnome-extensions"),
+                timeout: T,
+            };
+            Self { tmp, env }
+        }
+
+        fn bin(&self, name: &str, body: &str) -> PathBuf {
+            script(&self.tmp.path().join("bin"), name, body)
+        }
+
+        fn store(&self) -> PathBuf {
+            let d = self.env.store_dir.clone().unwrap();
+            fs::create_dir_all(&d).unwrap();
+            fs::set_permissions(&d, fs::Permissions::from_mode(0o700)).unwrap();
+            d
+        }
+
+        fn extension_dir(&self) -> PathBuf {
+            crate::install::gnome::extension_dir(self.env.data_home.as_ref().unwrap())
+        }
+
+        /// A stub daemon that answers `status` with `status` and then stops.
+        fn stub_daemon(&self, status: &DaemonStatus) {
+            let listener = UnixListener::bind(self.env.socket.as_ref().unwrap()).unwrap();
+            let result = serde_json::to_value(status).unwrap();
+            std::thread::spawn(move || {
+                let Ok((stream, _)) = listener.accept() else {
+                    return;
+                };
+                let mut line = String::new();
+                BufReader::new(&stream).read_line(&mut line).unwrap();
+                let req: serde_json::Value = serde_json::from_str(&line).unwrap();
+                assert_eq!(req["op"], "status");
+                let reply =
+                    serde_json::json!({"v": 1, "id": req["id"], "ok": true, "result": result});
+                writeln!(&stream, "{reply}").unwrap();
+            });
+        }
+    }
+
+    /// Every path under `dir` with its mode and size.
+    fn tree(dir: &Path) -> Vec<(PathBuf, u32, u64)> {
+        let mut out = Vec::new();
+        let mut stack = vec![dir.to_path_buf()];
+        while let Some(d) = stack.pop() {
+            for e in fs::read_dir(&d).unwrap().flatten() {
+                let m = e.metadata().unwrap();
+                out.push((e.path(), m.permissions().mode(), m.len()));
+                if m.is_dir() {
+                    stack.push(e.path());
+                }
+            }
+        }
+        out.sort();
+        out
+    }
+
+    #[test]
+    fn the_environment_gives_paths_the_way_the_cli_finds_them() {
+        let vars: HashMap<&str, &str> = HashMap::from([
+            ("XDG_RUNTIME_DIR", "/r"),
+            ("XDG_STATE_HOME", "/s"),
+            ("XDG_CONFIG_HOME", "/c"),
+            ("XDG_DATA_HOME", "/d"),
+            ("HOME", "/h"),
+            ("WAYLAND_DISPLAY", "wayland-1"),
+            ("DISPLAY", ""),
+            ("XDG_CURRENT_DESKTOP", "ubuntu:GNOME"),
+            ("TERMINAL", "foot"),
+            ("PATH", "/x:/y"),
+        ]);
+        let get = |k: &str| vars.get(k).map(|v| (*v).to_string());
+        let e = ProbeEnv::from_lookup(&get, 1000, Path::new("/nonexistent"), NOW);
+        assert_eq!(
+            e.socket.as_deref(),
+            Some(Path::new("/r/rstory/control.sock"))
+        );
+        assert_eq!(e.store_dir.as_deref(), Some(Path::new("/s/rstory")));
+        assert_eq!(
+            e.config_path.as_deref(),
+            Some(Path::new("/c/rstory/config.toml"))
+        );
+        assert_eq!(e.config_home.as_deref(), Some(Path::new("/c")));
+        assert_eq!(e.data_home.as_deref(), Some(Path::new("/d")));
+        assert_eq!(e.session.wayland_display.as_deref(), Some("wayland-1"));
+        assert_eq!(e.session.display, None, "empty counts as unset");
+        assert_eq!(e.terminal.as_deref(), Some("foot"));
+        assert_eq!(e.path, "/x:/y");
+        assert_eq!(e.timeout, probes::PROBE_TIMEOUT);
+
+        let home_only: HashMap<&str, &str> = HashMap::from([("HOME", "/h")]);
+        let get = |k: &str| home_only.get(k).map(|v| (*v).to_string());
+        let e = ProbeEnv::from_lookup(&get, 1000, Path::new("/nonexistent"), NOW);
+        assert_eq!(e.socket, None, "no runtime directory, no socket");
+        assert_eq!(
+            e.store_dir.as_deref(),
+            Some(Path::new("/h/.local/state/rstory"))
+        );
+        assert_eq!(e.config_home.as_deref(), Some(Path::new("/h/.config")));
+        assert_eq!(e.data_home.as_deref(), Some(Path::new("/h/.local/share")));
+
+        let none = ProbeEnv::from_lookup(&|_| None, 1000, Path::new("/nonexistent"), NOW);
+        assert_eq!(
+            (none.store_dir, none.config_home, none.data_home),
+            (None, None, None)
+        );
+    }
+
+    #[test]
+    fn session_kind_follows_the_type_then_the_displays() {
+        let k = |t: Option<&str>, w: Option<&str>, d: Option<&str>| {
+            probes::session_kind(&SessionEnv {
+                wayland_display: w.map(Into::into),
+                display: d.map(Into::into),
+                session_type: t.map(Into::into),
+                xdg_runtime_dir: None,
+            })
+        };
+        assert_eq!(k(Some("wayland"), None, None), SessionKind::Wayland);
+        assert_eq!(k(Some("X11"), Some("w"), None), SessionKind::X11);
+        assert_eq!(k(None, Some("w"), Some(":0")), SessionKind::Wayland);
+        assert_eq!(k(Some("tty"), None, Some(":0")), SessionKind::X11);
+        assert_eq!(k(None, None, None), SessionKind::None);
+        assert_eq!(k(Some(""), Some(""), Some("")), SessionKind::None);
+    }
+
+    #[test]
+    fn shell_versions_are_parsed() {
+        assert_eq!(
+            probes::parse_shell_version("GNOME Shell 48.7\n").as_deref(),
+            Some("48.7")
+        );
+        assert_eq!(
+            probes::parse_shell_version("GNOME Shell 50.alpha").as_deref(),
+            Some("50.alpha")
+        );
+        assert_eq!(probes::parse_shell_version("something else"), None);
+        assert_eq!(probes::parse_shell_version(""), None);
+    }
+
+    #[test]
+    fn run_capture_returns_output_and_gives_up_on_slow_or_failing_programs() {
+        let rig = Rig::new();
+        let ok = rig.bin("ok", "echo hello");
+        assert_eq!(probes::run_capture(&ok, &[], T).as_deref(), Some("hello\n"));
+        let args = rig.bin("args", "echo \"$1 $2\"");
+        assert_eq!(
+            probes::run_capture(&args, &["a", "b"], T).as_deref(),
+            Some("a b\n")
+        );
+        let bad = rig.bin("bad", "echo out; exit 3");
+        assert_eq!(probes::run_capture(&bad, &[], T), None);
+        assert_eq!(
+            probes::run_capture(Path::new("/nonexistent/prog"), &[], T),
+            None
+        );
+        let slow = rig.bin("slow", "exec sleep 5");
+        let t0 = Instant::now();
+        assert_eq!(
+            probes::run_capture(&slow, &[], Duration::from_millis(150)),
+            None
+        );
+        assert!(t0.elapsed() < Duration::from_secs(2), "{:?}", t0.elapsed());
+    }
+
+    #[test]
+    fn no_daemon_means_down() {
+        let mut rig = Rig::new();
+        assert_eq!(
+            probes::daemon_fact(&rig.env),
+            DaemonFact::Down,
+            "no socket file"
+        );
+        rig.env.socket = None;
+        assert_eq!(
+            probes::daemon_fact(&rig.env),
+            DaemonFact::Down,
+            "no socket path"
+        );
+    }
+
+    #[test]
+    fn a_socket_file_nobody_listens_on_means_down() {
+        let rig = Rig::new();
+        drop(UnixListener::bind(rig.env.socket.as_ref().unwrap()).unwrap());
+        assert_eq!(probes::daemon_fact(&rig.env), DaemonFact::Down);
+    }
+
+    #[test]
+    fn a_daemon_that_answers_status_is_up() {
+        let rig = Rig::new();
+        let status = daemon_status(StateKind::Paused, Some(60), "active");
+        rig.stub_daemon(&status);
+        assert_eq!(
+            probes::daemon_fact(&rig.env),
+            DaemonFact::Up(Box::new(status))
+        );
+    }
+
+    #[test]
+    fn a_daemon_that_stays_silent_or_talks_nonsense_is_not_answering() {
+        let rig = Rig::new();
+        let listener = UnixListener::bind(rig.env.socket.as_ref().unwrap()).unwrap();
+        let (tx, rx) = std::sync::mpsc::channel::<()>();
+        std::thread::spawn(move || {
+            let (_stream, _) = listener.accept().unwrap();
+            let _ = rx.recv(); // hold the connection open without answering
+        });
+        let t0 = Instant::now();
+        assert_eq!(probes::daemon_fact(&rig.env), DaemonFact::NotAnswering);
+        assert!(t0.elapsed() < Duration::from_secs(2));
+        drop(tx);
+
+        let rig = Rig::new();
+        let listener = UnixListener::bind(rig.env.socket.as_ref().unwrap()).unwrap();
+        std::thread::spawn(move || {
+            let (stream, _) = listener.accept().unwrap();
+            let mut line = String::new();
+            BufReader::new(&stream).read_line(&mut line).unwrap();
+            writeln!(&stream, "not json at all").unwrap();
+        });
+        assert_eq!(probes::daemon_fact(&rig.env), DaemonFact::NotAnswering);
+
+        let rig = Rig::new();
+        fs::write(rig.env.socket.as_ref().unwrap(), "a plain file").unwrap();
+        assert_eq!(probes::daemon_fact(&rig.env), DaemonFact::NotAnswering);
+    }
+
+    #[test]
+    fn a_missing_store_is_missing_and_nothing_is_created() {
+        let rig = Rig::new();
+        let before = tree(rig.tmp.path());
+        let (fact, pause) = probes::store_fact(&rig.env, &DaemonFact::Down);
+        assert_eq!(fact, StoreFact::Missing(rig.env.store_dir.clone().unwrap()));
+        assert_eq!(pause, None);
+        assert_eq!(tree(rig.tmp.path()), before);
+        let mut none = rig.env.clone();
+        none.store_dir = None;
+        assert_eq!(
+            probes::store_fact(&none, &DaemonFact::Down).0,
+            StoreFact::Unknown
+        );
+    }
+
+    #[test]
+    fn a_private_empty_store_counts_zero_entries_without_writing() {
+        let rig = Rig::new();
+        rig.store();
+        let before = tree(rig.tmp.path());
+        let (fact, _) = probes::store_fact(&rig.env, &DaemonFact::Down);
+        assert_eq!(fact, StoreFact::Private { entries: Some(0) });
+        assert_eq!(tree(rig.tmp.path()), before, "doctor writes nothing");
+    }
+
+    #[test]
+    fn a_store_open_to_the_group_is_too_open() {
+        let rig = Rig::new();
+        let dir = rig.store();
+        fs::set_permissions(&dir, fs::Permissions::from_mode(0o750)).unwrap();
+        let (fact, _) = probes::store_fact(&rig.env, &DaemonFact::Down);
+        assert_eq!(fact, StoreFact::TooOpen { dir: dir.clone() });
+        fs::set_permissions(&dir, fs::Permissions::from_mode(0o700)).unwrap();
+        fs::write(dir.join("index.json"), "{}").unwrap();
+        fs::set_permissions(dir.join("index.json"), fs::Permissions::from_mode(0o644)).unwrap();
+        let (fact, _) = probes::store_fact(&rig.env, &DaemonFact::Down);
+        assert_eq!(fact, StoreFact::TooOpen { dir: dir.clone() });
+    }
+
+    #[test]
+    fn a_running_daemon_supplies_the_count_and_the_store_is_not_opened() {
+        let rig = Rig::new();
+        rig.store();
+        let up = DaemonFact::Up(Box::new(daemon_status(
+            StateKind::Recording,
+            None,
+            "active",
+        )));
+        let (fact, pause) = probes::store_fact(&rig.env, &up);
+        assert_eq!(fact, StoreFact::Private { entries: Some(8) });
+        assert_eq!(pause, None);
+    }
+
+    #[test]
+    fn the_shell_version_and_the_extension_come_from_the_injected_programs() {
+        let rig = Rig::new();
+        rig.bin("gnome-shell", "echo 'GNOME Shell 48.7'");
+        rig.bin(
+            "gnome-extensions",
+            &format!("[ \"$1 $2\" = \"info {UUID}\" ] || exit 9\necho '  Enabled: Yes'"),
+        );
+        let ext = rig.extension_dir();
+        fs::create_dir_all(&ext).unwrap();
+        fs::write(ext.join("metadata.json"), r#"{"version-name":"0.0.9"}"#).unwrap();
+        let g = probes::gnome_facts(&rig.env);
+        assert_eq!(g.shell_version.as_deref(), Some("48.7"));
+        let e = g.extension.unwrap();
+        assert_eq!(e.installed_version.as_deref(), Some("0.0.9"));
+        assert_eq!(e.enabled, Some(true));
+        assert_eq!(g.shipped_version, crate::install::gnome::embedded_version());
+        assert!(g.shipped_version.is_some());
+    }
+
+    #[test]
+    fn missing_gnome_programs_leave_unknowns_not_failures() {
+        let rig = Rig::new();
+        let g = probes::gnome_facts(&rig.env);
+        assert_eq!(g.shell_version, None);
+        let e = g.extension.unwrap();
+        assert_eq!((e.installed_version, e.enabled), (None, None));
+    }
+
+    #[test]
+    fn a_slow_gnome_extensions_does_not_hold_doctor_up() {
+        let mut rig = Rig::new();
+        rig.env.timeout = Duration::from_millis(150);
+        rig.bin("gnome-shell", "exec sleep 5");
+        rig.bin("gnome-extensions", "exec sleep 5");
+        let ext = rig.extension_dir();
+        fs::create_dir_all(&ext).unwrap();
+        fs::write(ext.join("metadata.json"), r#"{"version-name":"0.1.0"}"#).unwrap();
+        let t0 = Instant::now();
+        let g = probes::gnome_facts(&rig.env);
+        assert!(t0.elapsed() < Duration::from_secs(1), "{:?}", t0.elapsed());
+        assert_eq!(g.shell_version, None);
+        let e = g.extension.unwrap();
+        assert_eq!(
+            e.installed_version.as_deref(),
+            Some("0.1.0"),
+            "read from the file"
+        );
+        assert_eq!(e.enabled, None);
+    }
+
+    #[test]
+    fn the_picker_plan_searches_the_injected_path_and_reads_the_config() {
+        let mut rig = Rig::new();
+        assert!(matches!(
+            probes::picker_plan(&rig.env),
+            LaunchPlan::NotFound { .. }
+        ));
+        rig.bin("kitty", "true");
+        match probes::picker_plan(&rig.env) {
+            LaunchPlan::Found { source, argv } => {
+                assert_eq!(source, Source::List);
+                assert_eq!(argv[0], "kitty");
+            }
+            other => panic!("{other:?}"),
+        }
+        rig.bin("myterm", "true");
+        rig.env.terminal = Some("myterm".into());
+        assert!(matches!(
+            probes::picker_plan(&rig.env),
+            LaunchPlan::Found {
+                source: Source::Env,
+                ..
+            }
+        ));
+        fs::write(
+            rig.env.config_path.as_ref().unwrap(),
+            "picker_command = \"/opt/x/term -e rstory pick\"\n",
+        )
+        .unwrap();
+        match probes::picker_plan(&rig.env) {
+            LaunchPlan::Found { source, argv } => {
+                assert_eq!(source, Source::Config);
+                assert_eq!(argv[0], "/opt/x/term");
+            }
+            other => panic!("{other:?}"),
+        }
+    }
+
+    #[test]
+    fn a_broken_config_file_does_not_stop_the_picker_search() {
+        let rig = Rig::new();
+        rig.bin("foot", "true");
+        fs::write(rig.env.config_path.as_ref().unwrap(), "this is [ not toml").unwrap();
+        assert!(matches!(
+            probes::picker_plan(&rig.env),
+            LaunchPlan::Found {
+                source: Source::List,
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn autostart_entries_are_found_where_the_installer_writes_them() {
+        let rig = Rig::new();
+        assert!(probes::autostart_facts(&rig.env).is_empty());
+        let cfg = rig.env.config_home.clone().unwrap();
+        fs::create_dir_all(cfg.join("autostart")).unwrap();
+        fs::write(cfg.join("autostart/rstory.desktop"), "[Desktop Entry]").unwrap();
+        let found = probes::autostart_facts(&rig.env);
+        assert_eq!(found.len(), 1);
+        assert_eq!(found[0].0, AutostartKind::Xdg);
+        assert_eq!(found[0].1, cfg.join("autostart/rstory.desktop"));
+        let mut none = rig.env.clone();
+        none.config_home = None;
+        assert!(probes::autostart_facts(&none).is_empty());
+    }
+
+    #[test]
+    fn gather_and_evaluate_report_a_healthy_fake_setup() {
+        let rig = Rig::new();
+        rig.store();
+        rig.bin("gnome-shell", "echo 'GNOME Shell 48.7'");
+        rig.bin("gnome-extensions", "echo 'Enabled: Yes'");
+        rig.bin("ghostty", "true");
+        let shipped = crate::install::gnome::embedded_version().unwrap();
+        let ext = rig.extension_dir();
+        fs::create_dir_all(&ext).unwrap();
+        fs::write(
+            ext.join("metadata.json"),
+            format!(r#"{{"version-name":"{shipped}"}}"#),
+        )
+        .unwrap();
+        let cfg = rig.env.config_home.clone().unwrap();
+        fs::create_dir_all(cfg.join("autostart")).unwrap();
+        fs::write(cfg.join("autostart/rstory.desktop"), "x").unwrap();
+        rig.stub_daemon(&daemon_status(StateKind::Recording, None, "no_host"));
+
+        let before = tree(rig.tmp.path());
+        let facts = probes::gather(&rig.env, &mut bridge());
+        let checks = evaluate(&facts);
+        assert!(checks.iter().all(|c| c.status == Status::Ok), "{checks:?}");
+        assert_eq!(exit_code(&checks), 0);
+        let session = checks.iter().find(|c| c.id == "session").unwrap();
+        assert_eq!(session.message, "Wayland (GNOME Shell 48.7)");
+        let after = tree(rig.tmp.path());
+        let strip = |t: Vec<(PathBuf, u32, u64)>| -> Vec<PathBuf> {
+            t.into_iter()
+                .map(|(p, _, _)| p)
+                .filter(|p| !p.ends_with("control.sock"))
+                .collect()
+        };
+        assert_eq!(strip(before), strip(after), "doctor creates nothing");
+    }
+
+    #[test]
+    fn gather_without_a_session_or_daemon_still_reports() {
+        let mut rig = Rig::new();
+        rig.env.session = SessionEnv::default();
+        rig.env.current_desktop = None;
+        let facts = probes::gather(
+            &rig.env,
+            &mut FakeProbe {
+                data_control: DataControl::None,
+                x11: false,
+            },
+        );
+        assert_eq!(facts.session.kind, SessionKind::None);
+        assert_eq!(facts.daemon, DaemonFact::Down);
+        assert_eq!(facts.gnome, None);
+        let checks = evaluate(&facts);
+        assert_eq!(exit_code(&checks), 2);
+        assert!(
+            checks
+                .iter()
+                .any(|c| c.id == "session" && c.message.contains("no graphical session"))
+        );
+    }
+
+    #[test]
+    fn gather_stays_inside_the_time_budget_with_slow_programs() {
+        let mut rig = Rig::new();
+        rig.env.timeout = Duration::from_millis(200);
+        rig.bin("gnome-shell", "exec sleep 5");
+        rig.bin("gnome-extensions", "exec sleep 5");
+        let ext = rig.extension_dir();
+        fs::create_dir_all(&ext).unwrap();
+        fs::write(ext.join("metadata.json"), r#"{"version-name":"0.1.0"}"#).unwrap();
+        let t0 = Instant::now();
+        let facts = probes::gather(&rig.env, &mut bridge());
+        assert!(t0.elapsed() < Duration::from_secs(1), "{:?}", t0.elapsed());
+        assert!(facts.gnome.is_some());
+    }
+
+    #[test]
+    fn arguments_are_json_or_nothing() {
+        let a = |v: &[&str]| v.iter().map(|s| (*s).to_string()).collect::<Vec<_>>();
+        assert_eq!(parse_args(&a(&[])), Ok(Options { json: false }));
+        assert_eq!(parse_args(&a(&["--json"])), Ok(Options { json: true }));
+        assert!(parse_args(&a(&["--yaml"])).unwrap_err().contains("--yaml"));
+        assert!(parse_args(&a(&["--json", "extra"])).is_err());
+    }
+
+    #[test]
+    fn run_with_prints_the_report_and_returns_the_scale() {
+        let rig = Rig::new();
+        let term = Term::new(false, 80, Tier::Mono, false);
+        let (mut out, mut err) = (Vec::new(), Vec::new());
+        let code = probes_run(&rig, &["--json"], &term, &mut out, &mut err);
+        assert_eq!(code, 2, "no daemon: a failure");
+        assert!(err.is_empty());
+        let doc: serde_json::Value = serde_json::from_slice(&out).unwrap();
+        assert_eq!(doc["schema"], 1);
+        assert!(
+            doc["checks"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|c| c["id"] == "daemon" && c["status"] == "fail")
+        );
+
+        let (mut out, mut err) = (Vec::new(), Vec::new());
+        let code = probes_run(&rig, &[], &term, &mut out, &mut err);
+        assert_eq!(code, 2);
+        let text = String::from_utf8(out).unwrap();
+        assert!(
+            text.contains("Daemon") && text.contains("failure"),
+            "{text}"
+        );
+
+        let (mut out, mut err) = (Vec::new(), Vec::new());
+        let code = probes_run(&rig, &["--nope"], &term, &mut out, &mut err);
+        assert_eq!(code, 2);
+        assert!(out.is_empty());
+        assert!(String::from_utf8(err).unwrap().contains("--nope"));
+    }
+
+    fn probes_run(
+        rig: &Rig,
+        args: &[&str],
+        term: &Term,
+        out: &mut Vec<u8>,
+        err: &mut Vec<u8>,
+    ) -> u8 {
+        let args: Vec<String> = args.iter().map(|s| (*s).to_string()).collect();
+        run_with(&args, &rig.env, &mut bridge(), term, out, err)
+    }
+}
