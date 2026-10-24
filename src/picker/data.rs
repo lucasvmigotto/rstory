@@ -276,10 +276,14 @@ pub fn subscribe(path: &Path, mut notify: impl FnMut() -> bool + Send + 'static)
     .to_string();
     line.push('\n');
     stream.write_all(line.as_bytes())?;
+    // Return only once the daemon has acknowledged the subscription: a change right after this
+    // call must not be missed.
+    let mut reader = BufReader::new(stream);
+    stream_ack(&mut reader)?;
     std::thread::Builder::new()
         .name("rstory-pick-subscribe".into())
         .spawn(move || {
-            for line in BufReader::new(stream).lines() {
+            for line in reader.lines() {
                 let Ok(line) = line else { return };
                 let Ok(v) = serde_json::from_str::<Value>(&line) else {
                     continue;
@@ -290,4 +294,25 @@ pub fn subscribe(path: &Path, mut notify: impl FnMut() -> bool + Send + 'static)
             }
         })?;
     Ok(())
+}
+
+/// Reads lines until the answer to the subscribe request (`id` 1).
+fn stream_ack(reader: &mut BufReader<UnixStream>) -> io::Result<()> {
+    let mut line = String::new();
+    loop {
+        line.clear();
+        if reader.read_line(&mut line)? == 0 {
+            return Err(io::Error::from(io::ErrorKind::UnexpectedEof));
+        }
+        let Ok(v) = serde_json::from_str::<Value>(&line) else {
+            continue;
+        };
+        if v.get("id").and_then(Value::as_u64) == Some(1) {
+            return if v.get("ok").and_then(Value::as_bool) == Some(true) {
+                Ok(())
+            } else {
+                Err(io::Error::other("subscribe refused"))
+            };
+        }
+    }
 }
