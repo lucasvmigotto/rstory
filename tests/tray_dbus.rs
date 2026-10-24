@@ -379,7 +379,8 @@ async fn rig() -> Rig {
     let conn = connect(&bus.addr).await;
     // The child seeds three entries after the tray starts: wait until the menu shows them all.
     until("the seeded entries in the menu", async || {
-        find(&layout(&conn, &item).await, "tray one").map(|_| ())
+        let l = layout(&conn, &item).await;
+        TEXTS.iter().all(|t| find(&l, t).is_some()).then_some(())
     })
     .await;
     Rig {
