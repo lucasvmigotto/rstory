@@ -173,7 +173,7 @@
       "help": "Print a shell completion script\n\nUsage: rstory completions [OPTIONS] <SHELL>\n\nArguments:\n  <SHELL>\n          The shell\n\n          Possible values:\n          - bash: bash\n          - zsh:  zsh\n          - fish: fish\n\nOptions:\n      --ascii\n          Use only ASCII glyphs (also the default in a non-UTF-8 locale)\n\n  -h, --help\n          Print help (see a summary with '-h')\n\n  -V, --version\n          Print version\n\nExamples:\n  rstory completions bash > ~/.local/share/bash-completion/completions/rstory\n  rstory completions fish > ~/.config/fish/completions/rstory.fish"
     }
   ],
-  "config_defaults": "# <tmp>/config/rstory/config.toml (not found, showing the defaults)\nmax_entries = 20\nmax_pinned = 10\nmax_entry_bytes = 1048576\nttl = \"7d\"\ntheme = \"terminal\"",
+  "config_defaults": "# $XDG_CONFIG_HOME/rstory/config.toml (not found, showing the defaults)\nmax_entries = 20\nmax_pinned = 10\nmax_entry_bytes = 1048576\nttl = \"7d\"\ntheme = \"terminal\"",
   "doctor": {
     "exit": 2,
     "checks": [

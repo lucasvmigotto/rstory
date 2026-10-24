@@ -58,7 +58,7 @@ LINT_FEATURES := --features fault-injection,session-tests,perf-tests
 EXT_MOUNT := -v $(NPM_VOLUME):/src/extension/node_modules
 TTY := $(shell [ -t 0 ] && echo -it)
 
-.PHONY: help image fetch fmt fmt-check lint check test test-quarantine bench test-integration test-e2e test-e2e-smoke test-perf test-soak build build-static test-launch ext-lint ext-test ext-pack ext-deps ext-typecheck deny audit secret-scan publish-dry-run publish sc001-test doctor shell clean clean-cache docs-install docs-dev docs-check docs-build docs-reference
+.PHONY: help image fetch fmt fmt-check lint check test test-quarantine bench test-integration test-e2e test-e2e-smoke test-perf test-soak build build-static test-launch ext-lint ext-test ext-pack ext-deps ext-typecheck deny audit secret-scan publish-dry-run publish sc001-test doctor shell clean clean-cache docs-install docs-dev docs-check docs-build docs-reference docs-fmt
 
 help: ## List recipes
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-17s %s\n", $$1, $$2}'
@@ -204,6 +204,9 @@ docs-dev: ## Serve the docs site with hot reload on http://127.0.0.1:5173/rstory
 
 docs-check: ## Docs site: Biome lint, typecheck, unit, accessibility, footer and LLM-output tests, offline
 	$(DOCS_RUN) $(OFFLINE) $(DOCS_IMAGE) sh -c 'bun run lint && bun run typecheck && bun run test'
+
+docs-fmt: ## Format and fix the docs site with Biome (writes files), offline
+	$(DOCS_RUN) $(OFFLINE) $(DOCS_IMAGE) bun run format
 
 docs-build: ## Build docs/site/dist (pages, llms.txt, llms-full.txt, one .md per page), offline
 	$(DOCS_RUN) $(OFFLINE) $(DOCS_IMAGE) bun run build

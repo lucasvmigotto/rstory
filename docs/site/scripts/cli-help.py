@@ -89,7 +89,7 @@ data = {
     "_generated": "make docs-reference - do not hand-edit",
     "rstory": version.strip().removeprefix("rstory ").strip(),
     "commands": commands,
-    "config_defaults": scrub(cfg.rstrip("\n")),
+    "config_defaults": scrub(cfg.rstrip("\n")).replace("<tmp>/config", "$XDG_CONFIG_HOME"),
     "doctor": {"exit": c_doc, "checks": doctor},
     "completions": shells,
 }
