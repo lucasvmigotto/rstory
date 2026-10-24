@@ -35,6 +35,7 @@ jobs:
     outputs:
       full: ${{ steps.stage.outputs.full }}
       perf: ${{ steps.stage.outputs.perf }}
+      e2e_full: ${{ steps.stage.outputs.e2e_full }}
       nextest_profile: ${{ steps.stage.outputs.nextest_profile }}
       proptest_cases: ${{ steps.stage.outputs.proptest_cases }}
     steps:
@@ -47,22 +48,23 @@ jobs:
           STAGE: ${{ inputs.stage }}
         run: |
           set -euo pipefail
-          full=false; perf=false; profile=ci; cases=1000
+          full=false; perf=false; e2e_full=false; profile=ci; cases=1000
           # PR into main, push to main, release tag: the main set (10 000 property cases, perf smoke).
           if [ "$BASE" = main ] || [ "$REF" = refs/heads/main ] || [ "$STAGE" = release ]; then
-            full=true; perf=true; cases=10000
+            full=true; perf=true; e2e_full=true; cases=10000
           fi
           # Push to dev: the PR set plus perf smoke; one reported rerun for flaky tests.
           if [ "$EVENT" = push ] && [ "$REF" = refs/heads/dev ]; then
-            perf=true; profile=ci-dev
+            perf=true; e2e_full=true; profile=ci-dev
           fi
           {
             echo "full=$full"
             echo "perf=$perf"
+            echo "e2e_full=$e2e_full"
             echo "nextest_profile=$profile"
             echo "proptest_cases=$cases"
           } >> "$GITHUB_OUTPUT"
-          echo "gate set: full=$full perf=$perf nextest=$profile proptest=$cases" >> "$GITHUB_STEP_SUMMARY"
+          echo "gate set: full=$full perf=$perf e2e_full=$e2e_full nextest=$profile proptest=$cases" >> "$GITHUB_STEP_SUMMARY"
 
   checks:
     name: checks (fmt, deny, audit, secrets, extension)
@@ -183,6 +185,42 @@ jobs:
           if-no-files-found: ignore
           retention-days: 30
 
+  e2e:
+    name: e2e (${{ matrix.arch }})
+    needs: plan
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { arch: x86_64, runner: ubuntu-24.04 }
+          - { arch: aarch64, runner: ubuntu-24.04-arm }
+    env:
+      NEXTEST_PROFILE: ${{ needs.plan.outputs.nextest_profile }}
+      E2E_FULL: ${{ needs.plan.outputs.e2e_full }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/tools
+      - name: End-to-end journeys, smoke K2/K3/K6 on pull requests, K1-K7 and PEER on dev and main (make test-e2e)
+        run: |
+          if [ "$E2E_FULL" = true ]; then make test-e2e; else make test-e2e-smoke; fi
+      - name: Report flaky tests
+        if: always()
+        run: python3 -I .github/scripts/flaky-report.py "$RUNNER_TEMP/target/nextest/$NEXTEST_PROFILE/junit.xml"
+      - name: Keep the JUnit report (flake rate over 30 days)
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: junit-e2e-${{ matrix.arch }}
+          path: ${{ runner.temp }}/target/nextest/${{ needs.plan.outputs.nextest_profile }}/junit.xml
+          if-no-files-found: ignore
+          retention-days: 30
+
   static:
     name: static build (${{ matrix.arch }})
     runs-on: ${{ matrix.runner }}
@@ -228,7 +266,7 @@ jobs:
   # The one required status check: stable name, always reports, red if any gate failed.
   ci-ok:
     name: ci-ok
-    needs: [plan, checks, lint, test, integration, static, perf]
+    needs: [plan, checks, lint, test, integration, e2e, static, perf]
     if: always()
     runs-on: ubuntu-24.04
     timeout-minutes: 5

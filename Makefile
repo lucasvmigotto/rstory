@@ -42,7 +42,7 @@ NPM_VOLUME ?= rstory-tools-npm
 EXT_MOUNT := -v $(NPM_VOLUME):/src/extension/node_modules
 TTY := $(shell [ -t 0 ] && echo -it)
 
-.PHONY: help image fetch fmt fmt-check lint check test test-quarantine bench test-integration build build-static test-launch ext-lint ext-test ext-deps ext-typecheck deny audit secret-scan publish-dry-run publish doctor shell clean-cache
+.PHONY: help image fetch fmt fmt-check lint check test test-quarantine bench test-integration test-e2e test-e2e-smoke build build-static test-launch ext-lint ext-test ext-deps ext-typecheck deny audit secret-scan publish-dry-run publish doctor shell clean-cache
 
 help: ## List recipes
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-17s %s\n", $$1, $$2}'
@@ -79,7 +79,16 @@ bench: image ## Store benchmarks (std harness); fails if a p95 is over 2x its bu
 	$(RUN) $(OFFLINE) $(IMAGE) cargo bench --locked --offline $(FEATURES) --bench store
 
 test-integration: image ## Session tests (Xvfb, headless sway/mutter, bridge mode), offline; TEST_ARGS='--test x11_capture' narrows
-	$(RUN) $(OFFLINE) $(IMAGE) $(NEXTEST) --features session-tests --test-threads 2 $(TEST_ARGS)
+	$(RUN) $(OFFLINE) $(IMAGE) $(NEXTEST) --features session-tests --test-threads 2 -E 'not binary(e2e)' $(TEST_ARGS)
+
+# The PR gate runs the smoke journeys only (K2, K3, K6); pushes to dev run them all (test-strategy §6).
+E2E_SMOKE := -E 'test(/::k2_/) | test(/::k3_/) | test(/::k6_/)'
+
+test-e2e: image ## End-to-end journeys K1-K7 + PEER (real binary, pty, headless sessions), offline; TEST_ARGS='k2_' narrows
+	$(RUN) $(OFFLINE) $(IMAGE) $(NEXTEST) --features session-tests --test e2e --test-threads 2 $(TEST_ARGS)
+
+test-e2e-smoke: image ## The PR-gate subset of the journeys (K2, K3, K6), offline
+	$(RUN) $(OFFLINE) $(IMAGE) $(NEXTEST) --features session-tests --test e2e --test-threads 2 $(E2E_SMOKE)
 
 build: image ## Debug build, offline
 	$(RUN) $(OFFLINE) $(IMAGE) cargo build --locked --offline

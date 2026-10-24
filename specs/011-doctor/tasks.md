@@ -69,7 +69,7 @@ No feature-specific setup (crate skeleton comes from 001).
 
 - [x] T007 Assert doctor never prints content (canary) — Executor: builder · Reviewer: thinker
 - [x] T008 Run quickstart.md validation — Executor: scout · Reviewer: thinker · Effort: low
-- [ ] T009 QA tasks — see `## QA` (appended by `qa:strategy`) — Executor: thinker · Reviewer: reviewer · Effort: high
+- [x] T009 QA tasks — see `## QA` (appended by `qa:strategy`) — Executor: thinker · Reviewer: reviewer · Effort: high
 
 ---
 
@@ -115,7 +115,7 @@ Appended by `frontend:spec`. `[TUI]`/`[CLI]` tasks built by `frontend:tui` (tick
 
 Appended by `qa:strategy`. Executed by `qa:e2e` / `qa:load` after the builds (ticks only this section).
 
-- [ ] T012 Reuse E2E-K1/K4 assertions on doctor output — Executor: builder · Reviewer: thinker · Effort: low
+- [x] T012 Reuse E2E-K1/K4 assertions on doctor output — Executor: builder · Reviewer: thinker · Effort: low
 
 **Checkpoint**: the journeys and suites in `qa.md` are green in CI; the exit criteria are met → Verified in `specs/README.md`.
 

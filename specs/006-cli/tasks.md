@@ -102,7 +102,7 @@ description: "Task list for Command-line interface"
 - [x] T012 [P] `benches/ls.rs`: < 50 ms at 500 entries (SC-001) — Executor: builder · Reviewer: thinker
 - [x] T013 Shell completions smoke test — Executor: builder · Reviewer: thinker · Effort: low
 - [x] T014 Run quickstart.md validation — Executor: scout · Reviewer: thinker · Effort: low
-- [ ] T015 QA tasks — see `## QA` (appended by `qa:strategy`) — Executor: thinker · Reviewer: reviewer · Effort: high
+- [x] T015 QA tasks — see `## QA` (appended by `qa:strategy`) — Executor: thinker · Reviewer: reviewer · Effort: high
 
 ---
 
@@ -174,7 +174,7 @@ Appended by `frontend:spec`. `[TUI]`/`[CLI]` tasks built by `frontend:tui` (tick
 
 Appended by `qa:strategy`. Executed by `qa:e2e` / `qa:load` after the builds (ticks only this section).
 
-- [ ] T024 `tests/e2e/E2E-K6.rs` (scripting, non-TTY) — Executor: builder · Reviewer: thinker
+- [x] T024 `tests/e2e/E2E-K6.rs` (scripting, non-TTY) — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: the journeys and suites in `qa.md` are green in CI; the exit criteria are met → Verified in `specs/README.md`.
 
