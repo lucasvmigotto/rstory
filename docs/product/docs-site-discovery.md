@@ -559,3 +559,10 @@ A few notes on these recipes:
 10. **The Install page before release.** Is "Planned: `cargo install rstory` and release tarballs from 0.1.0; today: build from source" acceptable wording?
 11. **GNOME Shell 51.** Should it be shown as Unavailable ("not declared until its manual matrix passes"), matching `dev@b4a998e`?
 12. **The CI runner.** Should the docs workflow call `make docs-*` (Podman or Docker on the runner, consistent with `ci.yml`'s tools action), rather than `oven-sh/setup-bun` on the host? And should a stub `docs/site/Containerfile` be added so Dependabot can track the Bun image?
+
+## Owner decisions (2026-10-24)
+
+- **Gaps:** implement them before the site, rather than trimming the docs: a real `rstory daemon --help`, the `theme` config key with the color tiers it unlocks, `--ascii`, and a `backend` config key. The site then documents them as Implemented.
+- **Deploy:** nothing goes live before 0.1.0. CI builds and tests the site on every PR; the first deploy is the 0.1.0 release, so the Install page is real from day one.
+- **Docs hub:** rstory is added to the hub (`apps.ts` and the sitemap) by a small PR when the site first deploys.
+- **Already decided:** the site lives in `docs/site/`, in English only, hosted on R2 at `docs.lucasvmigotto.me/rstory/`. The extension declares GNOME Shell 48–50.
