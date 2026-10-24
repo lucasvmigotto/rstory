@@ -305,8 +305,25 @@ fn execute_inner(
 }
 
 /// Entry point for `rstory install-gnome-extension <args>`; uses the real session.
+/// `rstory install-gnome-extension --help`.
+pub const HELP: &str = "Install the rstory GNOME Shell extension (Shell 48 to 51) from this binary.
+
+Usage: rstory install-gnome-extension [--enable | --uninstall]
+
+  --enable     also run `gnome-extensions enable` (works after a re-login)
+  --uninstall  remove the extension
+
+Examples:
+  rstory install-gnome-extension
+  rstory install-gnome-extension --uninstall
+";
+
 #[must_use]
 pub fn run(args: &[String]) -> u8 {
+    if args.iter().any(|a| a == "-h" || a == "--help") {
+        print!("{HELP}");
+        return 0;
+    }
     let opts = match parse_args(args) {
         Ok(o) => o,
         Err(e) => {
