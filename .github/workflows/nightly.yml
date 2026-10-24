@@ -1,0 +1,101 @@
+# Nightly (test-strategy §6, scheduled row): property tests at 100 000 cases, RustSec advisories,
+# quarantined tests. A failure opens or updates one issue (devsecops failure-issues).
+name: nightly
+
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: nightly
+  cancel-in-progress: false
+
+env:
+  CPUS: "4"
+  MEMORY: 12g
+
+jobs:
+  property:
+    name: property tests, 100 000 cases
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    permissions:
+      contents: read
+    env:
+      PROPTEST_CASES: "100000"
+      NEXTEST_PROFILE: ci-dev
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/tools
+      - name: Store, history and filter properties (make test)
+        run: make test TEST_ARGS="--test store_crash --test history_props --test filter_props"
+      - name: Report flaky tests
+        if: always()
+        run: python3 -I .github/scripts/flaky-report.py "$RUNNER_TEMP/target/nextest/$NEXTEST_PROFILE/junit.xml"
+
+  audit:
+    name: RustSec advisories
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/tools
+        with:
+          fetch: "false"
+      - name: Advisories (make audit)
+        run: make audit
+
+  quarantine:
+    name: quarantined tests (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { arch: x86_64, runner: ubuntu-24.04 }
+          - { arch: aarch64, runner: ubuntu-24.04-arm }
+    env:
+      NEXTEST_PROFILE: ci-dev
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/tools
+      - name: "#[ignore = \"quarantine: ...\"] tests (make test-quarantine)"
+        run: make test-quarantine
+      - name: Report flaky tests
+        if: always()
+        run: python3 -I .github/scripts/flaky-report.py "$RUNNER_TEMP/target/nextest/$NEXTEST_PROFILE/junit.xml"
+
+  report-failure:
+    name: report failure
+    needs: [property, audit, quarantine]
+    if: failure()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      issues: write # open or update the "CI failing" issue
+    steps:
+      - name: Open or update the "CI failing" issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TITLE: "CI failing: ${{ github.workflow }} on ${{ github.ref_name }}"
+          RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          n=$(gh issue list --state open --search "\"$TITLE\" in:title" --json number -q '.[0].number')
+          if [ -n "$n" ]; then gh issue comment "$n" --body "Failed again: $RUN"
+          else gh issue create --title "$TITLE" --body "Run: $RUN"; fi
