@@ -41,7 +41,7 @@ Each known failure has a specific message and hint.
 2. The daemon isn't running: fail, with the hint "run `rstory daemon` or `rstory install-autostart`".
 3. The store is too open: fail, with the hint "chmod 700 <dir> && chmod 600 <dir>/*".
 4. The GNOME extension is missing, disabled or outdated (on GNOME): warn, with the matching command.
-5. The Shell version is outside 48–51: warn, "panel icon not supported on GNOME Shell N; CLI and picker work".
+5. The Shell version is outside the extension's declared range (48–50, `extension/metadata.json`): warn, "panel icon not supported on GNOME Shell N; CLI and picker work".
 6. No SNI host (outside GNOME): warn, "no StatusNotifierItem host: the tray is unavailable; CLI and picker work".
 7. No terminal for the picker: warn, listing what was searched, with the hint "set picker_command in config.toml".
 8. Pause active: info, "recording paused (resumes in …)".

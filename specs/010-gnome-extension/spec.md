@@ -6,9 +6,9 @@
 
 **Status**: Draft
 
-**Input**: Brief §6 (Tray & GNOME), G7, K8, Q3 (48–51), Q6 (control socket); ADR-0008.
+**Input**: Brief §6 (Tray & GNOME), G7, K8, Q3 (48–51; the extension declares 48–50, decision 2026-10-24), Q6 (control socket); ADR-0008.
 
-> Tests are **required** for every story (Constitution II): install tests in Rust, a protocol-fixture test of the JS client under `gjs` when available, and the manual matrix on Shell 48–51.
+> Tests are **required** for every story (Constitution II): install tests in Rust, a protocol-fixture test of the JS client under `gjs` when available, and the manual matrix on Shell 48–50.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -18,7 +18,7 @@
 
 **Why this priority**: The v0.1 gate on the owner's GNOME 48 needs a panel icon, with no AppIndicator.
 
-**Independent Test**: Run with `XDG_DATA_HOME` set to a temp dir. The files appear under `gnome-shell/extensions/rstory@lucasvmigotto.github.io/`, `metadata.json` lists shell-version 48–51 and the rstory version, and the output explains the re-login.
+**Independent Test**: Run with `XDG_DATA_HOME` set to a temp dir. The files appear under `gnome-shell/extensions/rstory@lucasvmigotto.github.io/`, `metadata.json` lists shell-version 48–50 and the rstory version, and the output explains the re-login.
 
 **Acceptance Scenarios**:
 
@@ -35,7 +35,7 @@ Once enabled, the extension shows an rstory icon in the top bar with the same me
 
 **Why this priority**: J7 on GNOME, and G7.
 
-**Independent Test**: The JS client replays the protocol fixtures (`status`, `list`, `subscribe` events) and checks the menu model it builds. On a real Shell, the manual matrix runs on 48–51.
+**Independent Test**: The JS client replays the protocol fixtures (`status`, `list`, `subscribe` events) and checks the menu model it builds. On a real Shell, the manual matrix runs on 48–50.
 
 **Acceptance Scenarios**:
 
@@ -47,7 +47,7 @@ Once enabled, the extension shows an rstory icon in the top bar with the same me
 
 ### Edge Cases
 
-- A Shell version outside 48–51: GNOME refuses to load the extension because of `metadata.json`, and `doctor` explains.
+- A Shell version outside 48–50: GNOME refuses to load the extension because of `metadata.json`, and `doctor` explains.
 - The socket path comes from `GLib.get_user_runtime_dir()` + `/rstory/control.sock`.
 - Extension disable must close the socket and remove every signal handler and timeout (GNOME review rules).
 - The installed extension version differs from the binary's: `doctor` reports "extension outdated: run rstory install-gnome-extension".
@@ -57,7 +57,7 @@ Once enabled, the extension shows an rstory icon in the top bar with the same me
 ### Functional Requirements
 
 - **FR-001**: The extension source MUST live in `extension/` in the repository and be embedded in the binary with `include_dir`.
-- **FR-002**: `metadata.json` MUST declare `uuid: rstory@lucasvmigotto.github.io`, `shell-version: ["48","49","50","51"]` and `version-name` equal to the crate version.
+- **FR-002**: `metadata.json` MUST declare `uuid: rstory@lucasvmigotto.github.io`, `shell-version: ["48","49","50"]` (51 is added once extensions.gnome.org accepts it and its manual check passes; decision 2026-10-24) and `version-name` equal to the crate version.
 - **FR-003**: The extension MUST be an ESM extension (`export default class … extends Extension`) using `PanelMenu.Button` and `PopupMenu`.
 - **FR-004**: It MUST talk only through the control socket (protocol v1), using `Gio.SocketClient` + `Gio.UnixSocketAddress` and line-based reads. No D-Bus, no subprocess.
 - **FR-005**: It MUST contain no history logic: everything it shows comes from `list`, `status` and `subscribe`.
@@ -73,7 +73,7 @@ Once enabled, the extension shows an rstory icon in the top bar with the same me
 
 ### Measurable Outcomes
 
-- **SC-001**: Manual matrix: on GNOME Shell 48, 49, 50 and 51 (Wayland), the icon appears after re-login and enable, restoring works, and pause changes the icon.
+- **SC-001**: Manual matrix: on GNOME Shell 48, 49 and 50 (Wayland), the icon appears after re-login and enable, restoring works, and pause changes the icon.
 - **SC-002**: The JS client passes all shared protocol fixtures.
 - **SC-003**: Install, reinstall and uninstall tests pass in CI.
 

@@ -236,6 +236,27 @@ the shell history.
    tarballs. The release workflow finds 0.1.0 already on crates.io, skips the publish, and
    creates the GitHub release after the `release` environment approval.
 
+## Publish the extension on extensions.gnome.org (after 0.1.0)
+
+The extension does nothing without the daemon, so it goes up only once 0.1.0 is released (owner
+decision 2026-10-24). The first upload is manual, and later versions use the same form.
+
+1. `make ext-pack`: writes `dist/rstory@lucasvmigotto.github.io.shell-extension.zip`, the files
+   `install-gnome-extension` installs, with fixed timestamps.
+2. Run the site's analyzer in a throwaway container. It must report `clean`:
+   `podman run --rm --name scratch-rstory-shexli -v "$PWD/dist":/ego:ro,Z docker.io/library/python:3.13-slim sh -c 'pip install -q shexli && shexli /ego/rstory@lucasvmigotto.github.io.shell-extension.zip'`
+3. Upload the zip at <https://extensions.gnome.org/upload/> and accept both terms (the GNOME Shell
+   license clause, and that site staff may remove, modify or reassign the extension).
+4. On the extension's page, add a description that says it needs the rstory daemon, with the
+   install steps (`cargo install rstory` or the release binary, then `rstory install-autostart --now`).
+   Add a screenshot of the menu.
+5. Review results arrive by e-mail. Record the outcome and the site's version number in the
+   "Manual check log".
+
+For each later version, raise `version-name` in `metadata.json` with the crate version (a test
+enforces it), then repeat steps 1–3. Add a Shell version to `shell-version` only after its manual
+matrix passes and Shexli accepts it.
+
 ## Every later release (0.1.1 on)
 
 1. On a branch off `dev`, bump `version` in `Cargo.toml`, update `Cargo.lock` with `cargo update
@@ -277,7 +298,7 @@ the release PR. A failing row blocks the release.
 | GNOME 49 Wayland | GNOME 48–51 manual check | | | |
 | GNOME 50 Wayland | GNOME 48–51 manual check | | | |
 | GNOME 51 Wayland | GNOME 48–51 manual check | | | |
-| GNOME 48, 49, 50, 51 (light and dark panel) | GNOME Shell extension manual matrix | | | |
+| GNOME 48, 49, 50 (light and dark panel) | GNOME Shell extension manual matrix | | | |
 | KDE Plasma 6 Wayland | KDE Plasma Wayland manual check | | | |
 | KDE Plasma 6 Wayland | Tray manual check | | | |
 | sway with waybar | Tray manual check | | | |
@@ -405,14 +426,14 @@ Record per desktop: version, result per row, and anything odd. A failing row blo
 CI cross-check before the manual run: `make test TEST_ARGS=` runs `tests/tray_dbus.rs` against a
 private `dbus-daemon` and a stub watcher inside the tools container.
 
-## GNOME Shell extension manual matrix (48, 49, 50, 51)
+## GNOME Shell extension manual matrix (48, 49, 50)
 
 Why manual: the panel button, the Shell's extension loader and its theme only exist in a real
 GNOME Shell. The gjs fixture tests (`make ext-test`) cover the client, the menu model and the
 cleanup in `disable()` against fakes. This covers SC-001 of spec 010. Use only throwaway text you
 typed for the check, never real clipboard contents.
 
-Repeat on each GNOME Shell version: 48, 49, 50 and 51, on a Wayland session. Run it on the light
+Repeat on each GNOME Shell version the extension declares (48, 49 and 50), on a Wayland session. Run it on the light
 and the dark panel (Settings > Appearance, or `gsettings set org.gnome.desktop.interface
 color-scheme prefer-dark`). Install the release binary to `~/.local/bin` first.
 
@@ -443,7 +464,7 @@ rstory`. Nothing in that log may contain entry text; only error codes.
 
 Record per Shell version: version, distribution, panel theme, result per row, and anything odd
 (for example the icon not following the panel color, or a Shell error in the journal on enable).
-A failing row blocks the release. A Shell outside 48 to 51 must refuse to load the extension
+A failing row blocks the release. A Shell outside 48 to 50 must refuse to load the extension
 because of `metadata.json`; `rstory doctor` explains it.
 
 Quick CI cross-check before the manual run: `make ext-test ext-typecheck ext-lint` and
