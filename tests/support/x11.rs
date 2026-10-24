@@ -268,6 +268,8 @@ pub struct Offer {
     pub refuse: bool,
     /// Values longer than this use INCR. 0 means 64 KiB.
     pub incr_threshold: usize,
+    /// Sleep before sending each INCR chunk (simulates a slow owner).
+    pub chunk_delay: Duration,
 }
 
 impl Offer {
@@ -433,6 +435,7 @@ fn serve_loop(c: Client, offer: Offer, stop: &AtomicBool, lost: &AtomicBool) -> 
                     if t.finished {
                         transfers.remove(&(p.window, p.atom));
                     } else {
+                        std::thread::sleep(offer.chunk_delay);
                         let end = (t.pos + threshold).min(t.data.len());
                         conn.change_property8(
                             PropMode::REPLACE,

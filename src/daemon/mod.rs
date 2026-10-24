@@ -349,3 +349,21 @@ pub(crate) fn error_kind(e: &StoreError) -> &'static str {
         StoreError::Io(_) => "io",
     }
 }
+
+/// The `io::ErrorKind` of an I/O store failure by name (for example `StorageFull`), or `-`.
+/// A kind never carries content (Constitution III).
+pub(crate) fn io_kind_name(_e: &StoreError) -> String {
+    "-".to_string()
+}
+
+#[cfg(test)]
+mod kind_tests {
+    use super::*;
+
+    #[test]
+    fn io_failures_name_their_error_kind() {
+        let e = StoreError::Io(std::io::Error::from(std::io::ErrorKind::StorageFull));
+        assert_eq!(io_kind_name(&e), "StorageFull");
+        assert_eq!(io_kind_name(&StoreError::Locked), "-");
+    }
+}

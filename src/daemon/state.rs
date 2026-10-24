@@ -89,6 +89,12 @@ impl Clock {
         }
     }
 
+    /// A clock that reads `source` (tests inject wall jumps through it).
+    #[must_use]
+    pub fn from_source(source: std::sync::Arc<dyn Fn() -> OffsetDateTime + Send + Sync>) -> Self {
+        Self::at(source())
+    }
+
     /// The system wall clock.
     #[must_use]
     pub fn system() -> Self {
@@ -170,6 +176,22 @@ mod tests {
         assert_eq!(v.state, StateKind::Inactive);
         assert_eq!(v.reason.as_deref(), Some("no_session"));
         assert_eq!(view(&rec, true, None).state, StateKind::Paused);
+    }
+
+    #[test]
+    fn the_clock_follows_wall_jumps_without_monotonic_time() {
+        use std::sync::{Arc, Mutex};
+        let wall = Arc::new(Mutex::new(T0));
+        let w = Arc::clone(&wall);
+        let c = Clock::from_source(Arc::new(move || *w.lock().unwrap()));
+        let before = c.now();
+        *wall.lock().unwrap() = T0 + Duration::from_secs(10 * 3600);
+        assert!(c.now() - before >= time::Duration::hours(10));
+        let at = c.instant_at(T0 + Duration::from_secs(10 * 3600 + 5));
+        assert!(
+            at > Instant::now(),
+            "deadlines are measured on the same clock"
+        );
     }
 
     #[tokio::test(start_paused = true)]

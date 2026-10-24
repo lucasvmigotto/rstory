@@ -120,6 +120,7 @@ impl Dirs {
 pub struct Opts {
     pub caps: Caps,
     pub clock_base: OffsetDateTime,
+    pub clock: Option<Clock>,
     pub backend: bool,
     pub launch: LaunchEnv,
     pub connector: Option<Connector<FakeBackend>>,
@@ -130,6 +131,7 @@ impl Default for Opts {
         Self {
             caps: Caps::default(),
             clock_base: BASE,
+            clock: None,
             backend: true,
             launch: no_terminal(),
             connector: None,
@@ -157,7 +159,7 @@ pub struct Rig {
 
 impl Rig {
     pub async fn start(dirs: &Dirs, opts: Opts) -> Self {
-        let clock = Clock::at(opts.clock_base);
+        let clock = opts.clock.unwrap_or_else(|| Clock::at(opts.clock_base));
         let store = Store::open_exclusive_at(&dirs.store, opts.caps, RealFs, clock.now()).unwrap();
         let (backend, fake) = FakeBackend::new();
         let (backend, info) = if opts.backend {
