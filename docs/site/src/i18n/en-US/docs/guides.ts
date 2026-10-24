@@ -71,7 +71,7 @@ export const guides: Record<G, PageContent> = {
     blocks: [
       {
         t: "p",
-        text: "Every action in the picker has a command. `ls` and `show` read the store directly, so they work while the daemon is down (the output then says `(daemon not running, read-only)`). The other commands need the daemon and exit with code 3 without it.",
+        text: "Every action in the picker has a command. `ls` and `show` read the store directly, so they work while the daemon is down (the output then says `(daemon not running, read-only)`). The commands that change state (`copy`, `pin`, `unpin`, `rm`, `clear`, `pause`, `resume`) and `status` need the daemon, and exit with code 3 without it.",
       },
       {
         t: "code",
