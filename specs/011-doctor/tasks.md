@@ -38,12 +38,12 @@ No feature-specific setup (crate skeleton comes from 001).
 
 ### Tests for User Story 1 ⚠️
 
-- [ ] T002 [P] [US1] healthy-baseline test + JSON schema test in `src/doctor/tests.rs` — Executor: builder · Reviewer: thinker
+- [x] T002 [P] [US1] healthy-baseline test + JSON schema test in `src/doctor/tests.rs` — Executor: builder · Reviewer: thinker
 
 ### Implementation for User Story 1
 
-- [ ] T003 [US1] Terminal UI / CLI implementation — see `## Frontend` (appended by `frontend:spec`; `[TUI]`/`[CLI]` tasks built by `frontend:tui`) — Executor: builder · Reviewer: thinker
-- [ ] T004 [US1] Backend implementation — see `## Backend` (appended by `backend:spec`) — Executor: builder · Reviewer: thinker
+- [x] T003 [US1] Terminal UI / CLI implementation — see `## Frontend` (appended by `frontend:spec`; `[TUI]`/`[CLI]` tasks built by `frontend:tui`) — Executor: builder · Reviewer: thinker
+- [x] T004 [US1] Backend implementation — see `## Backend` (appended by `backend:spec`) — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: User Story 1 passes its tests independently.
 
@@ -55,11 +55,11 @@ No feature-specific setup (crate skeleton comes from 001).
 
 ### Tests for User Story 2 ⚠️
 
-- [ ] T005 [P] [US2] table-driven failure tests (8 rows, status/message/hint; SC-001) — Executor: builder · Reviewer: thinker
+- [x] T005 [P] [US2] table-driven failure tests (8 rows, status/message/hint; SC-001) — Executor: builder · Reviewer: thinker
 
 ### Implementation for User Story 2
 
-- [ ] T006 [US2] Backend implementation — see `## Backend` (appended by `backend:spec`) — Executor: builder · Reviewer: thinker
+- [x] T006 [US2] Backend implementation — see `## Backend` (appended by `backend:spec`) — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: User Story 2 passes its tests independently.
 
@@ -92,7 +92,7 @@ Appended by `backend:spec`. Built by `backend:build` (ticks only this section). 
 
 ### Backend US2 — Every detectable failure is explained
 
-- [ ] T010 [US2] Probe adapters with timeouts (session, store, daemon status, extension, shell version, launch, autostart) in `src/doctor/probes.rs` — Executor: builder · Reviewer: thinker
+- [x] T010 [US2] Probe adapters with timeouts (session, store, daemon status, extension, shell version, launch, autostart) in `src/doctor/probes.rs` — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: the US2 tests in this file's story phase pass (`cargo test`), plus the contract tests where they apply.
 
@@ -105,7 +105,7 @@ Appended by `frontend:spec`. `[TUI]`/`[CLI]` tasks built by `frontend:tui` (tick
 
 ### Frontend US1 — See what works and what's missing
 
-- [ ] T011 [US1] [CLI] text renderer (CheckLine, summary line) and `--json` in `src/doctor/render.rs` — Executor: builder · Reviewer: thinker
+- [x] T011 [US1] [CLI] text renderer (CheckLine, summary line) and `--json` in `src/doctor/render.rs` — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: the US1 snapshot/journey tests pass; `cargo insta review` is clean.
 

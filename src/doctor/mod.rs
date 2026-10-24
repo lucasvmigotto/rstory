@@ -24,8 +24,14 @@ pub struct Options {
 /// # Errors
 /// A message for any other argument.
 pub fn parse_args(args: &[String]) -> Result<Options, String> {
-    let _ = args;
-    todo!()
+    let mut o = Options { json: false };
+    for a in args {
+        match a.as_str() {
+            "--json" => o.json = true,
+            other => return Err(format!("unknown argument `{other}`")),
+        }
+    }
+    Ok(o)
 }
 
 /// The command against injected inputs: parses `args`, gathers, evaluates, writes the report
@@ -39,16 +45,32 @@ pub fn run_with(
     out: &mut dyn std::io::Write,
     err: &mut dyn std::io::Write,
 ) -> u8 {
-    let _ = (args, env, probe, term, out, err);
-    todo!()
+    let opts = match parse_args(args) {
+        Ok(o) => o,
+        Err(m) => {
+            let _ = writeln!(err, "rstory doctor: {m}\nUsage: rstory doctor [--json]");
+            return 2;
+        }
+    };
+    let checks = checks::evaluate(&probes::gather(env, probe));
+    let report = if opts.json {
+        render::json(&checks)
+    } else {
+        render::text(&checks, term)
+    };
+    let _ = out.write_all(report.as_bytes());
+    exit_code(&checks)
 }
 
 /// `rstory doctor [--json]`: probes the real session, prints the report on stdout and returns
 /// the doctor exit code (0, 1 or 2; 2 also for a usage error).
 #[must_use]
 pub fn run(args: &[String]) -> u8 {
-    let _ = args;
-    todo!()
+    let env = probes::ProbeEnv::from_process();
+    let mut probe = crate::session::RealProbe::new(&env.session, env.xauthority.clone());
+    let term = crate::cli::render::Term::detect();
+    let (mut out, mut err) = (std::io::stdout().lock(), std::io::stderr().lock());
+    run_with(args, &env, &mut probe, &term, &mut out, &mut err)
 }
 
 /// How a check came out. The order is the severity order.
