@@ -260,8 +260,15 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/tools
-      - name: Store benchmarks, p95 within 2x budget (make bench)
+      - name: Store benchmarks and F6 picker first frame, p95 within 2x budget = the CI budget (make bench)
         run: make bench
+      # The real daemon on Xvfb, measured from /proc: F7 capture to listed p95 under 200 ms (CI
+      # budget; 100 ms locally), burst of 500 copies, SC-002 RSS <= 20 MiB, F10 idle wake-ups.
+      # Shared runners are noisy, so the budgets are the documented CI ones, not tighter.
+      - name: Daemon perf smoke F7, burst, RSS, F10 (make test-perf)
+        env:
+          CI: "true"
+        run: make test-perf
 
   # The one required status check: stable name, always reports, red if any gate failed.
   ci-ok:

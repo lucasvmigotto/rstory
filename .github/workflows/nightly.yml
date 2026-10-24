@@ -38,6 +38,22 @@ jobs:
         if: always()
         run: python3 -I .github/scripts/flaky-report.py "$RUNNER_TEMP/target/nextest/$NEXTEST_PROFILE/junit.xml"
 
+  soak:
+    name: soak, 30 min idle plus a copy a minute
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/tools
+      - name: Real daemon on Xvfb; RSS flat within 1 MiB, wake-ups only at timers (make test-soak)
+        env:
+          CI: "true"
+        run: make test-soak
+
   audit:
     name: RustSec advisories
     runs-on: ubuntu-24.04
@@ -81,7 +97,7 @@ jobs:
 
   report-failure:
     name: report failure
-    needs: [property, audit, quarantine]
+    needs: [property, soak, audit, quarantine]
     if: failure()
     runs-on: ubuntu-24.04
     timeout-minutes: 5
