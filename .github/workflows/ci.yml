@@ -78,6 +78,8 @@ jobs:
           persist-credentials: false
       - name: No publishing token referenced (SC-001)
         run: .github/scripts/no-publish-token.sh .github
+      - name: The SC-001 check catches every forbidden pattern (make sc001-test)
+        run: scripts/test-no-publish-token.sh
       - uses: ./.github/actions/tools
       - name: Format (make fmt-check)
         run: make fmt-check
