@@ -133,3 +133,9 @@ Appended by `qa:strategy`. Executed by `qa:e2e` / `qa:load` after the builds (ti
 - [x] T015 Flaky-test policy wiring (nextest config, quarantine label) — Executor: builder · Reviewer: thinker
 
 **Checkpoint**: the journeys and suites in `qa.md` are green in CI; the exit criteria are met → Verified in `specs/README.md`.
+
+---
+
+## Convergence — 2026-10-24
+
+Converged. FR-001/FR-002 map to `.github/workflows/ci.yml` and the local `tools` action, which run the same `make` recipes as locally on x86_64 and aarch64, with `ci-ok` as the single required check. FR-003/FR-004 map to `.github/workflows/release.yml`: SemVer tags on `main`, reproducible tarballs and `SHA256SUMS`, and crates.io Trusted Publishing in a protected `release` environment with no stored token (SC-001 is checked by `.github/scripts/no-publish-token.sh`). `nightly.yml` and Dependabot are included. The tools image gains cargo-deny, cargo-nextest and gitleaks; `make test` runs nextest. The first GitHub run of PR #71 was green on both architectures in about 4 minutes. actionlint is clean. Owner decisions pending: the `ksni` Unlicense exception in `deny.toml`. Owner setup before the first tag (environment, rulesets, Trusted Publisher, the manual 0.1.0 publish) is in `docs/release.md`. Still open: T009 (release dry run via `workflow_dispatch`, which needs the workflow on the default branch) and the QA tasks (T004, T010).
