@@ -58,7 +58,7 @@ LINT_FEATURES := --features fault-injection,session-tests,perf-tests
 EXT_MOUNT := -v $(NPM_VOLUME):/src/extension/node_modules
 TTY := $(shell [ -t 0 ] && echo -it)
 
-.PHONY: help image fetch fmt fmt-check lint check test test-quarantine bench test-integration test-e2e test-e2e-smoke test-perf test-soak build build-static test-launch ext-lint ext-test ext-pack ext-deps ext-typecheck deny audit secret-scan publish-dry-run publish sc001-test doctor shell clean clean-cache
+.PHONY: help image fetch fmt fmt-check lint check test test-quarantine bench test-integration test-e2e test-e2e-smoke test-perf test-soak build build-static dist test-launch ext-lint ext-test ext-pack ext-deps ext-typecheck deny audit secret-scan publish-dry-run publish sc001-test doctor shell clean clean-cache docs-install docs-dev docs-check docs-build docs-reference docs-fmt
 
 help: ## List recipes
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-17s %s\n", $$1, $$2}'
@@ -122,6 +122,10 @@ build-static: image ## Static musl release build for this host's arch + F2/F5 ch
 	  b=/target/$$t/release/rstory && file $$b && file $$b | grep -Eq "static(-pie)? linked|statically linked" && \
 	  s=$$(stat -c %s $$b) && echo "size $$s bytes" && [ $$s -le 15728640 ]'
 
+dist: build-static ## Copy the static binary to dist/rstory (then: install -m 0755 dist/rstory ~/.local/bin/)
+	$(RUN) $(OFFLINE) $(IMAGE) sh -c 'mkdir -p dist && cp /target/$$(uname -m)-unknown-linux-musl/release/rstory dist/rstory'
+	@ls -l dist/rstory
+
 ext-lint: image ## Lint the GNOME extension (eslint from the npm volume), offline
 	$(RUN) $(OFFLINE) $(EXT_MOUNT) -w /src/extension $(IMAGE) npx --no-install eslint .
 
@@ -175,4 +179,41 @@ clean: ## Remove this worktree's labelled containers and volumes and our danglin
 	for i in $$($(ENGINE) images -q --filter dangling=true --filter label=$(PKEY)=$(PROJECT)); do echo "image $$i"; [ -n "$(dry)" ] || $(ENGINE) rmi $$i >/dev/null; done
 
 clean-cache: ## Remove this project's cache volumes
-	-$(ENGINE) volume rm rstory-tools-cargo $(TARGET_VOLUME)
+	-$(ENGINE) volume rm rstory-tools-cargo $(TARGET_VOLUME) $(DOCS_NODE_VOLUME) $(DOCS_CACHE_VOLUME)
+
+# Docs site (docs/site): Bun runs only in this pinned container, never on the host (discovery section 7).
+# docker.io/oven/bun:1.4.2, the multi-arch index digest. docs/site/Containerfile repeats it for Dependabot.
+DOCS_IMAGE  := docker.io/oven/bun:1.4.2@sha256:9114c058aeae42162ee16dd5084b95fe9473970bb6bcb5b232ab1630f0546895
+DOCS_NODE_VOLUME  ?= rstory-docs-node-modules
+DOCS_CACHE_VOLUME ?= rstory-docs-bun-cache
+# Git facts come from the host: a worktree's .git is a file pointing outside the mount, so the container can't ask git.
+DOCS_GIT_SHA      := $(shell git rev-parse HEAD 2>/dev/null)
+DOCS_GIT_TAG      := $(shell git describe --tags --exact-match --match '[0-9]*.[0-9]*.[0-9]*' 2>/dev/null)
+DOCS_GIT_LAST_TAG := $(shell git describe --tags --abbrev=0 --match '[0-9]*.[0-9]*.[0-9]*' 2>/dev/null)
+docs_ensure = $(call ensure_vol,$(DOCS_NODE_VOLUME),$(WT)) $(call ensure_vol,$(DOCS_CACHE_VOLUME),$(WT))
+DOCS_RUN := $(docs_ensure) $(ENGINE) run --rm --init $(USERNS) $(OWN) --label $(WKEY)=$(PROJECT)/$(WT) \
+	--cpus $(CPUS) --memory $(MEMORY) --pids-limit 2048 \
+	-v "$(CURDIR)":/src:Z \
+	-v $(DOCS_NODE_VOLUME):/src/docs/site/node_modules \
+	-v $(DOCS_CACHE_VOLUME):/bun-cache \
+	-w /src/docs/site \
+	-e BUN_INSTALL_CACHE_DIR=/bun-cache -e HOME=/tmp -e TZ=UTC -e LANG=C.UTF-8 \
+	-e RSTORY_GIT_SHA=$(DOCS_GIT_SHA) -e RSTORY_GIT_TAG=$(DOCS_GIT_TAG) -e RSTORY_GIT_LAST_TAG=$(DOCS_GIT_LAST_TAG)
+
+docs-install: ## Install the docs site's packages into a volume (bun install --frozen-lockfile; the only networked docs step)
+	$(DOCS_RUN) $(DOCS_IMAGE) bun install --frozen-lockfile
+
+docs-dev: ## Serve the docs site with hot reload on http://127.0.0.1:5173/rstory/ (publishes a port, so not offline)
+	$(DOCS_RUN) -p 127.0.0.1:5173:5173 $(TTY) $(DOCS_IMAGE) bun run dev --host 0.0.0.0 --port 5173 --strictPort
+
+docs-check: ## Docs site: Biome lint, typecheck, unit, accessibility, footer and LLM-output tests, offline
+	$(DOCS_RUN) $(OFFLINE) $(DOCS_IMAGE) sh -c 'bun run lint && bun run typecheck && bun run test'
+
+docs-fmt: ## Format and fix the docs site with Biome (writes files), offline
+	$(DOCS_RUN) $(OFFLINE) $(DOCS_IMAGE) bun run format
+
+docs-build: ## Build docs/site/dist (pages, llms.txt, llms-full.txt, one .md per page), offline
+	$(DOCS_RUN) $(OFFLINE) $(DOCS_IMAGE) bun run build
+
+docs-reference: image ## Regenerate the CLI reference from the built binary's --help (tools image), offline
+	$(RUN) $(OFFLINE) $(IMAGE) sh -c 'cargo build --locked --offline && python3 -I docs/site/scripts/cli-help.py /target/debug/rstory docs/site/src/content/generated/cli-help.json'

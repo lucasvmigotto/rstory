@@ -1,0 +1,4 @@
+[install]
+# Packages must be at least 14 days old (seconds).
+minimumReleaseAge = 1209600
+exact = true

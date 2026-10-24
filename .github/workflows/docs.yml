@@ -1,0 +1,205 @@
+# Documentation site (docs/site). Every recipe is a `make docs-*` recipe, so a green run locally means
+# the same as a green job here, and Bun only ever runs in the pinned container (docs-site-discovery §7).
+#
+# verify: on pull requests that touch the site or anything it is built from (the pipeline artifacts,
+#   the specs, the source whose --help is documented, Cargo.toml). It regenerates the CLI reference and
+#   fails when the committed copy is stale, then lints, type-checks, tests and builds.
+# deploy: nothing goes live before 0.1.0 (owner decision 2026-10-24). It runs only when the release
+#   workflow, triggered by a plain X.Y.Z tag push, ends successfully; it never runs for pull requests,
+#   branch pushes or the release workflow's manual dry runs.
+name: docs
+
+on:
+  pull_request:
+    branches: [dev, main]
+    paths:
+      - "docs/site/**"
+      - "docs/product/**"
+      - "specs/**"
+      - "src/**"
+      - "contracts/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "Makefile"
+      - ".github/workflows/docs.yml"
+  workflow_run:
+    workflows: [release]
+    types: [completed]
+
+permissions: {}
+
+concurrency:
+  group: docs-${{ github.event_name }}-${{ github.event.workflow_run.head_sha || github.ref }}
+  # A deploy is never cancelled halfway; a superseded pull request run is.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  CPUS: "4"
+  MEMORY: 12g
+
+jobs:
+  verify:
+    name: verify (reference, lint, typecheck, tests, build)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # tags and history: the footer's versions and links
+          persist-credentials: false
+
+      - name: Tools image and crates (the CLI reference is built from the binary)
+        uses: ./.github/actions/tools
+
+      - name: Point the docs volumes at runner-local directories
+        run: |
+          set -euo pipefail
+          install -d -m 0777 "$RUNNER_TEMP/docs-node-modules" "$RUNNER_TEMP/docs-bun-cache"
+          {
+            echo "DOCS_NODE_VOLUME=$RUNNER_TEMP/docs-node-modules"
+            echo "DOCS_CACHE_VOLUME=$RUNNER_TEMP/docs-bun-cache"
+          } >> "$GITHUB_ENV"
+
+      # The tools and Bun containers run as uid 1000, while the runner owns the checkout: let them
+      # write the generated reference and dist/ (Podman's keep-id mapping does this locally).
+      - name: Let the container user write under docs/site
+        run: chmod -R a+rwX docs/site
+      - name: Regenerate the CLI reference from the built binary
+        run: make docs-reference
+
+      - name: The committed CLI reference is current
+        run: |
+          if ! git diff --exit-code -- docs/site/src/content/generated/; then
+            echo "::error::the generated CLI reference is stale; run 'make docs-reference' and commit the result"
+            exit 1
+          fi
+
+      - name: Install packages (the only networked docs step)
+        run: make docs-install
+
+      - name: Lint, typecheck, unit, accessibility, footer and LLM-output tests
+        run: make docs-check
+
+      - name: Build
+        run: make docs-build
+
+      - name: Keep the built site
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: docs-site-dist
+          path: docs/site/dist/
+          retention-days: 7
+          if-no-files-found: error
+
+  deploy:
+    name: Sync static site to Cloudflare R2
+    # Gate: a successful release run caused by a tag push. The tag itself is checked in the first step.
+    if: >-
+      github.event_name == 'workflow_run' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    environment:
+      name: rstory-docs
+      url: https://docs.lucasvmigotto.me/rstory/
+    env:
+      AWS_ACCESS_KEY_ID: ${{ vars.CLOUDFLARE_R2_ACCOUNT_ID }}
+      # An environment secret of `rstory-docs`: the one secrets read SC-001 allows, here only
+      # (.github/scripts/no-publish-token.sh). Unset until the owner adds it, and then the check below fails closed.
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.CLOUDFLARE_R2_ACCOUNT_SECRET }}
+      AWS_DEFAULT_REGION: auto
+      AWS_EC2_METADATA_DISABLED: "true"
+      R2_ENDPOINT: ${{ vars.CLOUDFLARE_R2_ENDPOINT_S3_CLIENT }}
+      R2_BUCKET: ${{ vars.CLOUDFLARE_R2_BUCKET_ID }}
+      R2_PREFIX: /rstory/
+      # The release run's tag and commit; event data reaches shell steps only through env.
+      TAG: ${{ github.event.workflow_run.head_branch }}
+    steps:
+      - name: The release was for a plain X.Y.Z tag
+        run: |
+          set -euo pipefail
+          case "$TAG" in
+            [0-9]*.[0-9]*.[0-9]*) ;;
+            *) echo "::error::not a release tag: '$TAG'; nothing is deployed"; exit 1 ;;
+          esac
+          printf '%s\n' "$TAG" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' || { echo "::error::not X.Y.Z: '$TAG'"; exit 1; }
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0 # tags: the footer shows rstory@vX.Y.Z, linked to the tag
+          persist-credentials: false
+
+      - name: The tag is on this commit and equals the crate version
+        run: |
+          set -euo pipefail
+          [ "$(git rev-parse "refs/tags/$TAG^{commit}")" = "$(git rev-parse HEAD)" ] || { echo "::error::tag $TAG is not the release commit"; exit 1; }
+          version=$(sed -n 's/^version *= *"\([^"]*\)".*/\1/p' Cargo.toml | head -n1)
+          [ "$version" = "$TAG" ] || { echo "::error::tag $TAG != Cargo.toml version $version"; exit 1; }
+
+      - name: Point the docs volumes at runner-local directories
+        run: |
+          set -euo pipefail
+          install -d -m 0777 "$RUNNER_TEMP/docs-node-modules" "$RUNNER_TEMP/docs-bun-cache"
+          {
+            echo "CONTAINER_ENGINE=docker"
+            echo "DOCS_NODE_VOLUME=$RUNNER_TEMP/docs-node-modules"
+            echo "DOCS_CACHE_VOLUME=$RUNNER_TEMP/docs-bun-cache"
+          } >> "$GITHUB_ENV"
+
+      - name: Install, check and build (this output is what gets deployed)
+        run: make docs-install docs-check docs-build
+
+      - name: Check R2 credentials
+        run: |
+          # A deploy that publishes nothing must not look green.
+          if [ -z "${AWS_ACCESS_KEY_ID:-}" ] || [ -z "${AWS_SECRET_ACCESS_KEY:-}" ]; then
+            echo "::error::R2 credentials are not configured (CLOUDFLARE_R2_ACCOUNT_ID, CLOUDFLARE_R2_ACCOUNT_SECRET); nothing was deployed"
+            exit 1
+          fi
+          [ -n "$R2_ENDPOINT" ] || { echo "::error::CLOUDFLARE_R2_ENDPOINT_S3_CLIENT is not set"; exit 1; }
+          case "$R2_ENDPOINT" in https://*) ;; *) echo "::error::CLOUDFLARE_R2_ENDPOINT_S3_CLIENT must start with https://"; exit 1 ;; esac
+          [ -n "$R2_BUCKET" ] || { echo "::error::CLOUDFLARE_R2_BUCKET_ID is not set"; exit 1; }
+          case "$R2_PREFIX" in /*/) ;; *) echo "::error::R2_PREFIX must look like /<slug>/"; exit 1 ;; esac
+
+      # Every sync below is scoped to the project prefix of the shared docs bucket. Never sync the
+      # bucket root: that would wipe the other projects.
+      - name: Sync hashed assets (immutable, old ones kept for now)
+        run: |
+          aws s3 sync docs/site/dist/assets "s3://$R2_BUCKET${R2_PREFIX}assets" \
+            --endpoint-url "$R2_ENDPOINT" \
+            --cache-control "public, max-age=31536000, immutable"
+
+      - name: Sync entry files (no-cache)
+        run: |
+          aws s3 cp docs/site/dist/index.html "s3://$R2_BUCKET${R2_PREFIX}index.html" \
+            --endpoint-url "$R2_ENDPOINT" --content-type "text/html; charset=utf-8" --cache-control "no-cache"
+          aws s3 cp docs/site/dist/theme-init.js "s3://$R2_BUCKET${R2_PREFIX}theme-init.js" \
+            --endpoint-url "$R2_ENDPOINT" --content-type "text/javascript; charset=utf-8" --cache-control "no-cache"
+          aws s3 cp docs/site/dist/favicon.svg "s3://$R2_BUCKET${R2_PREFIX}favicon.svg" \
+            --endpoint-url "$R2_ENDPOINT" --content-type "image/svg+xml" --cache-control "public, max-age=86400"
+
+      - name: Sync llms.txt and llms-full.txt (no-cache)
+        run: |
+          for f in docs/site/dist/llms.txt docs/site/dist/llms-full.txt; do
+            aws s3 cp "$f" "s3://$R2_BUCKET${R2_PREFIX}$(basename "$f")" \
+              --endpoint-url "$R2_ENDPOINT" --content-type "text/plain; charset=utf-8" --cache-control "no-cache"
+          done
+
+      - name: Sync the Markdown pages (no-cache)
+        run: |
+          aws s3 sync docs/site/dist/docs "s3://$R2_BUCKET${R2_PREFIX}docs" \
+            --endpoint-url "$R2_ENDPOINT" --delete \
+            --content-type "text/markdown; charset=utf-8" --cache-control "no-cache"
+
+      - name: Prune the previous hashed assets (last, so index.html never points at a missing file)
+        run: |
+          aws s3 sync docs/site/dist/assets "s3://$R2_BUCKET${R2_PREFIX}assets" \
+            --endpoint-url "$R2_ENDPOINT" --delete \
+            --cache-control "public, max-age=31536000, immutable"

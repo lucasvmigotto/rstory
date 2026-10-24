@@ -29,3 +29,7 @@ rustc-ice-*.txt
 # extension dev tools live in a named volume (make ext-deps)
 extension/node_modules/
 /dist/
+
+# docs site: packages live in a named volume, the build output is regenerated
+docs/site/node_modules/
+docs/site/dist/

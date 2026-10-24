@@ -38,6 +38,7 @@ make lint               # clippy -D warnings, offline
 make test               # unit, property, snapshot, contract and fitness tests (cargo-nextest), offline
 make test-integration   # Xvfb, headless sway and headless mutter session tests, offline
 make build-static       # static musl release build + static-binary and size checks
+make dist               # the same, copied to dist/rstory
 make ext-lint ext-test  # GNOME extension: eslint + gjs fixture tests
 make deny audit         # cargo-deny: bans/licences/sources (F3, F4) offline; RustSec advisories (networked)
 make secret-scan        # gitleaks over the working tree
@@ -74,6 +75,7 @@ Work happens on `feat/…`, `fix/…`, `docs/…` or `ci/…` branches off `dev`
 
 ## Links
 
+- Documentation site: [`docs/site/`](docs/site/) (published at https://docs.lucasvmigotto.me/rstory/ from the first release; `make docs-dev` serves it locally)
 - Product brief: [`docs/product/brief.md`](docs/product/brief.md)
 - Architecture and ADRs: [`docs/product/architecture.md`](docs/product/architecture.md), [`docs/product/adr/`](docs/product/adr/)
 - Features (Spec Kit): [`specs/README.md`](specs/README.md), constitution: [`.specify/memory/constitution.md`](.specify/memory/constitution.md)
