@@ -22,7 +22,7 @@ Placement (Phase 0): rstory is a host application, so the site goes in `docs/sit
 | Implemented | 12 | 34 | 134 | **180** |
 | Partially Implemented | 2 | 2 | 1 | **5** |
 | Planned | 0 | 1 | 15 | **16** |
-| Unavailable | 0 | 0 | 6 | **6** |
+| Unavailable | 0 | 0 | 1 | **1** (was 6; 5 implemented by feat/docs-gaps) |
 | Upstream Limitation | 0 | 0 | 2 | **2** |
 | N/A | 0 | 0 | 2 | **2** |
 | **Rows** | 14 | 37 | 160 | **211** |
@@ -141,8 +141,8 @@ Where the code and `specs/README.md` disagree:
 | `install-gnome-extension --enable` | Implemented | `gnome.rs:99` |
 | `install-gnome-extension --uninstall` (not with `--enable`) | Implemented | `gnome.rs:100-106` |
 | `completions bash\|zsh\|fish` | Implemented | `args.rs:194-201` |
-| `daemon --help` | **Unavailable** | `daemon` takes no help flag. It exits 2 with `rstory: unknown argument --help; usage: rstory daemon [--backend x11\|wayland]` (`src/daemon/start.rs:227-229,394`, observed in §3). |
-| `--ascii` | **Unavailable** | Named in `docs/product/ux-vision.md` ("Glyphs"). `ascii_mode` is always called with `false` (`src/cli/render.rs:52`, `src/picker/mod.rs:153`). |
+| `daemon --help` | **Implemented** (feat/docs-gaps; the evidence below is pre-fix) | `daemon` takes no help flag. It exits 2 with `rstory: unknown argument --help; usage: rstory daemon [--backend x11\|wayland]` (`src/daemon/start.rs:227-229,394`, observed in §3). |
+| `--ascii` | **Implemented** (feat/docs-gaps; the evidence below is pre-fix) | Named in `docs/product/ux-vision.md` ("Glyphs"). `ascii_mode` is always called with `false` (`src/cli/render.rs:52`, `src/picker/mod.rs:153`). |
 
 **Config keys (9):** 7 Implemented, 2 Unavailable. The file is `$XDG_CONFIG_HOME/rstory/config.toml`, falling back to `~/.config/rstory/config.toml` (`src/cli/env.rs:85-99`).
 
@@ -155,8 +155,8 @@ Where the code and `specs/README.md` disagree:
 | `picker_command` | Implemented | unset (blank counts as unset) | `src/config/mod.rs:130-138`, `tests/daemon_status.rs:194` |
 | `tray` | Implemented | `true` | `src/config/mod.rs:144-152`, `tests/tray_dbus.rs:636` |
 | Unknown keys are ignored | Implemented | — | `src/config/mod.rs:39,232-239` |
-| `theme` (`terminal\|rstory\|mono`) | **Unavailable** | — | The parser exists (`src/ui/theme.rs:30-55`), but no config reader calls it (`src/daemon/start.rs:255` reads caps, `picker_command` and `tray` only). |
-| A backend override in config | **Unavailable** | — | `docs/product/brief.md` §6 and `src/session/mod.rs:131` say "config or `--backend`". Only `--backend` is wired (`src/daemon/start.rs:255,410-428`). |
+| `theme` (`terminal\|rstory\|mono`) | **Implemented** (feat/docs-gaps; the evidence below is pre-fix) | — | The parser exists (`src/ui/theme.rs:30-55`), but no config reader calls it (`src/daemon/start.rs:255` reads caps, `picker_command` and `tray` only). |
+| A backend override in config | **Implemented** (feat/docs-gaps; the evidence below is pre-fix) | — | `docs/product/brief.md` §6 and `src/session/mod.rs:131` say "config or `--backend`". Only `--backend` is wired (`src/daemon/start.rs:255,410-428`). |
 
 **Environment variables (18):** 17 Implemented, 1 Unavailable.
 
@@ -179,7 +179,7 @@ Where the code and `specs/README.md` disagree:
 | `LC_ALL`, `LC_CTYPE`, `LANG` | Implemented | a non-UTF-8 locale switches to ASCII glyphs | `src/ui/glyphs.rs:48-66` |
 | `COLUMNS` | Implemented | CLI width when the terminal size is unknown | `src/cli/render.rs:88` |
 | `RUST_LOG` | Implemented | daemon log filter, default `info` | `src/daemon/log.rs:7-10` |
-| `COLORTERM` | **Unavailable** | Read, but no effect: the `Terminal` preference returns earlier | `src/ui/theme.rs:104,117-119` |
+| `COLORTERM` | **Implemented** (feat/docs-gaps; the evidence below is pre-fix) | Read, but no effect: the `Terminal` preference returns earlier | `src/ui/theme.rs:104,117-119` |
 
 Test-only variables (`RSTORY_SOAK_SECS`, `PROPTEST_CASES`, `CI`) and X11 atom names (`RSTORY_TARGETS`, `RSTORY_DATA`, `src/backend/x11/mod.rs:548`) aren't user surfaces. The site must not list them.
 
@@ -566,3 +566,8 @@ A few notes on these recipes:
 - **Deploy:** nothing goes live before 0.1.0. CI builds and tests the site on every PR; the first deploy is the 0.1.0 release, so the Install page is real from day one.
 - **Docs hub:** rstory is added to the hub (`apps.ts` and the sitemap) by a small PR when the site first deploys.
 - **Already decided:** the site lives in `docs/site/`, in English only, hosted on R2 at `docs.lucasvmigotto.me/rstory/`. The extension declares GNOME Shell 48–50.
+
+## Update 2026-10-24: gaps implemented (feat/docs-gaps)
+
+`rstory daemon --help`/`-h`, the global `--ascii` flag (also on `pick` and `doctor`), the `theme` config key (`terminal`, the default, plus `rstory` and `mono`) with the 256-color and truecolor tiers it unlocks (`COLORTERM` now has an effect under `theme = "rstory"`), and the `backend` config key (the `--backend` flag wins; doctor reports a config override; an unknown value exits 5 naming the key). `contracts/cli.md` gains `[--help]` on `daemon`, `[--ascii]` on `pick`/`doctor` and a global-flag line. The only Unavailable surface left is GNOME Shell 51. Phase 2 regenerates the truth table's evidence from the code.
+
