@@ -74,6 +74,7 @@ Work happens on `feat/…`, `fix/…`, `docs/…` or `ci/…` branches off `dev`
 
 ## Links
 
+- Documentation site: [`docs/site/`](docs/site/) (published at https://docs.lucasvmigotto.me/rstory/ from the first release; `make docs-dev` serves it locally)
 - Product brief: [`docs/product/brief.md`](docs/product/brief.md)
 - Architecture and ADRs: [`docs/product/architecture.md`](docs/product/architecture.md), [`docs/product/adr/`](docs/product/adr/)
 - Features (Spec Kit): [`specs/README.md`](specs/README.md), constitution: [`.specify/memory/constitution.md`](.specify/memory/constitution.md)
