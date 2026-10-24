@@ -95,9 +95,30 @@ pub fn ttl_text(ttl: Duration) -> String {
     }
 }
 
+/// The non-cap keys `rstory config` shows.
+#[derive(Debug, Clone, Copy)]
+pub struct ConfigView<'a> {
+    /// The effective `theme`.
+    pub theme: &'a str,
+    /// `backend`, shown only when set.
+    pub backend: Option<&'a str>,
+    /// `picker_command`, shown only when set.
+    pub picker_command: Option<&'a str>,
+}
+
+impl Default for ConfigView<'_> {
+    fn default() -> Self {
+        Self {
+            theme: "terminal",
+            backend: None,
+            picker_command: None,
+        }
+    }
+}
+
 /// The effective configuration as TOML, headed by the config file's path.
 #[must_use]
-pub fn config_text(path: &Path, exists: bool, caps: &Caps, picker_command: Option<&str>) -> String {
+pub fn config_text(path: &Path, exists: bool, caps: &Caps, view: &ConfigView<'_>) -> String {
     let note = if exists {
         ""
     } else {
@@ -111,7 +132,11 @@ pub fn config_text(path: &Path, exists: bool, caps: &Caps, picker_command: Optio
         caps.max_entry_bytes,
         ttl_text(caps.ttl)
     );
-    if let Some(cmd) = picker_command {
+    out.push_str(&format!("theme = \"{}\"\n", view.theme));
+    if let Some(backend) = view.backend {
+        out.push_str(&format!("backend = \"{backend}\"\n"));
+    }
+    if let Some(cmd) = view.picker_command {
         out.push_str(&format!(
             "picker_command = {}\n",
             toml::Value::String(cmd.into())
@@ -237,21 +262,33 @@ mod tests {
     fn config_text_shows_the_effective_values_and_where_the_file_is() {
         let caps = crate::config::Caps::from_toml("max_entries = 50\nttl = \"36h\"").unwrap();
         let path = std::path::Path::new("/home/u/.config/rstory/config.toml");
-        insta::assert_snapshot!(config_text(path, true, &caps, Some("ghostty -e")), @r#"
+        insta::assert_snapshot!(config_text(
+            path,
+            true,
+            &caps,
+            &ConfigView {
+                theme: "rstory",
+                backend: Some("wayland"),
+                picker_command: Some("ghostty -e"),
+            },
+        ), @r#"
         # /home/u/.config/rstory/config.toml
         max_entries = 50
         max_pinned = 10
         max_entry_bytes = 1048576
         ttl = "36h"
+        theme = "rstory"
+        backend = "wayland"
         picker_command = "ghostty -e"
         "#);
         let defaults = crate::config::Caps::default();
-        insta::assert_snapshot!(config_text(path, false, &defaults, None), @r#"
+        insta::assert_snapshot!(config_text(path, false, &defaults, &ConfigView::default()), @r#"
         # /home/u/.config/rstory/config.toml (not found, showing the defaults)
         max_entries = 20
         max_pinned = 10
         max_entry_bytes = 1048576
         ttl = "7d"
+        theme = "terminal"
         "#);
     }
 

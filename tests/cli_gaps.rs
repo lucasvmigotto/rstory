@@ -13,7 +13,10 @@ async fn daemon_help_prints_usage_on_stdout_and_exits_zero() {
         assert_eq!(r.code, 0, "{flag}: {}", r.stderr);
         assert_eq!(r.stderr, "", "{flag}");
         let out = r.out();
-        assert!(out.contains("Usage: rstory daemon [--backend x11|wayland]"), "{out}");
+        assert!(
+            out.contains("Usage: rstory daemon [--backend x11|wayland]"),
+            "{out}"
+        );
         assert!(out.contains("--backend"), "{out}");
         assert!(out.contains("Examples:"), "{out}");
         assert!(out.contains("rstory daemon --backend x11"), "{out}");
@@ -58,7 +61,10 @@ async fn config_shows_a_configured_theme_and_backend() {
 
 #[tokio::test]
 async fn config_rejects_unknown_values_naming_the_key() {
-    for (text, key) in [("theme = \"neon\"\n", "theme"), ("backend = \"xorg\"\n", "backend")] {
+    for (text, key) in [
+        ("theme = \"neon\"\n", "theme"),
+        ("backend = \"xorg\"\n", "backend"),
+    ] {
         let dirs = Dirs::new();
         dirs.write_config(text);
         let r = dirs.rstory(&["config"]).await;
@@ -77,7 +83,11 @@ async fn the_daemon_refuses_an_unknown_backend_in_the_config() {
 }
 
 fn check<'a>(doc: &'a serde_json::Value, id: &str) -> Option<&'a serde_json::Value> {
-    doc["checks"].as_array().unwrap().iter().find(|c| c["id"] == id)
+    doc["checks"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|c| c["id"] == id)
 }
 
 #[tokio::test]

@@ -38,20 +38,37 @@ impl Term {
         }
     }
 
-    /// Looks at stdout, `NO_COLOR`, `TERM`, the locale and the terminal size.
+    /// Looks at stdout, the config `theme`, `NO_COLOR`, `TERM`, `COLORTERM`, the locale and the
+    /// terminal size. `ascii` is the `--ascii` flag.
     #[must_use]
-    pub fn detect() -> Self {
+    pub fn detect(ascii: bool) -> Self {
         let out = std::io::stdout();
         let tty = out.is_terminal();
-        let theme = Theme::detect(
-            ThemePref::Terminal,
-            &TermEnv::from_process(),
-            Background::Dark,
-        );
-        let tier = if tty { theme.tier() } else { Tier::Mono };
-        let ascii = ascii_mode(false, &LocaleEnv::from_process());
         let width = if tty { terminal_width(&out) } else { 80 };
-        Self::new(tty, width, tier, ascii)
+        Self::resolve(
+            tty,
+            width,
+            ThemePref::from_user_config(),
+            &TermEnv::from_process(),
+            &LocaleEnv::from_process(),
+            ascii,
+        )
+    }
+
+    /// The output description for explicit inputs: the color tier follows `pref` and `env`
+    /// (mono when not a terminal), ASCII glyphs follow `ascii` or a non-UTF-8 `locale`.
+    #[must_use]
+    pub fn resolve(
+        tty: bool,
+        width: usize,
+        pref: ThemePref,
+        env: &TermEnv,
+        locale: &LocaleEnv,
+        ascii: bool,
+    ) -> Self {
+        let theme = Theme::detect(pref, env, Background::Dark);
+        let tier = if tty { theme.tier() } else { Tier::Mono };
+        Self::new(tty, width, tier, ascii_mode(ascii, locale))
     }
 
     /// The design-system context for widgets.
@@ -256,6 +273,101 @@ mod tests {
         assert!(colored.contains("\x1b["), "{colored:?}");
         let mono = ls_text(&sample(), NOW, &Term::new(true, 80, Tier::Mono, false));
         assert!(!mono.contains('\x1b'));
+    }
+
+    fn env(term: &str, colorterm: &str) -> TermEnv {
+        TermEnv {
+            no_color: false,
+            term: Some(term.to_string()),
+            colorterm: (!colorterm.is_empty()).then(|| colorterm.to_string()),
+        }
+    }
+
+    fn utf8() -> LocaleEnv {
+        LocaleEnv {
+            lang: Some("C.UTF-8".into()),
+            ..LocaleEnv::default()
+        }
+    }
+
+    fn resolve(pref: ThemePref, env: &TermEnv, tty: bool, ascii: bool) -> Term {
+        Term::resolve(tty, 80, pref, env, &utf8(), ascii)
+    }
+
+    #[test]
+    fn the_theme_picks_the_tier_on_a_terminal() {
+        let e = env("xterm-256color", "truecolor");
+        let tier = |pref, env: &TermEnv| resolve(pref, env, true, false).theme.tier();
+        assert_eq!(
+            tier(ThemePref::Terminal, &e),
+            Tier::Ansi16,
+            "the default is the 16-color palette"
+        );
+        assert_eq!(tier(ThemePref::Rstory, &e), Tier::TrueColor);
+        assert_eq!(
+            tier(ThemePref::Rstory, &env("xterm-256color", "")),
+            Tier::Ansi256
+        );
+        assert_eq!(tier(ThemePref::Rstory, &env("xterm", "")), Tier::Ansi16);
+        assert_eq!(tier(ThemePref::Mono, &e), Tier::Mono);
+        let no_color = TermEnv {
+            no_color: true,
+            ..e.clone()
+        };
+        assert_eq!(
+            tier(ThemePref::Rstory, &no_color),
+            Tier::Mono,
+            "NO_COLOR always wins"
+        );
+    }
+
+    #[test]
+    fn a_pipe_is_mono_whatever_the_theme() {
+        let e = env("xterm-256color", "truecolor");
+        assert_eq!(
+            resolve(ThemePref::Rstory, &e, false, false).theme.tier(),
+            Tier::Mono
+        );
+    }
+
+    #[test]
+    fn ascii_follows_the_flag_or_the_locale() {
+        let e = env("xterm", "");
+        assert!(!resolve(ThemePref::Terminal, &e, true, false).is_ascii());
+        assert!(resolve(ThemePref::Terminal, &e, true, true).is_ascii());
+        let c = LocaleEnv {
+            lang: Some("C".into()),
+            ..LocaleEnv::default()
+        };
+        assert!(Term::resolve(true, 80, ThemePref::Terminal, &e, &c, false).is_ascii());
+    }
+
+    #[test]
+    fn rstory_theme_colors_ls_in_256_colors() {
+        let t = resolve(ThemePref::Rstory, &env("xterm-256color", ""), true, false);
+        insta::assert_debug_snapshot!(ls_text(&sample(), NOW, &t), @r#""[0]   \u{1b}[38;5;245m01JBD8Z\u{1b}[0m \u{1b}[38;5;178m  \u{1b}[0m \u{1b}[38;5;245m  3m\u{1b}[0m  https://example.org/rstory\n[1]   \u{1b}[38;5;245m01JBD8X\u{1b}[0m \u{1b}[38;5;178m📌\u{1b}[0m \u{1b}[38;5;245m  2h\u{1b}[0m  git rebase -i HEAD~3\n[2]   \u{1b}[38;5;245m01JBC2K\u{1b}[0m \u{1b}[38;5;178m  \u{1b}[0m \u{1b}[38;5;245m  1d\u{1b}[0m  cargo test -p rstory --test daemon_restore -- --nocaptur…\n""#);
+    }
+
+    #[test]
+    fn rstory_theme_colors_ls_in_truecolor() {
+        let t = resolve(
+            ThemePref::Rstory,
+            &env("xterm-256color", "truecolor"),
+            true,
+            false,
+        );
+        insta::assert_debug_snapshot!(ls_text(&sample(), NOW, &t), @r#""[0]   \u{1b}[38;2;138;138;138m01JBD8Z\u{1b}[0m \u{1b}[38;2;215;175;0m  \u{1b}[0m \u{1b}[38;2;138;138;138m  3m\u{1b}[0m  https://example.org/rstory\n[1]   \u{1b}[38;2;138;138;138m01JBD8X\u{1b}[0m \u{1b}[38;2;215;175;0m📌\u{1b}[0m \u{1b}[38;2;138;138;138m  2h\u{1b}[0m  git rebase -i HEAD~3\n[2]   \u{1b}[38;2;138;138;138m01JBC2K\u{1b}[0m \u{1b}[38;2;215;175;0m  \u{1b}[0m \u{1b}[38;2;138;138;138m  1d\u{1b}[0m  cargo test -p rstory --test daemon_restore -- --nocaptur…\n""#);
+    }
+
+    #[test]
+    fn terminal_theme_keeps_ls_in_16_colors() {
+        let t = resolve(
+            ThemePref::Terminal,
+            &env("xterm-256color", "truecolor"),
+            true,
+            false,
+        );
+        insta::assert_debug_snapshot!(ls_text(&sample(), NOW, &t), @r#""[0]   \u{1b}[90m01JBD8Z\u{1b}[0m \u{1b}[33m  \u{1b}[0m \u{1b}[90m  3m\u{1b}[0m  https://example.org/rstory\n[1]   \u{1b}[90m01JBD8X\u{1b}[0m \u{1b}[33m📌\u{1b}[0m \u{1b}[90m  2h\u{1b}[0m  git rebase -i HEAD~3\n[2]   \u{1b}[90m01JBC2K\u{1b}[0m \u{1b}[33m  \u{1b}[0m \u{1b}[90m  1d\u{1b}[0m  cargo test -p rstory --test daemon_restore -- --nocaptur…\n""#);
     }
 
     #[test]

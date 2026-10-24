@@ -53,3 +53,11 @@ Tray and panel icons are distinguishable by shape for recording, paused and disc
 
 - **SC-001**: Every component has snapshots in 16-color, mono and ASCII at 80 and 40 columns.
 - **SC-002**: The icon review checklist passes at 16 px, monochrome.
+
+## Notes (docs-gaps, 2026-10-24)
+
+- `theme` is read from `config.toml` by every terminal renderer: the CLI (`ls`, `show`, `status`, ...), the picker and doctor. `terminal` (the default) is the 16-color tier; `rstory` picks truecolor when `COLORTERM` is `truecolor` or `24bit`, else 256 colors when `TERM` names them, else 16; `mono` is no color. `NO_COLOR` (non-empty) and `TERM=dumb` give mono under every theme, and a pipe is always mono.
+- Rendering never fails on a bad `theme`: the renderers fall back to `terminal`. `rstory config` and `rstory doctor` report the invalid value instead (exit 5 and a failing `config` check).
+- `--ascii` is a global flag (`rstory --ascii ls`, `rstory doctor --ascii`, `rstory pick --ascii`). It forces the ASCII glyphs, like a non-UTF-8 locale does. The installers (`install-autostart`, `install-gnome-extension`) print no design-system output and take no `--ascii`.
+- The tray, the GNOME extension and the protocol output don't use the tiers and are unchanged.
+- The 256-color and truecolor tiers have snapshots through the CLI (`ls`) and doctor renderers; the widgets already had them in every tier.

@@ -83,12 +83,17 @@ pub struct Facts {
     pub gnome: Option<GnomeFacts>,
     pub picker: LaunchPlan,
     pub autostart: Vec<(AutostartKind, PathBuf)>,
+    /// What is wrong with `config.toml`, when something is.
+    pub config_error: Option<String>,
 }
 
 /// Turns the facts into the report, in display order.
 #[must_use]
 pub fn evaluate(facts: &Facts) -> Vec<Check> {
-    let mut out = vec![session(facts), backend(facts), store(facts), daemon(facts)];
+    let mut out = vec![session(facts), backend(facts)];
+    out.extend(config(facts));
+    out.push(store(facts));
+    out.push(daemon(facts));
     out.extend(pause(facts));
     out.extend(tray(facts));
     if let Some(g) = &facts.gnome {
@@ -119,10 +124,22 @@ fn session(f: &Facts) -> Check {
     }
 }
 
+/// Only present when `config.toml` has a value rstory rejects (the daemon would refuse it too).
+fn config(f: &Facts) -> Option<Check> {
+    f.config_error.as_ref().map(|e| {
+        Check::with_hint(
+            "config",
+            Status::Fail,
+            format!("config.toml: {e}"),
+            "fix or remove that key (run `rstory config` to see the file and its path)",
+        )
+    })
+}
+
 fn backend(f: &Facts) -> Check {
     let sel = f.session.selection;
     let how = if sel.reason == Reason::Override {
-        " (chosen in the settings)"
+        " (chosen with backend in config.toml)"
     } else {
         ""
     };

@@ -6,7 +6,7 @@ Status: **skeleton**. Owner: spec 006 (`project:spec` → `frontend:spec` for `t
 
 | Command | Daemon needed | Output | Notes |
 |---|---|---|---|
-| `rstory daemon [--backend wayland\|x11]` | is the daemon | logs to stderr | spec 004 |
+| `rstory daemon [--backend wayland\|x11] [--help]` | is the daemon | logs to stderr | spec 004 |
 | `rstory ls [--json] [--limit N]` | no (read-only fallback) | lines, or `entry_list` JSON | spec 006 |
 | `rstory show <ref> [--json]` | no (read-only fallback) | raw bytes, or `entry` JSON | spec 006 |
 | `rstory copy <ref>` | yes | silent | spec 006 |
@@ -16,11 +16,13 @@ Status: **skeleton**. Owner: spec 006 (`project:spec` → `frontend:spec` for `t
 | `rstory pause [--for <dur>]` / `resume` | yes | silent | `<dur>` = `<n>s\|m\|h` |
 | `rstory status [--json]` | yes (exits 3 otherwise) | text, or `status` JSON | |
 | `rstory config [--path]` | no | effective TOML or the path | |
-| `rstory pick [--plain]` | no (read-only fallback) | TUI | spec 007 |
-| `rstory doctor [--json]` | no | report | spec 011 |
+| `rstory pick [--plain] [--ascii]` | no (read-only fallback) | TUI | spec 007 |
+| `rstory doctor [--json] [--ascii]` | no | report | spec 011 |
 | `rstory install-autostart [--systemd] [--now] [--uninstall]` | no | messages | spec 012 |
 | `rstory install-gnome-extension [--enable] [--uninstall]` | no | messages | spec 010 |
 | `rstory completions <bash\|zsh\|fish>` | no | script | spec 006 |
+
+Global flag: `--ascii` forces ASCII glyphs for every command that draws (`ls`, `status`, `doctor`, `pick`, ...), as a non-UTF-8 locale does.
 
 ## Exit codes (stable within a major version)
 

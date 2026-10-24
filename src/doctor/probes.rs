@@ -14,6 +14,7 @@ use std::time::{Duration, Instant};
 use time::OffsetDateTime;
 
 use super::checks::{DaemonFact, Facts, GnomeFacts, SessionFacts, SessionKind, StoreFact};
+use crate::backend::BackendKind;
 use crate::config;
 use crate::domain::entry::PauseState;
 use crate::install::autostart::{self, AutostartKind};
@@ -309,7 +310,8 @@ pub fn autostart_facts(env: &ProbeEnv) -> Vec<(AutostartKind, PathBuf)> {
 /// registry and the X display), as for the daemon.
 #[must_use]
 pub fn gather(env: &ProbeEnv, probe: &mut dyn session::Probe) -> Facts {
-    let selection = session::select(&env.session, probe, None);
+    let (override_backend, config_error) = config_facts(env);
+    let selection = session::select(&env.session, probe, override_backend);
     let daemon = daemon_fact(env);
     let (store, store_pause) = store_fact(env, &daemon);
     let on_gnome = env
@@ -328,6 +330,29 @@ pub fn gather(env: &ProbeEnv, probe: &mut dyn session::Probe) -> Facts {
         gnome: on_gnome.then(|| gnome_facts(env)),
         picker: picker_plan(env),
         autostart: autostart_facts(env),
+        config_error,
+    }
+}
+
+/// The `backend` override from `config.toml`, or what is wrong with the file. An absent or
+/// unreadable file is not an error here: the store and daemon checks have their say.
+fn config_facts(env: &ProbeEnv) -> (Option<BackendKind>, Option<String>) {
+    let Some(text) = env
+        .config_path
+        .as_ref()
+        .and_then(|p| std::fs::read_to_string(p).ok())
+    else {
+        return (None, None);
+    };
+    let checked = config::Caps::from_toml(&text)
+        .map(drop)
+        .and_then(|()| config::theme_from_toml(&text).map(drop))
+        .and_then(|()| config::backend_from_toml(&text));
+    match checked {
+        Ok(Some(config::BackendName::X11)) => (Some(BackendKind::X11), None),
+        Ok(Some(config::BackendName::Wayland)) => (Some(BackendKind::Wayland), None),
+        Ok(None) => (None, None),
+        Err(e) => (None, Some(e.to_string())),
     }
 }
 

@@ -14,6 +14,7 @@ fn label(id: &str) -> &str {
     match id {
         "session" => "Session",
         "backend" => "Backend",
+        "config" => "Config",
         "store" => "Store",
         "daemon" => "Daemon",
         "pause" => "Pause",

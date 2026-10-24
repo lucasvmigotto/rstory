@@ -16,7 +16,10 @@ mod tests;
 /// `rstory doctor --help`.
 pub const HELP: &str = "Check the setup and explain what is wrong. Read-only: it changes nothing.
 
-Usage: rstory doctor [--json]
+Usage: rstory doctor [--json] [--ascii]
+
+  --json   print the report as JSON
+  --ascii  use only ASCII glyphs
 
 Exit codes: 0 everything works, 1 warnings, 2 failures (or a usage error).
 
@@ -29,17 +32,23 @@ Examples:
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Options {
     pub json: bool,
+    /// `--ascii`: the caller builds the `Term` from it; the report itself needs nothing more.
+    pub ascii: bool,
 }
 
-/// Parses the arguments after `doctor` (only `--json`).
+/// Parses the arguments after `doctor` (`--json` and `--ascii`).
 ///
 /// # Errors
 /// A message for any other argument.
 pub fn parse_args(args: &[String]) -> Result<Options, String> {
-    let mut o = Options { json: false };
+    let mut o = Options {
+        json: false,
+        ascii: false,
+    };
     for a in args {
         match a.as_str() {
             "--json" => o.json = true,
+            "--ascii" => o.ascii = true,
             other => return Err(format!("unknown argument `{other}`")),
         }
     }
@@ -78,13 +87,13 @@ pub fn run_with(
     exit_code(&checks)
 }
 
-/// `rstory doctor [--json]`: probes the real session, prints the report on stdout and returns
+/// `rstory doctor [--json] [--ascii]`: probes the real session, prints the report on stdout and returns
 /// the doctor exit code (0, 1 or 2; 2 also for a usage error).
 #[must_use]
-pub fn run(args: &[String]) -> u8 {
+pub fn run(args: &[String], ascii: bool) -> u8 {
     let env = probes::ProbeEnv::from_process();
     let mut probe = crate::session::RealProbe::new(&env.session, env.xauthority.clone());
-    let term = crate::cli::render::Term::detect();
+    let term = crate::cli::render::Term::detect(ascii || args.iter().any(|a| a == "--ascii"));
     let (mut out, mut err) = (std::io::stdout().lock(), std::io::stderr().lock());
     run_with(args, &env, &mut probe, &term, &mut out, &mut err)
 }

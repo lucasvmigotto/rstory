@@ -53,6 +53,27 @@ impl FromStr for ThemePref {
     }
 }
 
+impl From<crate::config::ThemeName> for ThemePref {
+    fn from(name: crate::config::ThemeName) -> Self {
+        match name {
+            crate::config::ThemeName::Terminal => Self::Terminal,
+            crate::config::ThemeName::Rstory => Self::Rstory,
+            crate::config::ThemeName::Mono => Self::Mono,
+        }
+    }
+}
+
+impl ThemePref {
+    /// The `theme` key of the user's `config.toml`. A missing or invalid file gives the
+    /// default: rendering must never fail on a config error (`rstory config` reports it).
+    #[must_use]
+    pub fn from_user_config() -> Self {
+        crate::config::user_config_text()
+            .and_then(|t| crate::config::theme_from_toml(&t).ok())
+            .map_or_else(Self::default, Self::from)
+    }
+}
+
 /// Terminal background, which picks the truecolor variant.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub enum Background {

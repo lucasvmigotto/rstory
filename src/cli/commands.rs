@@ -14,7 +14,9 @@ use super::error::CliError;
 use super::render::{self, Term};
 use super::source;
 use super::status;
-use crate::config::{Caps, ConfigError, picker_command_from_toml};
+use crate::config::{
+    BackendName, Caps, ConfigError, backend_from_toml, picker_command_from_toml, theme_from_toml,
+};
 use crate::ipc::protocol::Status;
 use crate::ui::copy;
 
@@ -137,9 +139,16 @@ pub fn config(io: &mut Io<'_>, path_only: bool) -> Result<(), CliError> {
     let invalid = |e: ConfigError| CliError::environment(format!("{}: {e}", path.display()));
     let caps = Caps::from_toml(&text).map_err(invalid)?;
     let picker = picker_command_from_toml(&text).map_err(invalid)?;
+    let theme = theme_from_toml(&text).map_err(invalid)?;
+    let backend = backend_from_toml(&text).map_err(invalid)?;
+    let view = status::ConfigView {
+        theme: theme.as_str(),
+        backend: backend.map(BackendName::as_str),
+        picker_command: picker.as_deref(),
+    };
     emit(
         io.out,
-        status::config_text(&path, exists, &caps, picker.as_deref()).as_bytes(),
+        status::config_text(&path, exists, &caps, &view).as_bytes(),
     )
 }
 

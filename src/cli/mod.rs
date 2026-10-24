@@ -93,14 +93,14 @@ pub fn run(args: &[String]) -> u8 {
                 socket: env.socket_path().ok(),
                 store: env.store_dir().ok(),
             };
-            return crate::picker::run(args, &paths);
+            return crate::picker::run(args, &paths, cli.ascii);
         }
         // Spec 011: doctor has its own exit scale (0 ok, 1 warnings, 2 failures).
-        args::Command::Doctor { args } => return crate::doctor::run(args),
+        args::Command::Doctor { args } => return crate::doctor::run(args, cli.ascii),
         _ => {}
     }
     let env = env::Env::process();
-    let term = render::Term::detect();
+    let term = render::Term::detect(cli.ascii);
     let (mut out, mut err) = (std::io::stdout().lock(), std::io::stderr().lock());
     let mut io = commands::Io {
         env: &env,
