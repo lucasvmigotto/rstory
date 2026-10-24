@@ -43,7 +43,7 @@ No feature-specific setup (crate skeleton comes from 001).
 ### Implementation for User Story 1
 
 - [x] T003 [US1] Backend implementation — see `## Backend` (appended by `backend:spec`) — Executor: builder · Reviewer: thinker
-- [ ] T004 [US1] QA tasks — see `## QA` (appended by `qa:strategy`) — Executor: thinker · Reviewer: reviewer · Effort: high
+- [x] T004 [US1] QA tasks — see `## QA` (appended by `qa:strategy`) — Executor: thinker · Reviewer: reviewer · Effort: high
 
 **Checkpoint**: User Story 1 passes its tests independently.
 
@@ -84,7 +84,7 @@ No feature-specific setup (crate skeleton comes from 001).
 ## Phase 6: Polish & Cross-Cutting
 
 - [ ] T009 Run quickstart.md validation — Executor: scout · Reviewer: thinker · Effort: low
-- [ ] T010 QA tasks — see `## QA` (appended by `qa:strategy`) — Executor: thinker · Reviewer: reviewer · Effort: high
+- [x] T010 QA tasks — see `## QA` (appended by `qa:strategy`) — Executor: thinker · Reviewer: reviewer · Effort: high
 
 ---
 

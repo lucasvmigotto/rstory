@@ -85,7 +85,7 @@ No feature-specific setup (crate skeleton comes from 001).
 
 - [x] T009 Write README sections: threat model, sensitive hints, `passc` wrapper (FR-007) — Executor: builder · Reviewer: thinker · Effort: low
 - [x] T010 Run quickstart.md validation — Executor: scout · Reviewer: thinker · Effort: low
-- [ ] T011 QA tasks — see `## QA` (appended by `qa:strategy`) — Executor: thinker · Reviewer: reviewer · Effort: high
+- [x] T011 QA tasks — see `## QA` (appended by `qa:strategy`) — Executor: thinker · Reviewer: reviewer · Effort: high
 
 ---
 
@@ -137,7 +137,7 @@ Appended by `backend:spec`. Built by `backend:build` (ticks only this section). 
 Appended by `qa:strategy`. Executed by `qa:e2e` / `qa:load` after the builds (ticks only this section).
 
 - [x] T016 `tests/e2e/E2E-K3.rs` (Xvfb, sway, bridge) and `E2E-K3b.rs` — Executor: builder · Reviewer: reviewer · Effort: high
-- [ ] T017 Charter session → `docs/product/qa/charters/005.md` — Executor: thinker · Reviewer: reviewer · Effort: high
+- [x] T017 Charter session → `docs/product/qa/charters/005.md` — Executor: thinker · Reviewer: reviewer · Effort: high
 
 **Checkpoint**: the journeys and suites in `qa.md` are green in CI; the exit criteria are met → Verified in `specs/README.md`.
 

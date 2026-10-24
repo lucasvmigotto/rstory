@@ -86,7 +86,7 @@ description: "Task list for Session detection & X11 capture"
 
 - [x] T011 Record GNOME 48–51 manual check steps (GUI-app copies, brief Q7) in `docs/release.md` draft — Executor: builder · Reviewer: thinker · Effort: low
 - [x] T012 Run quickstart.md validation — Executor: scout · Reviewer: thinker · Effort: low
-- [ ] T013 QA tasks — see `## QA` (appended by `qa:strategy`) — Executor: thinker · Reviewer: reviewer · Effort: high
+- [x] T013 QA tasks — see `## QA` (appended by `qa:strategy`) — Executor: thinker · Reviewer: reviewer · Effort: high
 
 ---
 
@@ -148,7 +148,7 @@ Appended by `qa:strategy`. Executed by `qa:e2e` / `qa:load` after the builds (ti
 
 - [x] T022 Bridge-mode CI environment (headless mutter) in `tests/support/mutter.rs` validated by `qa:e2e` — Executor: builder · Reviewer: thinker
 - [x] T023 GNOME 48–51 manual matrix rows in `docs/release.md` (GUI-app copies, restore into Wayland apps) — Executor: builder · Reviewer: thinker
-- [ ] T024 Charter session → `docs/product/qa/charters/002.md` — Executor: thinker · Reviewer: reviewer · Effort: high
+- [x] T024 Charter session → `docs/product/qa/charters/002.md` — Executor: thinker · Reviewer: reviewer · Effort: high
 
 **Checkpoint**: the journeys and suites in `qa.md` are green in CI; the exit criteria are met → Verified in `specs/README.md`.
 

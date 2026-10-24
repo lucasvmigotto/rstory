@@ -68,7 +68,7 @@ description: "Task list for Wayland data-control capture"
 
 - [x] T007 Add KDE Plasma manual check to `docs/release.md` (SC-003) — Executor: builder · Reviewer: thinker · Effort: low
 - [x] T008 Run quickstart.md validation — Executor: scout · Reviewer: thinker · Effort: low
-- [ ] T009 QA tasks — see `## QA` (appended by `qa:strategy`) — Executor: thinker · Reviewer: reviewer · Effort: high
+- [x] T009 QA tasks — see `## QA` (appended by `qa:strategy`) — Executor: thinker · Reviewer: reviewer · Effort: high
 
 ---
 
@@ -120,7 +120,7 @@ Appended by `backend:spec`. Built by `backend:build` (ticks only this section). 
 Appended by `qa:strategy`. Executed by `qa:e2e` / `qa:load` after the builds (ticks only this section).
 
 - [x] T014 KDE manual matrix row in `docs/release.md` — Executor: builder · Reviewer: thinker · Effort: low
-- [ ] T015 Charter session → `docs/product/qa/charters/003.md` — Executor: thinker · Reviewer: reviewer · Effort: high
+- [x] T015 Charter session → `docs/product/qa/charters/003.md` — Executor: thinker · Reviewer: reviewer · Effort: high
 
 **Checkpoint**: the journeys and suites in `qa.md` are green in CI; the exit criteria are met → Verified in `specs/README.md`.
 
