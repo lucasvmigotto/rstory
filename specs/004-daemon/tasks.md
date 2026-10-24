@@ -177,7 +177,7 @@ Appended by `backend:spec`. Built by `backend:build` (ticks only this section). 
 Appended by `qa:strategy`. Executed by `qa:e2e` / `qa:load` after the builds (ticks only this section).
 
 - [x] T028 `tests/e2e/E2E-K1.rs`, `E2E-K4.rs`, `E2E-PEER.rs` (pty/expectrl harness + session launchers in `tests/e2e/support.rs`) — Executor: builder · Reviewer: reviewer · Effort: high
-- [ ] T029 Burst and soak harness `tests/perf/{burst,soak}.rs` per the load profile — Executor: builder · Reviewer: reviewer · Effort: high
+- [x] T029 Burst and soak harness `tests/perf/{burst,soak}.rs` per the load profile — Executor: builder · Reviewer: reviewer · Effort: high
 - [ ] T030 Charter session → `docs/product/qa/charters/004.md` — Executor: thinker · Reviewer: reviewer · Effort: high
 
 **Checkpoint**: the journeys and suites in `qa.md` are green in CI; the exit criteria are met → Verified in `specs/README.md`.

@@ -39,8 +39,20 @@ fn hinted(j: &Job) -> bool {
         .any(|t| SENSITIVE_HINTS.contains(&t.as_str()))
 }
 
+/// 10 000 cases unless `PROPTEST_CASES` says otherwise (1 000 on PRs, 100 000 nightly).
+fn config() -> ProptestConfig {
+    let cases = std::env::var("PROPTEST_CASES")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(10_000);
+    ProptestConfig {
+        cases,
+        ..ProptestConfig::default()
+    }
+}
+
 proptest! {
-    #![proptest_config(ProptestConfig::with_cases(10_000))]
+    #![proptest_config(config())]
 
     #[test]
     fn hinted_content_is_never_read_stored_or_logged(jobs in prop::collection::vec(job(), 0..12)) {

@@ -15,7 +15,7 @@ means the same as a green job in CI.
 |---|---|---|
 | `.github/workflows/ci.yml` | PRs into `dev` and `main`; pushes to `dev` and `main`; called by `release.yml` | `plan`, `checks`, `lint`, `test`, `integration`, `e2e`, `static`, `perf`, `ci-ok`, `report-failure` |
 | `.github/workflows/release.yml` | tags `X.Y.Z` (plain SemVer, no `v`); manual `workflow_dispatch` (dry run only) | `verify`, `ci` (the main set), `package`, `SHA256SUMS`, `cargo publish --dry-run`, `publish`, `GitHub release`, `report-failure` |
-| `.github/workflows/nightly.yml` | every day 03:17 UTC; manual | `property`, `audit`, `quarantine`, `report-failure` |
+| `.github/workflows/nightly.yml` | every day 03:17 UTC; manual | `property`, `soak`, `audit`, `quarantine`, `report-failure` |
 
 Job graph of `ci.yml` (the `lint`, `test`, `integration`, `e2e`, `static` and `perf` jobs run once per
 architecture: x86_64 on `ubuntu-24.04`, aarch64 on `ubuntu-24.04-arm`):
@@ -39,7 +39,7 @@ static (x86_64, aarch64) ─────────────────┘
 | `integration` | `test-integration` (Xvfb, headless sway with XWayland, headless mutter bridge mode) |
 | `e2e` | `test-e2e-smoke` (K2, K3, K6) on PRs into `dev`; `test-e2e` (K1 to K7, PEER, launch table) on pushes to `dev` and for the main set |
 | `static` | `build-static` (musl static build, F2 static, F5 at most 15 MiB) |
-| `perf` | `bench` (store benchmarks, p95 within 2x budget on shared runners) |
+| `perf` | `bench` (store benchmarks and F6 picker first frame, p95 within 2x budget on shared runners), `test-perf` (real daemon on Xvfb: F7, burst, RSS, F10) |
 | `ci-ok` | none: fails unless every gate above succeeded (`perf` may be skipped). **The one required status check.** |
 
 Job graph of `release.yml`:
@@ -108,7 +108,7 @@ From `docs/product/test-strategy.md` §6. `plan` in `ci.yml` picks the set.
 | Stage | Runs | Gate set in CI |
 |---|---|---|
 | PR into `dev` | `ci.yml`, both architectures | fmt, clippy, unit, property (`PROPTEST_CASES=1000`), snapshots, contract, integration (Xvfb, sway, bridge), fitness F1, F2, F3, F4, F5, F9, F10, F11, RSS and burst, advisories, secret scan, extension lint, type-check and tests. Nextest profile `ci`: no retries. |
-| Push to `dev` | `ci.yml` | the PR set + perf smoke (`make bench`). Nextest profile `ci-dev`: one rerun, reported. |
+| Push to `dev` | `ci.yml` | the PR set + perf smoke (`make bench`, `make test-perf`). Nextest profile `ci-dev`: one rerun, reported. |
 | PR `dev` → `main`, push to `main` | `ci.yml` | the PR set + perf smoke, property with `PROPTEST_CASES=10000`. Nextest profile `ci`. |
 | Tag `X.Y.Z` | `release.yml` | the main set (through `ci.yml`) + tag, version and SC-001 checks, both tarballs with F2/F5, `cargo publish --dry-run`. The manual matrix is signed off in the release PR (below). |
 | Nightly | `nightly.yml` | property with `PROPTEST_CASES=100000` (`store_crash`, `history_props`, `filter_props`), advisories, quarantined tests on both architectures. A failure opens or updates the issue `CI failing: nightly on <branch>`. |
@@ -121,14 +121,16 @@ Gaps against §6, not wired because the suites do not exist yet:
 - E2E-PEER runs the real daemon against a second uid only where the job can switch uid
   (`setpriv --reuid`); the unprivileged tools container cannot, so it checks the daemon's accept
   loop in-process there (`tests/e2e/E2E-PEER.rs`).
-- Perf smoke F6 (picker first frame) and F7 (capture latency) at 200 ms: `make bench` runs the
-  store benchmark only.
-- Nightly idle soak (daemon for 30 minutes, RSS flat): no soak test exists. F10 is covered by the
-  idle-wake-up tests in `make test`.
+- Perf smoke: F6 (picker first frame) fails at 2x its 100 ms budget, which is the 200 ms CI
+  budget (`make bench`). F7 (`tests/perf/capture_latency.rs`) fails at p95 100 ms locally and 200 ms
+  when `CI` is set. Burst, SC-002 RSS and F10 run the real daemon binary on Xvfb and read `/proc/<pid>`
+  (`make test-perf`; the binary is a debug build, so RSS figures are an upper bound). Wake-ups are
+  voluntary context switches over the daemon's threads, not `schedstat`.
+- Nightly soak (`make test-soak`, 30 minutes, 1 copy a minute; `SOAK_SECS=n` shortens it).
 - FR-002's headless mutter `--no-x11` case (no capture path) is covered by E2E-K4 in the `e2e`
   job (`Mutter::start_no_x11`).
-- `filter_props` hardcodes 10 000 cases, so `PROPTEST_CASES` does not change it; `store_crash`
-  and tests on proptest's default config follow the variable.
+- `store_crash`, `filter_props` (default 10 000) and tests on proptest's default config follow
+  `PROPTEST_CASES`.
 
 ## Flaky-test policy
 

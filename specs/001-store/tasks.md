@@ -158,7 +158,7 @@ Appended by `backend:spec`. Built by `backend:build` (ticks only this section). 
 Appended by `qa:strategy`. Executed by `qa:e2e` / `qa:load` after the builds (ticks only this section).
 
 - [ ] T028 Exploratory charter session for the store (SIGKILL during bursts) → notes in `docs/product/qa/charters/001.md` — Executor: thinker · Reviewer: reviewer · Effort: high
-- [ ] T029 Nightly property job with 100 000 cases (gate wiring for `devsecops:pipeline`) — Executor: builder · Reviewer: thinker · Effort: low
+- [x] T029 Nightly property job with 100 000 cases (gate wiring for `devsecops:pipeline`) — Executor: builder · Reviewer: thinker · Effort: low
 
 **Checkpoint**: the journeys and suites in `qa.md` are green in CI; the exit criteria are met → Verified in `specs/README.md`.
 

@@ -36,13 +36,13 @@ NEXTEST := cargo nextest run --locked --offline --no-tests=pass --profile $(NEXT
 # Test-only feature: FaultFs for the crash and power-loss suites (never in release builds).
 FEATURES := --features fault-injection
 # Lint and check also compile the session tests (Xvfb / mutter), which `make test` skips.
-LINT_FEATURES := --features fault-injection,session-tests
+LINT_FEATURES := --features fault-injection,session-tests,perf-tests
 # Extension dev tools (typescript, @girs types) live in a named volume, so nothing lands in the repo.
 NPM_VOLUME ?= rstory-tools-npm
 EXT_MOUNT := -v $(NPM_VOLUME):/src/extension/node_modules
 TTY := $(shell [ -t 0 ] && echo -it)
 
-.PHONY: help image fetch fmt fmt-check lint check test test-quarantine bench test-integration test-e2e test-e2e-smoke build build-static test-launch ext-lint ext-test ext-deps ext-typecheck deny audit secret-scan publish-dry-run publish doctor shell clean-cache
+.PHONY: help image fetch fmt fmt-check lint check test test-quarantine bench test-integration test-e2e test-e2e-smoke test-perf test-soak build build-static test-launch ext-lint ext-test ext-deps ext-typecheck deny audit secret-scan publish-dry-run publish doctor shell clean-cache
 
 help: ## List recipes
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-17s %s\n", $$1, $$2}'
@@ -89,6 +89,12 @@ test-e2e: image ## End-to-end journeys K1-K7 + PEER (real binary, pty, headless 
 
 test-e2e-smoke: image ## The PR-gate subset of the journeys (K2, K3, K6), offline
 	$(RUN) $(OFFLINE) $(IMAGE) $(NEXTEST) --features session-tests --test e2e --test-threads 2 $(E2E_SMOKE)
+
+test-perf: image ## Perf smoke (F7 capture latency, burst, RSS and idle wake-ups of the real daemon on Xvfb), one at a time; CI=1 applies the CI budgets
+	$(RUN) $(if $(CI),-e CI=$(CI)) $(OFFLINE) $(IMAGE) $(NEXTEST) --features perf-tests --success-output immediate --test-threads 1 $(or $(TEST_ARGS),--test burst --test capture_latency --test idle --test rss)
+
+test-soak: image ## Soak (nightly): the daemon for 30 min with 1 copy a minute, RSS flat, wake-ups only at timers; SOAK_SECS=n shortens it
+	$(RUN) $(if $(SOAK_SECS),-e RSTORY_SOAK_SECS=$(SOAK_SECS)) $(OFFLINE) $(IMAGE) $(NEXTEST) --features perf-tests --success-output immediate --test-threads 1 --test soak
 
 build: image ## Debug build, offline
 	$(RUN) $(OFFLINE) $(IMAGE) cargo build --locked --offline

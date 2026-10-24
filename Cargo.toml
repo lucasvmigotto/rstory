@@ -24,6 +24,8 @@ default = []
 fault-injection = []
 # Session tests: Xvfb and headless mutter (capture, serve, bridge mode); run by `make test-integration`.
 session-tests = []
+# Performance suite (tests/perf: real daemon on Xvfb, latency, burst, RSS, soak); run by `make test-perf`.
+perf-tests = []
 # Test doubles (FakeBackend) for other crates' tests; always on under cfg(test).
 testing = []
 
@@ -82,6 +84,31 @@ required-features = ["session-tests"]
 name = "e2e"
 path = "tests/e2e/main.rs"
 required-features = ["session-tests"]
+
+[[test]]
+name = "capture_latency"
+path = "tests/perf/capture_latency.rs"
+required-features = ["perf-tests"]
+
+[[test]]
+name = "burst"
+path = "tests/perf/burst.rs"
+required-features = ["perf-tests"]
+
+[[test]]
+name = "rss"
+path = "tests/perf/rss.rs"
+required-features = ["perf-tests"]
+
+[[test]]
+name = "idle"
+path = "tests/perf/idle.rs"
+required-features = ["perf-tests"]
+
+[[test]]
+name = "soak"
+path = "tests/perf/soak.rs"
+required-features = ["perf-tests"]
 
 [[bench]]
 name = "store"
