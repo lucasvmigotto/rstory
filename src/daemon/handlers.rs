@@ -15,7 +15,7 @@ use crate::launch::{self, LaunchPlan};
 use crate::store::fs::Fs;
 use crate::store::{Mutation, Outcome, StoreError};
 
-use super::{Daemon, error_kind};
+use super::{Daemon, error_kind, io_kind_name};
 
 fn json_value<T: serde::Serialize>(v: &T) -> Value {
     serde_json::to_value(v).unwrap_or(Value::Null)
@@ -62,7 +62,7 @@ impl<B: Backend, F: Fs> Daemon<B, F> {
                 ),
                 other => {
                     let c = Correlation::next();
-                    tracing::error!(kind = %error_kind(&other), correlation = %c, "store error");
+                    tracing::error!(kind = %error_kind(&other), io_kind = %io_kind_name(&other), correlation = %c, "store error");
                     ProtoError::internal(c)
                 }
             })
@@ -130,7 +130,7 @@ impl<B: Backend, F: Fs> Daemon<B, F> {
         let id = self.resolve(r)?.id;
         let bytes = self.store.content(&id).map_err(|e| {
             let c = Correlation::next();
-            tracing::error!(kind = %error_kind(&e), correlation = %c, "show: content unreadable");
+            tracing::error!(kind = %error_kind(&e), io_kind = %io_kind_name(&e), correlation = %c, "show: content unreadable");
             ProtoError::internal(c)
         })?;
         let entry = self.summary_of(&id);
@@ -199,8 +199,15 @@ impl<B: Backend, F: Fs> Daemon<B, F> {
         changed: bool,
     ) -> Result<Value, ProtoError> {
         if changed {
-            if let Err(e) = self.commit(vec![Mutation::SetPause(self.rec.state())]) {
-                self.rec = before;
+            let persisted = self.commit(vec![Mutation::SetPause(self.rec.state())]);
+            if let Err(e) = persisted {
+                // Fail closed: a pause that cannot be saved still stops recording now (it is
+                // lost on restart, and the caller is told). Only a resume is undone.
+                if !self.rec.is_paused() {
+                    self.rec = before;
+                    return Err(e);
+                }
+                self.publish_pause();
                 return Err(e);
             }
             self.publish_pause();

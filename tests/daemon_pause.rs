@@ -183,6 +183,8 @@ async fn a_pause_that_ended_while_the_daemon_was_down_resumes_on_start() {
     .await;
     let mut c = rig.client().await;
     assert_eq!(c.status().await["state"], "recording");
+    // The owner present at start is skipped (see the next test); a later copy is recorded.
+    change_only(&rig.fake);
     copy(&rig.fake, "recorded");
     let mut s = rig.client().await;
     s.subscribe().await;

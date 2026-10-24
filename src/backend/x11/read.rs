@@ -60,6 +60,8 @@ pub(crate) enum Stage {
         buf: Vec<u8>,
         ty: u32,
         deadline: Instant,
+        /// The whole transfer must end by then, however steadily chunks arrive.
+        total: Instant,
     },
 }
 
@@ -331,7 +333,10 @@ impl Engine {
 
     pub(super) fn read_deadline(&self) -> Option<Instant> {
         match self.read.as_ref().map(|o| &o.stage) {
-            Some(Stage::Convert { deadline, .. } | Stage::Incr { deadline, .. }) => Some(*deadline),
+            Some(Stage::Convert { deadline, .. }) => Some(*deadline),
+            Some(Stage::Incr {
+                deadline, total, ..
+            }) => Some((*deadline).min(*total)),
             _ => None,
         }
     }

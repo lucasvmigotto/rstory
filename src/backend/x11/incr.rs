@@ -15,6 +15,7 @@ impl Engine {
     /// The INCR announcement was read (which deleted the property and started the transfer).
     pub(super) fn begin_incr(&mut self) {
         let timeout = self.read_timeout;
+        let total = self.incr_total_timeout;
         if let Some(op) = self.read.as_mut()
             && let Stage::Convert { name, .. } = &op.stage
         {
@@ -23,6 +24,7 @@ impl Engine {
                 buf: Vec::new(),
                 ty: 0,
                 deadline: Instant::now() + timeout,
+                total: Instant::now() + total,
             };
         }
     }

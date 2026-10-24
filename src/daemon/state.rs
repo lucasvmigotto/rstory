@@ -1,5 +1,6 @@
 //! Daemon state view, status read model, clock and reconnect policy.
 
+use std::sync::Arc;
 use std::time::Duration;
 
 use time::OffsetDateTime;
@@ -72,42 +73,71 @@ pub fn view(rec: &RecordingState, active: bool, reason: Option<&str>) -> State {
     }
 }
 
-/// Wall clock that follows tokio's clock, so tests with paused time move it too.
-#[derive(Debug, Clone, Copy)]
+type WallSource = Arc<dyn Fn() -> OffsetDateTime + Send + Sync>;
+
+#[derive(Clone)]
+enum Source {
+    /// The system wall clock, read on every call: wall jumps and suspend show up.
+    System,
+    /// A wall time at a tokio instant, moving with tokio's clock (tests with paused time).
+    Tokio { wall: OffsetDateTime, at: Instant },
+    /// An injected wall source.
+    Injected(WallSource),
+}
+
+/// The daemon's wall clock. In production it reads the system wall clock each time, so a
+/// suspend or a clock correction is reflected (the store keeps stamps from going backwards).
+#[derive(Clone)]
 pub struct Clock {
-    wall: OffsetDateTime,
-    at: Instant,
+    source: Source,
+}
+
+impl std::fmt::Debug for Clock {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("Clock")
+    }
 }
 
 impl Clock {
-    /// A clock that reads `wall` now.
+    /// A clock that reads `wall` now and then follows tokio's clock.
     #[must_use]
     pub fn at(wall: OffsetDateTime) -> Self {
         Self {
-            wall,
-            at: Instant::now(),
+            source: Source::Tokio {
+                wall,
+                at: Instant::now(),
+            },
         }
     }
 
     /// A clock that reads `source` (tests inject wall jumps through it).
     #[must_use]
-    pub fn from_source(source: std::sync::Arc<dyn Fn() -> OffsetDateTime + Send + Sync>) -> Self {
-        Self::at(source())
+    pub fn from_source(source: WallSource) -> Self {
+        Self {
+            source: Source::Injected(source),
+        }
     }
 
     /// The system wall clock.
     #[must_use]
     pub fn system() -> Self {
-        Self::at(OffsetDateTime::now_utc())
+        Self {
+            source: Source::System,
+        }
     }
 
     /// The current time.
     #[must_use]
     pub fn now(&self) -> OffsetDateTime {
-        self.wall + self.at.elapsed()
+        match &self.source {
+            Source::System => OffsetDateTime::now_utc(),
+            Source::Tokio { wall, at } => *wall + at.elapsed(),
+            Source::Injected(f) => f(),
+        }
     }
 
-    /// The tokio instant at which the clock reads `t` (now when `t` has passed).
+    /// The tokio instant at which the clock reads `t` (now when `t` has passed), measured from
+    /// the current reading. The loop re-arms on every wake-up, so a jump is picked up then.
     #[must_use]
     pub fn instant_at(&self, t: OffsetDateTime) -> Instant {
         let ahead = (t - self.now()).max(time::Duration::ZERO);

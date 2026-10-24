@@ -10,7 +10,7 @@ use crate::domain::redact::Redacted;
 use crate::store::fs::Fs;
 use crate::store::{Mutation, Outcome};
 
-use super::{Daemon, QUEUE_BOUND, error_kind};
+use super::{Daemon, QUEUE_BOUND, error_kind, io_kind_name};
 
 /// One pending clipboard change (no content: that is read when the change is processed).
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -31,7 +31,13 @@ impl<B: Backend, F: Fs> Daemon<B, F> {
                     self.lose_backend();
                     return;
                 }
-                Some(BackendEvent::SelectionCleared) => {}
+                Some(BackendEvent::SelectionCleared) => self.skip_startup_owner = false,
+                Some(BackendEvent::SelectionChanged { .. })
+                    if std::mem::take(&mut self.skip_startup_owner) =>
+                {
+                    tracing::debug!(decision = "skipped_paused", "capture.startup_owner");
+                    self.counters.skipped_paused += 1;
+                }
                 Some(BackendEvent::SelectionChanged { types, self_owned }) => {
                     if self.queue.len() >= QUEUE_BOUND {
                         self.queue.pop_front();
@@ -120,7 +126,9 @@ impl<B: Backend, F: Fs> Daemon<B, F> {
                     self.publish_history();
                 }
             }
-            Err(e) => tracing::error!(kind = %error_kind(&e), "capture commit failed"),
+            Err(e) => {
+                tracing::error!(kind = %error_kind(&e), io_kind = %io_kind_name(&e), "capture commit failed")
+            }
         }
     }
 }

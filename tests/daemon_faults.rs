@@ -129,7 +129,7 @@ async fn a_failed_command_logs_the_io_error_kind() {
 
     let dirs = Dirs::new();
     let (_fake, mut c, stop) = start(&dirs, 0, io::ErrorKind::StorageFull).await;
-    assert_eq!(c.err("clear", json!({"all": true})).await, "internal");
+    assert_eq!(c.err("pause", json!({})).await, "internal");
     let log = String::from_utf8_lossy(&buf.0.lock().unwrap()).into_owned();
     assert!(
         log.contains("store error") && log.contains("StorageFull"),

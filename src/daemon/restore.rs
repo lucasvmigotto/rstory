@@ -9,7 +9,7 @@ use crate::ipc::error::{Correlation, ErrorCode, ProtoError};
 use crate::store::Mutation;
 use crate::store::fs::Fs;
 
-use super::{Daemon, error_kind};
+use super::{Daemon, error_kind, io_kind_name};
 
 impl<B: Backend, F: Fs> Daemon<B, F> {
     pub(crate) async fn restore(&mut self, r: &EntryRef) -> Result<Value, ProtoError> {
@@ -22,7 +22,7 @@ impl<B: Backend, F: Fs> Daemon<B, F> {
         let id = self.resolve(r)?.id;
         let bytes = self.store.content(&id).map_err(|e| {
             let c = Correlation::next();
-            tracing::error!(kind = %error_kind(&e), correlation = %c, "restore: content unreadable");
+            tracing::error!(kind = %error_kind(&e), io_kind = %io_kind_name(&e), correlation = %c, "restore: content unreadable");
             ProtoError::internal(c)
         })?;
         let Some(backend) = self.backend.as_mut() else {
