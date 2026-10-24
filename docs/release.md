@@ -282,6 +282,16 @@ the release PR. A failing row blocks the release.
 | GNOME, KDE Plasma, sway | Autostart re-login check | | | |
 | CI (release dry run) | `ci-ok` green on both architectures; both tarballs pass F2 and F5 | | | |
 
+## Manual check log
+
+Checks run outside a release candidate, for example on a `dev` build, so they inform the release
+but don't replace the sign-off above.
+
+| Date | Environment | Check | Build | Result | By |
+|---|---|---|---|---|---|
+| 2026-10-24 | GNOME Shell 48.7, Wayland | GNOME 48–51 manual check (10 rows) | `dev` static build after PR #74 | all pass | owner |
+| 2026-10-24 | GNOME Shell 48.7, Wayland | GNOME Shell extension manual matrix (18 rows) | `dev` static build after PR #74 | all pass | owner |
+
 ## GNOME 48–51 manual check
 
 Why manual: headless mutter (used in CI for bridge mode) has no keyboard seat, so no Wayland
@@ -436,3 +446,16 @@ because of `metadata.json`; `rstory doctor` explains it.
 
 Quick CI cross-check before the manual run: `make ext-test ext-typecheck ext-lint` and
 `make test` (the install tests in `tests/install_gnome.rs`).
+
+### Extension leak check (once per Shell version)
+
+The gjs tests check `disable()` cleanup against fakes (20 enable and disable cycles). This repeats
+it in the real Shell, where leaked signal handlers, timers or actors would show.
+
+1. Note the Shell's memory: `ps -o rss= -C gnome-shell`.
+2. Run 50 cycles: `for i in $(seq 50); do gnome-extensions disable rstory@lucasvmigotto.github.io; gnome-extensions enable rstory@lucasvmigotto.github.io; sleep 0.2; done`.
+3. Open and close the menu a few times, then check the journal: `journalctl --user -b /usr/bin/gnome-shell | grep -i rstory`.
+
+Expected: exactly one rstory icon in the top bar; no `rstory` warnings or JS errors in the journal
+(no "already disposed" or "signal handler" messages); Shell RSS within about 5 MiB of step 1.
+A clear upward trend over repeated runs counts as a leak and blocks the release.

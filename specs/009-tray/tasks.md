@@ -150,7 +150,7 @@ Appended by `frontend:spec`. `[TUI]`/`[CLI]` tasks built by `frontend:tui` (tick
 Appended by `qa:strategy`. Executed by `qa:e2e` / `qa:load` after the builds (ticks only this section).
 
 - [x] T018 `tests/e2e/E2E-K7.rs` (dbus-daemon + stub watcher) — Executor: builder · Reviewer: thinker
-- [ ] T019 KDE + waybar manual rows in `docs/release.md` — Executor: builder · Reviewer: thinker · Effort: low
+- [x] T019 KDE + waybar manual rows in `docs/release.md` — Executor: builder · Reviewer: thinker · Effort: low
 
 **Checkpoint**: the journeys and suites in `qa.md` are green in CI; the exit criteria are met → Verified in `specs/README.md`.
 
