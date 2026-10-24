@@ -67,8 +67,8 @@ No feature-specific setup (crate skeleton comes from 001).
 
 ## Phase 5: Polish & Cross-Cutting
 
-- [ ] T007 Assert doctor never prints content (canary) — Executor: builder · Reviewer: thinker
-- [ ] T008 Run quickstart.md validation — Executor: scout · Reviewer: thinker · Effort: low
+- [x] T007 Assert doctor never prints content (canary) — Executor: builder · Reviewer: thinker
+- [x] T008 Run quickstart.md validation — Executor: scout · Reviewer: thinker · Effort: low
 - [ ] T009 QA tasks — see `## QA` (appended by `qa:strategy`) — Executor: thinker · Reviewer: reviewer · Effort: high
 
 ---
