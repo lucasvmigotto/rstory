@@ -34,3 +34,17 @@ slow-timeout = { period = "60s", terminate-after = 10 }
 
 [profile.ci-dev.junit]
 path = "junit.xml"
+
+# The nightly soak runs 30 minutes by design (tests/perf/soak.rs): give it 45 before it is killed.
+[[profile.default.overrides]]
+filter = "binary(soak)"
+slow-timeout = { period = "300s", terminate-after = 9 }
+
+[[profile.ci.overrides]]
+filter = "binary(soak)"
+slow-timeout = { period = "300s", terminate-after = 9 }
+
+[[profile.ci-dev.overrides]]
+filter = "binary(soak)"
+slow-timeout = { period = "300s", terminate-after = 9 }
+retries = 0
