@@ -63,6 +63,10 @@ jobs:
             echo "DOCS_CACHE_VOLUME=$RUNNER_TEMP/docs-bun-cache"
           } >> "$GITHUB_ENV"
 
+      # The tools and Bun containers run as uid 1000, while the runner owns the checkout: let them
+      # write the generated reference and dist/ (Podman's keep-id mapping does this locally).
+      - name: Let the container user write under docs/site
+        run: chmod -R a+rwX docs/site
       - name: Regenerate the CLI reference from the built binary
         run: make docs-reference
 
