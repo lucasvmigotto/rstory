@@ -340,7 +340,25 @@ fn execute_inner(
 }
 
 /// Entry point for `rstory install-autostart <args>`; uses the real session.
+/// `rstory install-autostart --help`.
+pub const HELP: &str = "Start the rstory daemon at login.
+
+Usage: rstory install-autostart [--systemd] [--now] [--uninstall]
+
+  --systemd    write a systemd user unit instead of an XDG autostart entry
+  --now        also start the daemon now
+  --uninstall  remove both kinds
+
+Examples:
+  rstory install-autostart
+  rstory install-autostart --systemd --now
+";
+
 pub fn run(args: &[String]) -> u8 {
+    if args.iter().any(|a| a == "-h" || a == "--help") {
+        print!("{HELP}");
+        return 0;
+    }
     let opts = match parse_args(args) {
         Ok(o) => o,
         Err(e) => {

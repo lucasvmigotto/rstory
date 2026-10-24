@@ -166,3 +166,25 @@ fn install_autostart_is_dispatched_to_the_installer() {
     assert!(err.contains("usage: rstory install-autostart"), "{err}");
     assert!(!err.contains("not available in this build"), "{err}");
 }
+
+#[test]
+fn passthrough_commands_answer_help_without_side_effects() {
+    for cmd in ["doctor", "install-autostart", "install-gnome-extension"] {
+        let out = assert_cmd::Command::cargo_bin("rstory")
+            .unwrap()
+            .args([cmd, "--help"])
+            .env_clear()
+            .env("HOME", "/nonexistent/rstory-test-home")
+            .env("XDG_CONFIG_HOME", "/nonexistent/rstory-test-config")
+            .env("XDG_DATA_HOME", "/nonexistent/rstory-test-data")
+            .output()
+            .unwrap();
+        assert_eq!(out.status.code(), Some(0), "{cmd}");
+        let text = String::from_utf8_lossy(&out.stdout);
+        assert!(
+            text.contains(&format!("Usage: rstory {cmd}")),
+            "{cmd}: {text}"
+        );
+        assert!(text.contains("Examples:"), "{cmd}");
+    }
+}

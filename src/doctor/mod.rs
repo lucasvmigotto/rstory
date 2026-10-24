@@ -13,6 +13,18 @@ pub mod render;
 #[cfg(test)]
 mod tests;
 
+/// `rstory doctor --help`.
+pub const HELP: &str = "Check the setup and explain what is wrong. Read-only: it changes nothing.
+
+Usage: rstory doctor [--json]
+
+Exit codes: 0 everything works, 1 warnings, 2 failures (or a usage error).
+
+Examples:
+  rstory doctor
+  rstory doctor --json | jq '.checks[] | select(.status != \"ok\")'
+";
+
 /// What the arguments after `doctor` ask for.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Options {
@@ -45,6 +57,10 @@ pub fn run_with(
     out: &mut dyn std::io::Write,
     err: &mut dyn std::io::Write,
 ) -> u8 {
+    if args.iter().any(|a| a == "-h" || a == "--help") {
+        let _ = out.write_all(HELP.as_bytes());
+        return 0;
+    }
     let opts = match parse_args(args) {
         Ok(o) => o,
         Err(m) => {
