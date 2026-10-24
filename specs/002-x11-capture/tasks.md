@@ -136,7 +136,7 @@ Appended by `backend:spec`. Built by `backend:build` (ticks only this section). 
 
 ### Backend Polish
 
-- [ ] T021 Document GNOME 48–51 manual check in `docs/release.md` (draft) — Executor: builder · Reviewer: thinker · Effort: low
+- [x] T021 Document GNOME 48–51 manual check in `docs/release.md` (draft) — Executor: builder · Reviewer: thinker · Effort: low
 
 **Checkpoint**: the budgets in backend.md are met; `/speckit-converge` (Backend) reports converged.
 

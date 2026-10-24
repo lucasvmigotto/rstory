@@ -67,7 +67,7 @@ description: "Task list for GNOME Shell extension"
 
 ## Phase 5: Polish & Cross-Cutting
 
-- [ ] T008 eslint + GNOME review rules check (disable() cleanup) and `make ext-typecheck` in CI (recipes `ext-lint`, `ext-typecheck`, `ext-test` exist; the CI step waits for spec 013's workflows) — Executor: builder · Reviewer: thinker · Effort: low
+- [x] T008 eslint + GNOME review rules check (disable() cleanup) and `make ext-typecheck` in CI (recipes `ext-lint`, `ext-typecheck`, `ext-test` exist; the CI step waits for spec 013's workflows) — Executor: builder · Reviewer: thinker · Effort: low
 - [x] T009 Run quickstart.md validation — Executor: scout · Reviewer: thinker · Effort: low
 - [x] T010 QA tasks — see `## QA` (appended by `qa:strategy`) — Executor: thinker · Reviewer: reviewer · Effort: high
 
