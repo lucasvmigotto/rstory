@@ -67,8 +67,10 @@ jobs:
           if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
             tagged=$(git rev-parse "refs/tags/$TAG^{commit}")
             if [ "$tagged" != "$SHA" ]; then
-              echo "::error::tag $TAG already exists on another commit ($tagged), not $SHA; bump the version or fix the tag by hand (docs/release.md)"
-              exit 1
+              # The normal state after a release: later pushes to main keep the released version
+              # until the next bump. Nothing to tag; a redispatch would release the wrong commit.
+              echo "version $TAG is already released at $tagged; nothing to do until the version is bumped" | tee -a "$GITHUB_STEP_SUMMARY"
+              exit 0
             fi
             echo "tag $TAG already exists on this commit; nothing to do" | tee -a "$GITHUB_STEP_SUMMARY"
             if [ "$REDISPATCH" = true ]; then dispatch; fi

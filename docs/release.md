@@ -56,7 +56,7 @@ any failure on a tag ── report-failure
   creates the annotated tag on that commit, pushes it with the built-in token (`contents: write`,
   that job only) and sends `repository_dispatch` `release` with `{tag, sha}`. (A tag pushed with
   the built-in token starts no workflow; a dispatch sent with it does.) The tag already on that
-  commit: nothing happens. The tag on another commit: the run fails. It reads no secret and
+  commit: nothing happens. The tag on an older commit (the version is already released): nothing happens either, until the next bump. It reads no secret and
   publishes nothing; one run at a time, never cancelled.
 - `release.yml` takes the tag from `github.ref_name` (a tag pushed by hand) or from the dispatch
   payload, which reaches the shell only through `env` and is checked against `^[0-9]+\.[0-9]+\.[0-9]+$`

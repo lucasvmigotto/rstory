@@ -38,7 +38,7 @@ ok "tag.yml: dispatches the release event" has 'event_type=release' "$tag"
 ok "tag.yml: payload has tag and sha" has 'client_payload\[tag\]' "$tag"
 ok "tag.yml: payload sha" has 'client_payload\[sha\]' "$tag"
 ok "tag.yml: dispatch goes through gh api" has 'gh api .*dispatches' "$tag"
-ok "tag.yml: fails when the tag is on another commit" has 'another commit' "$tag"
+ok "tag.yml: a tag on an older commit (already released) is a no-op" has 'already released at' "$tag"
 
 ok "release.yml: repository_dispatch types [release]" has 'types: \[release\]' "$rel"
 ok "release.yml: still tag-push" has 'tags: \["\[0-9\]\+\.\[0-9\]\+\.\[0-9\]\+"\]' "$rel"
