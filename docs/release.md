@@ -23,7 +23,7 @@ terminal for `rstory ls`.
 | 3 | Copy a selection in Terminal with Ctrl+Shift+C | New entry |
 | 4 | Copy the same text twice | One entry, moved to the top (BR1) |
 | 5 | Copy from a secrets-manager entry (it offers the sensitive hint) | No entry recorded; `skipped_sensitive` rises |
-| 6 | Restore an entry (`rstory restore <id>` or the picker), then paste into a Wayland-native app (Text Editor, Console) | Pasted text equals the entry |
+| 6 | Restore an entry (`rstory copy <ref>` or the picker), then paste into a Wayland-native app (Text Editor, Console) | Pasted text equals the entry |
 | 7 | Paste the same restored value into an X11-only app (`xterm`, or `xclip -o -selection clipboard`) | Pasted text equals the entry |
 | 8 | Restore a value of about 1 MiB and paste into a Wayland-native app | Complete paste, no hang |
 | 9 | Kill XWayland (`pkill Xwayland`), then copy again | The daemon reconnects (100 ms to 5 s backoff) and the copy is captured |
