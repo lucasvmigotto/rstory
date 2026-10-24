@@ -136,7 +136,7 @@ Appended by `backend:spec`. Built by `backend:build` (ticks only this section). 
 
 Appended by `qa:strategy`. Executed by `qa:e2e` / `qa:load` after the builds (ticks only this section).
 
-- [ ] T016 `tests/e2e/E2E-K3.rs` (Xvfb, sway, bridge) and `E2E-K3b.rs` — Executor: builder · Reviewer: reviewer · Effort: high
+- [x] T016 `tests/e2e/E2E-K3.rs` (Xvfb, sway, bridge) and `E2E-K3b.rs` — Executor: builder · Reviewer: reviewer · Effort: high
 - [ ] T017 Charter session → `docs/product/qa/charters/005.md` — Executor: thinker · Reviewer: reviewer · Effort: high
 
 **Checkpoint**: the journeys and suites in `qa.md` are green in CI; the exit criteria are met → Verified in `specs/README.md`.
