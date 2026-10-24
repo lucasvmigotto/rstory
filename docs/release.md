@@ -120,8 +120,7 @@ Gaps against §6, not wired because the suites do not exist yet:
 
 - E2E-PEER runs the real daemon against a second uid only where the job can switch uid
   (`setpriv --reuid`); the unprivileged tools container cannot, so it checks the daemon's accept
-  loop in-process there (`tests/e2e/E2E-PEER.rs`). The e2e doctor journey (011 T012) waits for
-  `rstory doctor`.
+  loop in-process there (`tests/e2e/E2E-PEER.rs`).
 - Perf smoke F6 (picker first frame) and F7 (capture latency) at 200 ms: `make bench` runs the
   store benchmark only.
 - Nightly idle soak (daemon for 30 minutes, RSS flat): no soak test exists. F10 is covered by the

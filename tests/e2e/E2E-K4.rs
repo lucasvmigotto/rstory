@@ -26,6 +26,23 @@ fn k4_no_capture_path_is_inactive_and_copy_exits_7() {
     assert_eq!(st["backend"], "none");
     assert_eq!(st["entries"], 1, "the prepared store is served");
 
+    // 011 T012: doctor explains the same condition and exits 2.
+    let (code, checks) = w.doctor();
+    assert_eq!(checks["backend"]["status"], "fail", "{}", checks["backend"]);
+    // The reason id is `status`'s; doctor words the same condition for people.
+    let msg = checks["backend"]["message"].as_str().unwrap();
+    assert!(
+        msg.contains("no clipboard-monitoring protocol and no XWayland"),
+        "{msg}"
+    );
+    assert!(
+        checks["backend"]["hint"]
+            .as_str()
+            .unwrap()
+            .contains("XWayland")
+    );
+    assert_eq!(code, 2, "doctor fails");
+
     let r = w.run(&["copy", "0"]);
     assert_eq!(r.code, 7, "inactive: {}", r.stderr);
     // Reads still work.

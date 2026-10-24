@@ -218,6 +218,18 @@ impl World {
         r.json()
     }
 
+    /// `rstory doctor --json`: the exit code and the checks by id.
+    pub fn doctor(&self) -> (i32, std::collections::HashMap<String, Value>) {
+        let r = self.run(&["doctor", "--json"]);
+        let checks = r.json()["checks"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|c| (c["id"].as_str().unwrap().to_string(), c.clone()))
+            .collect();
+        (r.code, checks)
+    }
+
     pub fn status(&self) -> Value {
         self.json(&["status", "--json"])
     }

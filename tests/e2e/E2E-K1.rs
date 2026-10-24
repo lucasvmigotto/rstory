@@ -1,6 +1,6 @@
 //! E2E-K1 First run (specs/004 qa.md): fresh XDG dirs on Xvfb; `install-autostart` writes the
 //! desktop entry, the daemon starts, `status` reports the session, backend, store and daemon.
-//! `doctor` (spec 011) is not on dev yet: T012 reuses these assertions on its output.
+//! `doctor --json` (spec 011 T012) is checked against the same running daemon.
 
 use crate::support::{BIN, World};
 
@@ -34,6 +34,18 @@ fn k1_first_run_installs_autostart_and_starts_the_daemon() {
     assert_eq!(st["protocol"], 1);
     assert!(w.store_dir().is_dir(), "the daemon created the store");
     assert!(w.socket().exists(), "the control socket is bound");
+
+    // 011 T012: doctor agrees with status.
+    let (code, checks) = w.doctor();
+    for id in ["session", "backend", "store", "daemon"] {
+        assert_eq!(checks[id]["status"], "ok", "{id}: {}", checks[id]);
+    }
+    // Exit 0 is ok/info only; this bare session has no terminal and no D-Bus, so those two warn (1).
+    assert!(checks.values().all(|c| c["status"] != "fail"), "{checks:?}");
+    assert_eq!(code, 1, "only warnings: {checks:?}");
+    for id in ["picker", "tray"] {
+        assert_eq!(checks[id]["status"], "warn", "{id}");
+    }
 
     // A second daemon is refused (exit 4), the first keeps serving.
     let second = w.run(&["daemon"]);
