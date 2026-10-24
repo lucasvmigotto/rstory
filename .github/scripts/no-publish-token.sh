@@ -10,6 +10,9 @@
 #   3. CARGO_REGISTRY_TOKEN and CARGO_REGISTRIES_<name>_TOKEN are only ever set from the OIDC
 #      exchange (steps.auth.outputs.token);
 #   4. the release workflow does use rust-lang/crates-io-auth-action, pinned by SHA.
+# One narrow exemption: the docs deploy (workflows/docs.yml) may read secrets.CLOUDFLARE_R2_<NAME>,
+# its R2 credential. SC-001 is about a stored *publishing* token; the docs site isn't published to a
+# registry. Those exact references are blanked in docs.yml before the checks; anything else is not.
 # Tested by scripts/test-no-publish-token.sh (make sc001-test).
 set -euo pipefail
 dir=${1:-.github}
@@ -19,7 +22,7 @@ fail=0
 mapfile -t files < <(find "$dir" -type f \( -name '*.yml' -o -name '*.yaml' \) | sort)
 lines=$(for f in "${files[@]}"; do
   awk -v f="$f" '{ sub(/^[[:space:]]*#.*/, ""); sub(/[[:space:]]#.*$/, "") } NF { print f ":" NR ":" $0 }' "$f"
-done)
+done | sed -E '/^[^:]*\/workflows\/docs\.yml:/ s/\$\{\{[[:space:]]*secrets\.CLOUDFLARE_R2_[A-Z0-9_]+[[:space:]]*\}\}/R2_SECRET/g')
 
 report() { # pattern, message
   if hits=$(printf '%s\n' "$lines" | grep -E -- "$1"); then

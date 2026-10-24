@@ -106,11 +106,9 @@ jobs:
       url: https://docs.lucasvmigotto.me/rstory/
     env:
       AWS_ACCESS_KEY_ID: ${{ vars.CLOUDFLARE_R2_ACCOUNT_ID }}
-      # AWS_SECRET_ACCESS_KEY must come from CLOUDFLARE_R2_ACCOUNT_SECRET, an environment secret of
-      # `rstory-docs`. The SC-001 assertion (.github/scripts/no-publish-token.sh) rejects every read of
-      # the secrets context in this repository, so the owner must decide how to wire it before the first
-      # deploy (docs/product/docs-site-discovery.md, open items). Until then the credential check below
-      # fails closed and nothing is published.
+      # An environment secret of `rstory-docs`: the one secrets read SC-001 allows, here only
+      # (.github/scripts/no-publish-token.sh). Unset until the owner adds it, and then the check below fails closed.
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.CLOUDFLARE_R2_ACCOUNT_SECRET }}
       AWS_DEFAULT_REGION: auto
       AWS_EC2_METADATA_DISABLED: "true"
       R2_ENDPOINT: ${{ vars.CLOUDFLARE_R2_ENDPOINT_S3_CLIENT }}

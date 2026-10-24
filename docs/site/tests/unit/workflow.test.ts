@@ -40,11 +40,13 @@ describe("docs workflow", () => {
     expect(deploy).toContain("[0-9]*.[0-9]*.[0-9]*");
   });
 
-  it("scopes every R2 sync to the project prefix and reads no credential value", () => {
+  it("scopes every R2 sync to the project prefix and reads only the R2 secret", () => {
     for (const m of deploy.matchAll(/aws s3 (sync|cp) \S+ "s3:\/\/([^"]+)"/g)) {
       expect(m[2], m[0]).toContain("${R2_PREFIX}");
     }
-    expect(body).not.toMatch(/\$\{\{\s*secrets\./);
+    // The one secrets read SC-001 allows (.github/scripts/no-publish-token.sh): the R2 key.
+    const reads = [...body.matchAll(/\$\{\{\s*secrets\.([A-Z0-9_]+)\s*\}\}/g)].map((m) => m[1]);
+    expect(reads).toEqual(["CLOUDFLARE_R2_ACCOUNT_SECRET"]);
     expect(body).not.toMatch(/ghp_|AKIA[0-9A-Z]{8}/);
   });
 });

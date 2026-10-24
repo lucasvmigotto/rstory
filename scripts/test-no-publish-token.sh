@@ -55,6 +55,18 @@ fixture registry-literal '          CARGO_REGISTRY_TOKEN: abc'
 for f in secrets-dot secrets-bracket secrets-tojson secrets-inherit secrets-hidden-by-comment vars-token \
   vars-registry registries-var registries-secret registry-literal; do expect "$f" 1; done
 
+# The docs deploy exemption: only secrets.CLOUDFLARE_R2_<NAME>, only in workflows/docs.yml.
+docs() { # NAME ENV-LINE: a clean fixture plus a docs.yml whose deploy job has ENV-LINE
+  fixture "$1" ''
+  printf 'name: docs\njobs:\n  deploy:\n    runs-on: ubuntu-24.04\n    env:\n%s\n    steps:\n      - run: true\n' "$2" > "$tmp/$1/workflows/docs.yml"
+}
+docs docs-r2-allowed '      AWS_SECRET_ACCESS_KEY: ${{ secrets.CLOUDFLARE_R2_ACCOUNT_SECRET }}'
+docs docs-other-secret '      X: ${{ secrets.CARGO_TOKEN }}'
+docs docs-r2-plus-other '      X: ${{ secrets.CLOUDFLARE_R2_ACCOUNT_SECRET }}${{ secrets.T }}'
+fixture r2-outside-docs '          X: ${{ secrets.CLOUDFLARE_R2_ACCOUNT_SECRET }}'
+expect docs-r2-allowed 0
+for f in docs-other-secret docs-r2-plus-other r2-outside-docs; do expect "$f" 1; done
+
 fixture no-auth ''
 sed -i '/crates-io-auth-action/d' "$tmp/no-auth/workflows/release.yml"
 expect no-auth 1
