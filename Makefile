@@ -91,7 +91,7 @@ test-e2e-smoke: image ## The PR-gate subset of the journeys (K2, K3, K6), offlin
 	$(RUN) $(OFFLINE) $(IMAGE) $(NEXTEST) --features session-tests --test e2e --test-threads 2 $(E2E_SMOKE)
 
 test-perf: image ## Perf smoke (F7 capture latency, burst, RSS and idle wake-ups of the real daemon on Xvfb), one at a time; CI=1 applies the CI budgets
-	$(RUN) $(if $(CI),-e CI=$(CI)) $(OFFLINE) $(IMAGE) $(NEXTEST) --features perf-tests --success-output immediate --test-threads 1 $(or $(TEST_ARGS),--test capture_latency --test burst --test idle)
+	$(RUN) $(if $(CI),-e CI=$(CI)) $(OFFLINE) $(IMAGE) $(NEXTEST) --features perf-tests --success-output immediate --test-threads 1 $(or $(TEST_ARGS),--test burst --test capture_latency --test idle --test rss)
 
 test-soak: image ## Soak (nightly): the daemon for 30 min with 1 copy a minute, RSS flat, wake-ups only at timers; SOAK_SECS=n shortens it
 	$(RUN) $(if $(SOAK_SECS),-e RSTORY_SOAK_SECS=$(SOAK_SECS)) $(OFFLINE) $(IMAGE) $(NEXTEST) --features perf-tests --success-output immediate --test-threads 1 --test soak

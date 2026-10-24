@@ -96,6 +96,11 @@ path = "tests/perf/burst.rs"
 required-features = ["perf-tests"]
 
 [[test]]
+name = "rss"
+path = "tests/perf/rss.rs"
+required-features = ["perf-tests"]
+
+[[test]]
 name = "idle"
 path = "tests/perf/idle.rs"
 required-features = ["perf-tests"]
