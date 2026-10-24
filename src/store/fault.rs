@@ -159,6 +159,8 @@ fn restore(path: &Path, bytes: &[u8]) {
 
 #[derive(Debug)]
 struct FaultState {
+    /// The kind of the injected `Fail` error.
+    kind: io::ErrorKind,
     /// Mutating calls allowed to succeed before the fault.
     budget: u64,
     fault: Fault,
@@ -184,11 +186,10 @@ impl FaultState {
             return Ok(());
         }
         if fail {
-            return Err(io::Error::other(format!(
-                "injected fault at mutating call {} ({})",
-                n + 1,
-                op.name()
-            )));
+            return Err(io::Error::new(
+                self.kind,
+                format!("injected fault at mutating call {} ({})", n + 1, op.name()),
+            ));
         }
         self.power_off();
         Err(crash_error(op.name()))
@@ -239,9 +240,17 @@ impl FaultFs {
     /// Lets `succeed` mutating calls through, then applies `fault`.
     #[must_use]
     pub fn new(succeed: u64, fault: Fault) -> Self {
+        Self::with_kind(succeed, fault, io::ErrorKind::Other)
+    }
+
+    /// Like [`FaultFs::new`], with `kind` as the `io::ErrorKind` of the injected `Fail` error
+    /// (for example `StorageFull`).
+    #[must_use]
+    pub fn with_kind(succeed: u64, fault: Fault, kind: io::ErrorKind) -> Self {
         Self {
             inner: RealFs,
             state: Arc::new(FaultState {
+                kind,
                 budget: succeed,
                 fault,
                 calls: AtomicU64::new(0),

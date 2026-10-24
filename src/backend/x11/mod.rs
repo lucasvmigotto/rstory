@@ -56,6 +56,8 @@ pub struct X11Options {
     pub connect_timeout: Duration,
     /// Per-step timeout of a read.
     pub read_timeout: Duration,
+    /// Overall limit of an INCR read, however steadily chunks arrive.
+    pub incr_total_timeout: Duration,
     /// Served values longer than this use INCR.
     pub incr_threshold: usize,
 }
@@ -70,6 +72,7 @@ impl X11Options {
             mode: Mode::Native,
             connect_timeout: Duration::from_secs(3),
             read_timeout: Duration::from_secs(2),
+            incr_total_timeout: Duration::from_secs(5),
             incr_threshold: 256 * 1024,
         }
     }
@@ -240,6 +243,7 @@ pub(crate) struct Engine {
     pub read: Option<read::ReadOp>,
     pub serve: serve::ServeState,
     pub read_timeout: Duration,
+    pub incr_total_timeout: Duration,
     pub incr_threshold: usize,
     pub dead: bool,
 }
@@ -600,6 +604,7 @@ impl X11Backend {
     /// `connect_timeout`), `NoXfixes` when XFIXES 2+ is missing.
     pub async fn connect(opts: X11Options) -> Result<Self, ConnectError> {
         let read_timeout = opts.read_timeout;
+        let incr_total_timeout = opts.incr_total_timeout;
         let incr_threshold = opts.incr_threshold;
         let (conn, watch, _screen, win, atoms, incr_threshold) =
             tokio::task::spawn_blocking(move || {
@@ -632,6 +637,7 @@ impl X11Backend {
             read: None,
             serve: serve::ServeState::default(),
             read_timeout,
+            incr_total_timeout,
             incr_threshold,
             dead: false,
         };

@@ -102,6 +102,33 @@ async fn incr_900_kib_arrives_whole() {
 }
 
 #[tokio::test]
+async fn incr_of_exactly_one_mib_still_succeeds() {
+    let x = Xvfb::start().unwrap();
+    let mut b = backend(&x).await;
+    let text = synthetic(MIB);
+    let _o = Owner::start(&x.display, Offer::utf8(&text)).unwrap();
+    next(&mut b).await;
+    assert_eq!(b.read_text(MIB).await.unwrap(), text.as_bytes());
+}
+
+#[tokio::test]
+async fn a_slow_incr_owner_times_out_overall() {
+    let x = Xvfb::start().unwrap();
+    let mut b = backend(&x).await;
+    let offer = Offer {
+        incr_threshold: 1024,
+        chunk_delay: Duration::from_millis(1500),
+        ..Offer::utf8(&synthetic(64 * 1024))
+    };
+    let _o = Owner::start(&x.display, offer).unwrap();
+    next(&mut b).await;
+    let t = Instant::now();
+    let r = b.read_text(2 * MIB).await;
+    assert_eq!(r, Err(ReadError::Timeout));
+    assert!(t.elapsed() < Duration::from_secs(6), "{:?}", t.elapsed());
+}
+
+#[tokio::test]
 async fn owner_exit_clears_the_selection() {
     let x = Xvfb::start().unwrap();
     let mut b = backend(&x).await;

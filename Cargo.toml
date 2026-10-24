@@ -61,6 +61,10 @@ required-features = ["fault-injection"]
 name = "store_trace"
 required-features = ["fault-injection"]
 
+[[test]]
+name = "daemon_faults"
+required-features = ["fault-injection"]
+
 # Session tests need a display server (container tools image); skipped without the feature.
 [[test]]
 name = "support_smoke"

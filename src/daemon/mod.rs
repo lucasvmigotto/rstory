@@ -80,6 +80,9 @@ pub struct Daemon<B: Backend, F: Fs> {
     pub(crate) launch: LaunchEnv,
     pub(crate) link: Link,
     pub(crate) queue: VecDeque<Pending>,
+    /// A stored pause ended while the daemon was down: the owner present at start was copied
+    /// during it, so the first selection change is treated as already seen.
+    pub(crate) skip_startup_owner: bool,
     connector: Option<Connector<B>>,
     backoff: Backoff,
     reconnect_at: Option<OffsetDateTime>,
@@ -127,6 +130,7 @@ impl<B: Backend, F: Fs> Daemon<B, F> {
             launch,
             link,
             queue: VecDeque::new(),
+            skip_startup_owner: changed,
             connector: None,
             backoff: Backoff::new(),
             reconnect_at: None,
@@ -255,7 +259,9 @@ impl<B: Backend, F: Fs> Daemon<B, F> {
                     self.publish_history();
                 }
             }
-            Err(e) => tracing::error!(kind = %error_kind(&e), "housekeeping failed"),
+            Err(e) => {
+                tracing::error!(kind = %error_kind(&e), io_kind = %io_kind_name(&e), "housekeeping failed")
+            }
         }
     }
 
@@ -347,5 +353,26 @@ pub(crate) fn error_kind(e: &StoreError) -> &'static str {
         StoreError::Corrupt { .. } => "corrupt",
         StoreError::History(_) => "history",
         StoreError::Io(_) => "io",
+    }
+}
+
+/// The `io::ErrorKind` of an I/O store failure by name (for example `StorageFull`), or `-`.
+/// A kind never carries content (Constitution III).
+pub(crate) fn io_kind_name(e: &StoreError) -> String {
+    match e {
+        StoreError::Io(io) => format!("{:?}", io.kind()),
+        _ => "-".to_string(),
+    }
+}
+
+#[cfg(test)]
+mod kind_tests {
+    use super::*;
+
+    #[test]
+    fn io_failures_name_their_error_kind() {
+        let e = StoreError::Io(std::io::Error::from(std::io::ErrorKind::StorageFull));
+        assert_eq!(io_kind_name(&e), "StorageFull");
+        assert_eq!(io_kind_name(&StoreError::Locked), "-");
     }
 }
