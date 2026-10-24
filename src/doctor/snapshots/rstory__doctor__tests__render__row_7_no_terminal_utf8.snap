@@ -1,0 +1,14 @@
+---
+source: src/doctor/tests.rs
+expression: "render::text(&evaluate(&f), &term(ascii))"
+---
+✓ Session    Wayland (GNOME Shell 48.7)
+✓ Backend    x11 via XWayland bridge (no data-control on this compositor)
+✓ Store      private (0700/0600), 8 entries
+✓ Daemon     running, recording
+✓ Extension  installed 0.1.0, enabled
+! Picker     no terminal found for the picker (searched: xdg-terminal-exec, ghostty, kitty)
+  → set picker_command in config.toml, for example picker_command = "xterm -e rstory pick"
+✓ Autostart  /home/u/.config/autostart/rstory.desktop
+
+1 warning.

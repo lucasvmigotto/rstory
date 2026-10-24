@@ -1,0 +1,15 @@
+---
+source: src/ui/tests.rs
+expression: out
+---
+# tier=truecolor width=40 ascii=true
+| > _                   14/14  Recording
+  ~ 1..2 fg=#2AA198 ; 3..4 fg=#2AA198 ; 23..28 fg=#8A8A8A
+| > reb_                 2/14  Recording
+  ~ 1..2 fg=#2AA198 ; 6..7 fg=#2AA198 ; 24..28 fg=#8A8A8A
+| > zzz_                    0/14  Paused
+  ~ 1..2 fg=#2AA198 ; 6..7 fg=#2AA198 ; 27..31 fg=#8A8A8A ; 33..39 fg=#D7AF00
+| > ong-branch-name-indeed_ 1/14  Paused
+  ~ 1..2 fg=#2AA198 ; 25..26 fg=#2AA198 ; 27..31 fg=#8A8A8A ; 33..39 fg=#D7AF00
+| > x_                     3/3  Inactive
+  ~ 1..2 fg=#2AA198 ; 4..5 fg=#2AA198 ; 26..29 fg=#8A8A8A ; 31..39 fg=#D70000

@@ -1,0 +1,12 @@
+# Deny by default; allow only what image builds need.
+*
+!rust-toolchain.toml
+!Cargo.toml
+!Cargo.lock
+!build.rs
+!src/
+!extension/
+!assets/
+!tests/
+!benches/
+!protocols/

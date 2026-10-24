@@ -1,0 +1,6 @@
+---
+source: src/ui/tests.rs
+expression: out
+---
+# tier=mono width=40 ascii=false
+| Read-only: daemon not running

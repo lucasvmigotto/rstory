@@ -1,0 +1,16 @@
+---
+source: src/picker/tests.rs
+expression: plain(&s)
+---
+# plain 40x10
+|query: _
+|> [0] 3m  git rebase -i HEAD~3
+  ~ 0..30 REV
+|  [1] 2h  [pinned] git reset --soft H...
+|  [2] 1d  https://example.org/a/very/...
+|  [3] 2d  日本語のテキスト
+|  [4] 3d  fn main() {⏎    println!("s...
+|  [5] 0s  [pinned] cargo test -p rsto...
+|
+|
+|6 of 6 shown. Enter restores, Esc quits.

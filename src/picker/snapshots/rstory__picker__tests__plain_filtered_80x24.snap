@@ -1,0 +1,19 @@
+---
+source: src/picker/tests.rs
+expression: plain(&s)
+---
+# plain 80x24
+|query: git_
+|> [0] 3m  git rebase -i HEAD~3
+  ~ 0..10 REV ; 10..13 REV BOLD UL ; 13..30 REV
+|  [1] 2h  [pinned] git reset --soft HEAD~1 && git push --force-with-lease ori...
+  ~ 46..49 BOLD UL
+|
+|
+|
+|
+|
+|
+|
+|
+|2 of 6 shown. Enter restores, Esc quits.

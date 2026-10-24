@@ -1,0 +1,199 @@
+[package]
+name = "rstory"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.92"
+license = "GPL-3.0-or-later"
+description = "A small, private clipboard history for Linux (Wayland and X11)"
+repository = "https://github.com/lucasvmigotto/rstory"
+readme = "README.md"
+keywords = ["clipboard", "history", "wayland", "x11"]
+categories = ["command-line-utilities"]
+# Ship only what the build needs (R4): sources, build.rs and its icons, the GNOME extension that
+# src/install/gnome.rs embeds (minus its dev-only files, as the installer and scripts/ext-pack.py
+# do), and scripts/ext-pack.py, which a unit test reads with include_str!. Specs, docs and tests
+# stay in the repository. Cargo.toml, Cargo.lock and LICENSE are added by cargo regardless.
+include = [
+    "/src/**",
+    "/build.rs",
+    "/assets/**",
+    "/extension/**",
+    "!/extension/tests/**",
+    "!/extension/node_modules/**",
+    "!/extension/package.json",
+    "!/extension/package-lock.json",
+    "!/extension/jsconfig.json",
+    "!/extension/eslint.config.js",
+    "/scripts/ext-pack.py",
+    "/LICENSE",
+    "/README.md",
+]
+
+[lib]
+name = "rstory"
+path = "src/lib.rs"
+
+[[bin]]
+name = "rstory"
+path = "src/main.rs"
+
+[features]
+default = []
+# Test-only: FaultFs and the power-loss model. Never enabled in release builds.
+fault-injection = []
+# Session tests: Xvfb and headless mutter (capture, serve, bridge mode); run by `make test-integration`.
+session-tests = []
+# Performance suite (tests/perf: real daemon on Xvfb, latency, burst, RSS, soak); run by `make test-perf`.
+perf-tests = []
+# Test doubles (FakeBackend) for other crates' tests; always on under cfg(test).
+testing = []
+
+# Tests that use FaultFs need the feature; without it they are skipped, not broken.
+[[test]]
+name = "store_crash"
+required-features = ["fault-injection"]
+
+[[test]]
+name = "store_fail"
+required-features = ["fault-injection"]
+
+[[test]]
+name = "store_trace"
+required-features = ["fault-injection"]
+
+[[test]]
+name = "daemon_faults"
+required-features = ["fault-injection"]
+
+# Session tests need a display server (container tools image); skipped without the feature.
+[[test]]
+name = "support_smoke"
+required-features = ["session-tests"]
+
+[[test]]
+name = "x11_capture"
+required-features = ["session-tests"]
+
+[[test]]
+name = "x11_serve"
+required-features = ["session-tests"]
+
+[[test]]
+name = "daemon_x11"
+required-features = ["session-tests"]
+
+[[test]]
+name = "daemon_wayland"
+required-features = ["session-tests"]
+
+[[test]]
+name = "bridge_capture"
+required-features = ["session-tests"]
+
+[[test]]
+name = "wayland_probe"
+required-features = ["session-tests"]
+
+[[test]]
+name = "wayland_capture"
+required-features = ["session-tests"]
+
+[[test]]
+name = "wayland_serve"
+required-features = ["session-tests"]
+
+# End-to-end journeys: the real binary in headless sessions, driven through a pty (`make test-e2e`).
+[[test]]
+name = "e2e"
+path = "tests/e2e/main.rs"
+required-features = ["session-tests"]
+
+[[test]]
+name = "capture_latency"
+path = "tests/perf/capture_latency.rs"
+required-features = ["perf-tests"]
+
+[[test]]
+name = "burst"
+path = "tests/perf/burst.rs"
+required-features = ["perf-tests"]
+
+[[test]]
+name = "rss"
+path = "tests/perf/rss.rs"
+required-features = ["perf-tests"]
+
+[[test]]
+name = "idle"
+path = "tests/perf/idle.rs"
+required-features = ["perf-tests"]
+
+[[test]]
+name = "soak"
+path = "tests/perf/soak.rs"
+required-features = ["perf-tests"]
+
+[[bench]]
+name = "store"
+harness = false
+
+[[bench]]
+name = "ls"
+harness = false
+
+[[bench]]
+name = "picker_first_frame"
+harness = false
+
+[dependencies]
+blake3 = { version = "1.8.7", default-features = false, features = ["pure"] }
+clap = { version = "4", features = ["derive"] }
+clap_complete = "4"
+crossterm = "0.29"
+include_dir = "0.7.4"
+ksni = { version = "0.3", default-features = false, features = ["tokio"] }
+nucleo-matcher = "0.3"
+rand = "0.10.3"
+ratatui = "0.30"
+rustix = { version = "1.1.5", features = ["event", "fs", "net", "pipe", "process", "termios"] }
+shell-words = "1.1.0"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+thiserror = "2"
+time = { version = "0.3.55", features = ["serde", "serde-well-known", "formatting", "parsing", "macros"] }
+tokio = { version = "1.54.1", features = ["rt", "time", "net", "macros", "sync", "io-util", "signal"] }
+toml = "1.1.8"
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3.23", features = ["fmt", "env-filter", "ansi"] }
+unicode-segmentation = "1"
+unicode-width = "0.2"
+wayland-client = "0.31.15"
+wayland-protocols = { version = "0.32", default-features = false, features = ["client", "staging"] }
+wayland-protocols-wlr = { version = "0.3", default-features = false, features = ["client"] }
+zbus = { version = "5", default-features = false, features = ["tokio"] }
+x11rb = { version = "0.14.0", default-features = false, features = ["xfixes"] }
+
+[build-dependencies]
+png = "0.18"
+
+[dev-dependencies]
+# Enables the `testing` feature (FakeBackend) for the integration tests without touching the Makefile.
+rstory = { path = ".", features = ["testing"] }
+jsonschema = { version = "0.30", default-features = false }
+tokio = { version = "1.54.1", features = ["test-util", "rt", "time", "net", "macros", "sync", "io-util", "signal"] }
+assert_cmd = "2"
+insta = "1"
+proptest = "1.12.0"
+tempfile = "3.27.0"
+# Pty-driven end-to-end journeys (tests/e2e): spawn the real binary under a terminal.
+expectrl = "0.8"
+
+# insta: snapshot diffs stay fast in debug test builds.
+[profile.dev.package.insta]
+opt-level = 3
+
+[profile.dev.package.similar]
+opt-level = 3
+
+[lints.rust]
+unsafe_code = "forbid"

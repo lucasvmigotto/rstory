@@ -1,0 +1,2 @@
+{"v":1,"id":8,"op":"pause","args":{"for":"50s"}}
+{"v":1,"id":8,"ok":true,"result":{"state":{"state":"paused","paused_until":"2026-10-21T14:06:00Z"}}}

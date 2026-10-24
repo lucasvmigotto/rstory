@@ -1,0 +1,15 @@
+---
+source: src/ui/tests.rs
+expression: out
+---
+# tier=16 width=40 ascii=true
+| Enter restore  Tab preview  Ctrl-T p...
+  ~ 1..40 fg=DarkGray
+| Enter restore  Tab preview  Esc quit
+  ~ 1..37 fg=DarkGray
+| Pin limit reached (10). Unpin an ent...
+  ~ 1..40 fg=Yellow
+| Restoring...
+  ~ 1..13 fg=Yellow
+| Delete this entry? y/n
+  ~ 1..23 fg=Red

@@ -1,0 +1,15 @@
+---
+source: src/ui/tests.rs
+expression: out
+---
+# tier=mono width=40 ascii=false
+| > _                   14/14  Recording
+  ~ 1..2 BOLD UL ; 3..4 BOLD UL
+| > reb_                 2/14  Recording
+  ~ 1..2 BOLD UL ; 6..7 BOLD UL
+| > zzz_                    0/14  Paused
+  ~ 1..2 BOLD UL ; 6..7 BOLD UL
+| > ong-branch-name-indeed_ 1/14  Paused
+  ~ 1..2 BOLD UL ; 25..26 BOLD UL
+| > x_                     3/3  Inactive
+  ~ 1..2 BOLD UL ; 4..5 BOLD UL

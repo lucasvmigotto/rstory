@@ -1,0 +1,2 @@
+{"v":1,"id":6,"op":"rm","args":{"ref":"zzzz"}}
+{"v":1,"id":6,"ok":false,"error":{"code":"not_found","message":"no entry zzzz"}}

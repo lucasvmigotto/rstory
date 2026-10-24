@@ -1,0 +1,50 @@
+# cargo-nextest profiles: the flaky-test policy of docs/product/test-strategy.md §8.
+# `make test` / `make test-integration` pick the profile with NEXTEST_PROFILE (default: default).
+
+# The tools image's cargo target volume (CARGO_TARGET_DIR=/target), never the bind-mounted source
+# tree: CI reads JUnit from there, and the checkout is not writable by the container user.
+[store]
+dir = "/target/nextest"
+
+[profile.default]
+# Never retry: a flaky test fails the run locally and on pull requests.
+retries = 0
+fail-fast = false
+# Session tests wait on readiness probes; flag anything slow, kill anything stuck.
+slow-timeout = { period = "60s", terminate-after = 10 }
+
+# Pull requests (and the release gate): no retries, JUnit for the run summary.
+[profile.ci]
+retries = 0
+fail-fast = false
+failure-output = "immediate-final"
+slow-timeout = { period = "60s", terminate-after = 10 }
+
+[profile.ci.junit]
+path = "junit.xml"
+
+# Pushes to dev and the nightly run: one rerun is allowed and reported (FLAKY in the log,
+# <flakyFailure> in JUnit; CI turns it into a warning annotation), never silently green.
+# A test that is flaky twice in 14 days is quarantined: #[ignore = "quarantine: #<issue>"].
+[profile.ci-dev]
+retries = 1
+fail-fast = false
+failure-output = "immediate-final"
+slow-timeout = { period = "60s", terminate-after = 10 }
+
+[profile.ci-dev.junit]
+path = "junit.xml"
+
+# The nightly soak runs 30 minutes by design (tests/perf/soak.rs): give it 45 before it is killed.
+[[profile.default.overrides]]
+filter = "binary(soak)"
+slow-timeout = { period = "300s", terminate-after = 9 }
+
+[[profile.ci.overrides]]
+filter = "binary(soak)"
+slow-timeout = { period = "300s", terminate-after = 9 }
+
+[[profile.ci-dev.overrides]]
+filter = "binary(soak)"
+slow-timeout = { period = "300s", terminate-after = 9 }
+retries = 0

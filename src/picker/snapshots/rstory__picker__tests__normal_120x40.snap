@@ -1,0 +1,85 @@
+---
+source: src/picker/tests.rs
+expression: "screen(&s, COLOR)"
+---
+# 120x40 tier=16 ascii=false
+| > _                                                                                                     6/6  Recording
+  ~ 1..2 fg=Cyan ; 3..4 fg=Cyan ; 105..108 fg=DarkGray
+|────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ~ 0..120 fg=DarkGray
+|     3m    git rebase -i HEAD~3                             │ git reset --soft HEAD~1 && git push --force-with-lease ori
+  ~ 3..7 fg=DarkGray ; 60..61 fg=DarkGray
+| >   2h 📌 git reset --soft HEAD~1 && git push --force-with…│ gin main (full)
+  ~ 0..3 REV ; 3..7 fg=DarkGray REV ; 7..8 REV ; 8..9 fg=Yellow REV ; 10..60 REV ; 60..61 fg=DarkGray
+|     1d    https://example.org/a/very/long/path/that/keeps/…│
+  ~ 3..7 fg=DarkGray ; 60..61 fg=DarkGray
+|     2d    日本語のテキスト                                 │
+  ~ 3..7 fg=DarkGray ; 60..61 fg=DarkGray
+|     3d    fn main() {⏎    println!("synthetic");⏎}         │
+  ~ 3..7 fg=DarkGray ; 60..61 fg=DarkGray
+|     0s 📌 cargo test -p rstory --test daemon_restore       │
+  ~ 3..7 fg=DarkGray ; 8..9 fg=Yellow ; 60..61 fg=DarkGray
+|                                                            │
+  ~ 60..61 fg=DarkGray
+|                                                            │
+  ~ 60..61 fg=DarkGray
+|                                                            │
+  ~ 60..61 fg=DarkGray
+|                                                            │
+  ~ 60..61 fg=DarkGray
+|                                                            │
+  ~ 60..61 fg=DarkGray
+|                                                            │
+  ~ 60..61 fg=DarkGray
+|                                                            │
+  ~ 60..61 fg=DarkGray
+|                                                            │
+  ~ 60..61 fg=DarkGray
+|                                                            │
+  ~ 60..61 fg=DarkGray
+|                                                            │
+  ~ 60..61 fg=DarkGray
+|                                                            │
+  ~ 60..61 fg=DarkGray
+|                                                            │
+  ~ 60..61 fg=DarkGray
+|                                                            │
+  ~ 60..61 fg=DarkGray
+|                                                            │
+  ~ 60..61 fg=DarkGray
+|                                                            │
+  ~ 60..61 fg=DarkGray
+|                                                            │
+  ~ 60..61 fg=DarkGray
+|                                                            │
+  ~ 60..61 fg=DarkGray
+|                                                            │
+  ~ 60..61 fg=DarkGray
+|                                                            │
+  ~ 60..61 fg=DarkGray
+|                                                            │
+  ~ 60..61 fg=DarkGray
+|                                                            │
+  ~ 60..61 fg=DarkGray
+|                                                            │
+  ~ 60..61 fg=DarkGray
+|                                                            │
+  ~ 60..61 fg=DarkGray
+|                                                            │
+  ~ 60..61 fg=DarkGray
+|                                                            │
+  ~ 60..61 fg=DarkGray
+|                                                            │
+  ~ 60..61 fg=DarkGray
+|                                                            │
+  ~ 60..61 fg=DarkGray
+|                                                            │
+  ~ 60..61 fg=DarkGray
+|                                                            │
+  ~ 60..61 fg=DarkGray
+|                                                            │ 73 B
+  ~ 60..61 fg=DarkGray ; 62..66 fg=DarkGray
+|────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ~ 0..120 fg=DarkGray
+| Enter restore  Tab preview  Ctrl-T pin  Ctrl-D delete  Esc quit
+  ~ 1..64 fg=DarkGray

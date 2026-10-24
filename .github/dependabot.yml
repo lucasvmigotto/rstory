@@ -1,0 +1,13 @@
+# Keeps the SHA pins of the GitHub Actions current (the version comment is updated with them).
+# The cooldown keeps new releases out until they are two weeks old.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directories: ["/", "/.github/actions/*"]
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 14
+    target-branch: dev
+    commit-message:
+      prefix: ci

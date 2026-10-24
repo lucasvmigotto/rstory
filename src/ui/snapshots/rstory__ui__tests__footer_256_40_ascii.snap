@@ -1,0 +1,15 @@
+---
+source: src/ui/tests.rs
+expression: out
+---
+# tier=256 width=40 ascii=true
+| Enter restore  Tab preview  Ctrl-T p...
+  ~ 1..40 fg=idx245
+| Enter restore  Tab preview  Esc quit
+  ~ 1..37 fg=idx245
+| Pin limit reached (10). Unpin an ent...
+  ~ 1..40 fg=idx178
+| Restoring...
+  ~ 1..13 fg=idx178
+| Delete this entry? y/n
+  ~ 1..23 fg=idx160

@@ -1,0 +1,16 @@
+---
+source: src/ui/tests.rs
+expression: out
+---
+# tier=truecolor width=80 ascii=true
+|ok   store  opened, 0700
+|info backend  x11 (XFIXES)
+  ~ 0..4 fg=#8A8A8A
+|warn autostart  not installed
+  ~ 0..4 fg=#D7AF00
+|  -> run `rstory install-autostart`
+  ~ 0..35 fg=#8A8A8A
+|FAIL daemon  not running
+  ~ 0..4 fg=#D70000
+|  -> run `rstory daemon`
+  ~ 0..24 fg=#8A8A8A

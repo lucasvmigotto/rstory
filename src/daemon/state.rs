@@ -1,0 +1,238 @@
+//! Daemon state view, status read model, clock and reconnect policy.
+
+use std::sync::Arc;
+use std::time::Duration;
+
+use time::OffsetDateTime;
+use tokio::time::Instant;
+
+use crate::backend::{BackendKind, Mode};
+use crate::domain::pause::RecordingState;
+use crate::ipc::protocol::{State, StateKind};
+
+/// What the daemon knows about its backend, for `status`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BackendInfo {
+    /// Which backend (or `None`).
+    pub kind: BackendKind,
+    /// How it reaches the clipboard.
+    pub mode: Mode,
+    /// Why there is no backend (selection reason), when there is none.
+    pub reason: Option<String>,
+}
+
+impl BackendInfo {
+    /// An active backend.
+    #[must_use]
+    pub fn active(kind: BackendKind, mode: Mode) -> Self {
+        Self {
+            kind,
+            mode,
+            reason: None,
+        }
+    }
+
+    /// No backend, for `reason`.
+    #[must_use]
+    pub fn none(reason: &str) -> Self {
+        Self {
+            kind: BackendKind::None,
+            mode: Mode::None,
+            reason: Some(reason.to_string()),
+        }
+    }
+
+    /// `status.mode`.
+    #[must_use]
+    pub fn mode_name(&self) -> Option<String> {
+        match self.mode {
+            Mode::None => None,
+            m => Some(m.as_str().to_string()),
+        }
+    }
+}
+
+/// The state clients see: `inactive` wins over a persisted pause.
+#[must_use]
+pub fn view(rec: &RecordingState, active: bool, reason: Option<&str>) -> State {
+    if !active {
+        return State {
+            state: StateKind::Inactive,
+            paused_until: None,
+            reason: Some(reason.unwrap_or("no_backend").to_string()),
+        };
+    }
+    State {
+        state: if rec.is_paused() {
+            StateKind::Paused
+        } else {
+            StateKind::Recording
+        },
+        paused_until: rec.until(),
+        reason: None,
+    }
+}
+
+type WallSource = Arc<dyn Fn() -> OffsetDateTime + Send + Sync>;
+
+#[derive(Clone)]
+enum Source {
+    /// The system wall clock, read on every call: wall jumps and suspend show up.
+    System,
+    /// A wall time at a tokio instant, moving with tokio's clock (tests with paused time).
+    Tokio { wall: OffsetDateTime, at: Instant },
+    /// An injected wall source.
+    Injected(WallSource),
+}
+
+/// The daemon's wall clock. In production it reads the system wall clock each time, so a
+/// suspend or a clock correction is reflected (the store keeps stamps from going backwards).
+#[derive(Clone)]
+pub struct Clock {
+    source: Source,
+}
+
+impl std::fmt::Debug for Clock {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("Clock")
+    }
+}
+
+impl Clock {
+    /// A clock that reads `wall` now and then follows tokio's clock.
+    #[must_use]
+    pub fn at(wall: OffsetDateTime) -> Self {
+        Self {
+            source: Source::Tokio {
+                wall,
+                at: Instant::now(),
+            },
+        }
+    }
+
+    /// A clock that reads `source` (tests inject wall jumps through it).
+    #[must_use]
+    pub fn from_source(source: WallSource) -> Self {
+        Self {
+            source: Source::Injected(source),
+        }
+    }
+
+    /// The system wall clock.
+    #[must_use]
+    pub fn system() -> Self {
+        Self {
+            source: Source::System,
+        }
+    }
+
+    /// The current time.
+    #[must_use]
+    pub fn now(&self) -> OffsetDateTime {
+        match &self.source {
+            Source::System => OffsetDateTime::now_utc(),
+            Source::Tokio { wall, at } => *wall + at.elapsed(),
+            Source::Injected(f) => f(),
+        }
+    }
+
+    /// The tokio instant at which the clock reads `t` (now when `t` has passed), measured from
+    /// the current reading. The loop re-arms on every wake-up, so a jump is picked up then.
+    #[must_use]
+    pub fn instant_at(&self, t: OffsetDateTime) -> Instant {
+        let ahead = (t - self.now()).max(time::Duration::ZERO);
+        Instant::now() + Duration::try_from(ahead).unwrap_or(Duration::ZERO)
+    }
+}
+
+/// Reconnect delays: 100 ms doubling to 5 s.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Backoff {
+    next: Duration,
+}
+
+impl Backoff {
+    /// First delay.
+    pub const START: Duration = Duration::from_millis(100);
+    /// Longest delay.
+    pub const MAX: Duration = Duration::from_secs(5);
+
+    /// A fresh policy.
+    #[must_use]
+    pub fn new() -> Self {
+        Self { next: Self::START }
+    }
+
+    /// The delay to wait now; the following one doubles.
+    pub fn next_delay(&mut self) -> Duration {
+        let d = self.next;
+        self.next = (self.next * 2).min(Self::MAX);
+        d
+    }
+
+    /// Back to the first delay after a successful connection.
+    pub fn reset(&mut self) {
+        self.next = Self::START;
+    }
+}
+
+impl Default for Backoff {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::domain::entry::PauseState;
+    use time::macros::datetime;
+
+    const T0: OffsetDateTime = datetime!(2026-10-21 14:00:00 UTC);
+
+    #[test]
+    fn backoff_doubles_from_100ms_to_5s_and_resets() {
+        let mut b = Backoff::new();
+        let ms: Vec<u128> = (0..8).map(|_| b.next_delay().as_millis()).collect();
+        assert_eq!(ms, [100, 200, 400, 800, 1600, 3200, 5000, 5000]);
+        b.reset();
+        assert_eq!(b.next_delay(), Backoff::START);
+    }
+
+    #[test]
+    fn inactive_wins_over_a_persisted_pause() {
+        let (rec, _) = RecordingState::load(PauseState::Paused { until: None }, T0);
+        let v = view(&rec, false, Some("no_session"));
+        assert_eq!(v.state, StateKind::Inactive);
+        assert_eq!(v.reason.as_deref(), Some("no_session"));
+        assert_eq!(view(&rec, true, None).state, StateKind::Paused);
+    }
+
+    #[test]
+    fn the_clock_follows_wall_jumps_without_monotonic_time() {
+        use std::sync::{Arc, Mutex};
+        let wall = Arc::new(Mutex::new(T0));
+        let w = Arc::clone(&wall);
+        let c = Clock::from_source(Arc::new(move || *w.lock().unwrap()));
+        let before = c.now();
+        *wall.lock().unwrap() = T0 + Duration::from_secs(10 * 3600);
+        assert!(c.now() - before >= time::Duration::hours(10));
+        let at = c.instant_at(T0 + Duration::from_secs(10 * 3600 + 5));
+        assert!(
+            at > Instant::now(),
+            "deadlines are measured on the same clock"
+        );
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn the_clock_follows_tokio_time() {
+        let c = Clock::at(T0);
+        assert_eq!(c.now(), T0);
+        tokio::time::advance(Duration::from_secs(90)).await;
+        assert_eq!(c.now(), T0 + Duration::from_secs(90));
+        let target = T0 + Duration::from_secs(100);
+        let i = c.instant_at(target);
+        assert_eq!(i - Instant::now(), Duration::from_secs(10));
+        assert_eq!(c.instant_at(T0), Instant::now(), "the past is now");
+    }
+}

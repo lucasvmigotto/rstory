@@ -1,0 +1,31 @@
+---
+source: src/picker/tests.rs
+expression: out
+---
+# 80x24 tier=mono ascii=true
+| > _                                                             6/6  Recording
+  ~ 1..2 BOLD UL ; 3..4 BOLD UL
+|--------------------------------------------------------------------------------
+| >   3m     git rebase -i HEAD~3                | git rebase -i HEAD~3 (full)
+  ~ 0..48 REV
+|     2h [p] git reset --soft HEAD~1 && git pu...|
+|     1d     https://example.org/a/very/long/p...|
+|     2d     日本語のテキスト                    |
+|     3d     fn main() {⏎    println!("synthet...|
+|     0s [p] cargo test -p rstory --test daemo...|
+|                                                |
+|                                                |
+|                                                |
+|                                                |
+|                                                |
+|                                                |
+|                                                |
+|                                                |
+|                                                |
+|                                                |
+|                                                |
+|                                                |
+|                                                |
+|                                                | 27 B
+|--------------------------------------------------------------------------------
+| Enter restore  Tab preview  Ctrl-T pin  Ctrl-D delete  Esc quit

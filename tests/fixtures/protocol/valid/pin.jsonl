@@ -1,0 +1,2 @@
+{"v":1,"id":4,"op":"pin","args":{"ref":"0"}}
+{"v":1,"id":4,"ok":false,"error":{"code":"pin_limit","message":"pin limit reached (10)"}}

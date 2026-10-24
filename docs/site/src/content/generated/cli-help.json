@@ -1,0 +1,223 @@
+{
+  "_generated": "make docs-reference - do not hand-edit",
+  "rstory": "0.1.0",
+  "commands": [
+    {
+      "name": "rstory",
+      "args": [
+        "--help"
+      ],
+      "exit": 0,
+      "help": "A small, private clipboard history for Linux\n\nUsage: rstory [OPTIONS] <COMMAND>\n\nCommands:\n  daemon                   Run the clipboard daemon in the foreground\n  ls                       List the history, newest first\n  show                     Print an entry's content, byte for byte\n  copy                     Put an entry back on the clipboard\n  pin                      Pin an entry so it survives clearing and expiry\n  unpin                    Unpin an entry\n  rm                       Delete one entry\n  clear                    Delete the unpinned entries (all of them with --all)\n  pause                    Stop recording, for a while or until `resume`\n  resume                   Start recording again\n  status                   Show the daemon state and counters\n  config                   Show the effective configuration\n  pick                     Open the interactive picker\n  doctor                   Check the setup and explain what is wrong\n  tray                     Show the tray icon from a separate process (for `tray = false`)\n  install-autostart        Start the daemon at login\n  install-gnome-extension  Install the GNOME Shell extension\n  completions              Print a shell completion script\n  help                     Print this message or the help of the given subcommand(s)\n\nOptions:\n      --ascii\n          Use only ASCII glyphs (also the default in a non-UTF-8 locale)\n\n  -h, --help\n          Print help (see a summary with '-h')\n\n  -V, --version\n          Print version\n\nEntries are addressed by index (0 is the newest) or by a short id of at least 4 characters.\n\nExit codes: 0 ok, 1 unexpected, 2 usage or not found, 3 daemon not running, 4 daemon already running, 5 environment error, 6 limit reached, 7 inactive."
+    },
+    {
+      "name": "daemon",
+      "args": [
+        "daemon",
+        "--help"
+      ],
+      "exit": 0,
+      "help": "Run the clipboard daemon in the foreground.\n\nUsage: rstory daemon [--backend x11|wayland]\n\n  --backend x11|wayland  capture with this backend instead of the one the session selects\n                         (also --backend=x11); wins over `backend` in config.toml\n  -h, --help             print this help\n\nThe daemon records what you copy, serves `rstory` and the tray over a private socket, and\nlogs to stderr (RUST_LOG, default info). Exit codes: 0 clean stop, 4 already running,\n5 environment error, 1 unexpected.\n\nExamples:\n  rstory daemon\n  rstory daemon --backend x11\n  RUST_LOG=debug rstory daemon"
+    },
+    {
+      "name": "ls",
+      "args": [
+        "ls",
+        "--help"
+      ],
+      "exit": 0,
+      "help": "List the history, newest first\n\nUsage: rstory ls [OPTIONS]\n\nOptions:\n      --ascii\n          Use only ASCII glyphs (also the default in a non-UTF-8 locale)\n\n      --json\n          Print JSON (`schema` 1) instead of lines\n\n      --limit <N>\n          Show at most N entries\n\n  -h, --help\n          Print help (see a summary with '-h')\n\n  -V, --version\n          Print version\n\nExamples:\n  rstory ls\n  rstory ls --limit 5\n  rstory ls --json | jq '.entries[].short_id'"
+    },
+    {
+      "name": "show",
+      "args": [
+        "show",
+        "--help"
+      ],
+      "exit": 0,
+      "help": "Print an entry's content, byte for byte\n\nUsage: rstory show [OPTIONS] <REF>\n\nArguments:\n  <REF>\n          Index (0 = newest) or short id (4+ characters)\n\nOptions:\n      --ascii\n          Use only ASCII glyphs (also the default in a non-UTF-8 locale)\n\n      --json\n          Print JSON (`schema` 1) instead of the raw content\n\n  -h, --help\n          Print help (see a summary with '-h')\n\n  -V, --version\n          Print version\n\nExamples:\n  rstory show 0\n  rstory show 01JB | wc -c\n  rstory show 1 --json"
+    },
+    {
+      "name": "copy",
+      "args": [
+        "copy",
+        "--help"
+      ],
+      "exit": 0,
+      "help": "Put an entry back on the clipboard\n\nUsage: rstory copy [OPTIONS] <REF>\n\nArguments:\n  <REF>\n          Index (0 = newest) or short id (4+ characters)\n\nOptions:\n      --ascii\n          Use only ASCII glyphs (also the default in a non-UTF-8 locale)\n\n  -h, --help\n          Print help (see a summary with '-h')\n\n  -V, --version\n          Print version\n\nExamples:\n  rstory copy 1\n  rstory copy 01JBD8X"
+    },
+    {
+      "name": "pin",
+      "args": [
+        "pin",
+        "--help"
+      ],
+      "exit": 0,
+      "help": "Pin an entry so it survives clearing and expiry\n\nUsage: rstory pin [OPTIONS] <REF>\n\nArguments:\n  <REF>\n          Index (0 = newest) or short id (4+ characters)\n\nOptions:\n      --ascii\n          Use only ASCII glyphs (also the default in a non-UTF-8 locale)\n\n  -h, --help\n          Print help (see a summary with '-h')\n\n  -V, --version\n          Print version\n\nExamples:\n  rstory pin 0"
+    },
+    {
+      "name": "unpin",
+      "args": [
+        "unpin",
+        "--help"
+      ],
+      "exit": 0,
+      "help": "Unpin an entry\n\nUsage: rstory unpin [OPTIONS] <REF>\n\nArguments:\n  <REF>\n          Index (0 = newest) or short id (4+ characters)\n\nOptions:\n      --ascii\n          Use only ASCII glyphs (also the default in a non-UTF-8 locale)\n\n  -h, --help\n          Print help (see a summary with '-h')\n\n  -V, --version\n          Print version\n\nExamples:\n  rstory unpin 01JBD8X"
+    },
+    {
+      "name": "rm",
+      "args": [
+        "rm",
+        "--help"
+      ],
+      "exit": 0,
+      "help": "Delete one entry\n\nUsage: rstory rm [OPTIONS] <REF>\n\nArguments:\n  <REF>\n          Index (0 = newest) or short id (4+ characters)\n\nOptions:\n      --ascii\n          Use only ASCII glyphs (also the default in a non-UTF-8 locale)\n\n  -h, --help\n          Print help (see a summary with '-h')\n\n  -V, --version\n          Print version\n\nExamples:\n  rstory rm 2"
+    },
+    {
+      "name": "clear",
+      "args": [
+        "clear",
+        "--help"
+      ],
+      "exit": 0,
+      "help": "Delete the unpinned entries (all of them with --all)\n\nUsage: rstory clear [OPTIONS]\n\nOptions:\n      --all\n          Also delete pinned entries\n\n      --ascii\n          Use only ASCII glyphs (also the default in a non-UTF-8 locale)\n\n  -y, --yes\n          Do not ask for confirmation (required without a terminal)\n\n  -h, --help\n          Print help (see a summary with '-h')\n\n  -V, --version\n          Print version\n\nExamples:\n  rstory clear\n  rstory clear --yes\n  rstory clear --all"
+    },
+    {
+      "name": "pause",
+      "args": [
+        "pause",
+        "--help"
+      ],
+      "exit": 0,
+      "help": "Stop recording, for a while or until `resume`\n\nUsage: rstory pause [OPTIONS]\n\nOptions:\n      --ascii\n          Use only ASCII glyphs (also the default in a non-UTF-8 locale)\n\n      --for <DURATION>\n          How long: 50s, 2m or 1h (1s to 24h)\n\n  -h, --help\n          Print help (see a summary with '-h')\n\n  -V, --version\n          Print version\n\nExamples:\n  rstory pause\n  rstory pause --for 50s\n  rstory pause --for 2m && pass -c mysite"
+    },
+    {
+      "name": "resume",
+      "args": [
+        "resume",
+        "--help"
+      ],
+      "exit": 0,
+      "help": "Start recording again\n\nUsage: rstory resume [OPTIONS]\n\nOptions:\n      --ascii\n          Use only ASCII glyphs (also the default in a non-UTF-8 locale)\n\n  -h, --help\n          Print help (see a summary with '-h')\n\n  -V, --version\n          Print version\n\nExamples:\n  rstory resume"
+    },
+    {
+      "name": "status",
+      "args": [
+        "status",
+        "--help"
+      ],
+      "exit": 0,
+      "help": "Show the daemon state and counters\n\nUsage: rstory status [OPTIONS]\n\nOptions:\n      --ascii\n          Use only ASCII glyphs (also the default in a non-UTF-8 locale)\n\n      --json\n          Print JSON (`schema` 1)\n\n  -h, --help\n          Print help (see a summary with '-h')\n\n  -V, --version\n          Print version\n\nExamples:\n  rstory status\n  rstory status --json | jq .entries"
+    },
+    {
+      "name": "config",
+      "args": [
+        "config",
+        "--help"
+      ],
+      "exit": 0,
+      "help": "Show the effective configuration\n\nUsage: rstory config [OPTIONS]\n\nOptions:\n      --ascii\n          Use only ASCII glyphs (also the default in a non-UTF-8 locale)\n\n      --path\n          Print only the path of the config file\n\n  -h, --help\n          Print help (see a summary with '-h')\n\n  -V, --version\n          Print version\n\nExamples:\n  rstory config\n  rstory config --path"
+    },
+    {
+      "name": "pick",
+      "args": [
+        "pick",
+        "--help"
+      ],
+      "exit": 0,
+      "help": "Open the interactive picker\n\nUsage: rstory pick [--plain] [--ascii]"
+    },
+    {
+      "name": "doctor",
+      "args": [
+        "doctor",
+        "--help"
+      ],
+      "exit": 0,
+      "help": "Check the setup and explain what is wrong. Read-only: it changes nothing.\n\nUsage: rstory doctor [--json] [--ascii]\n\n  --json   print the report as JSON\n  --ascii  use only ASCII glyphs\n\nExit codes: 0 everything works, 1 warnings, 2 failures (or a usage error).\n\nExamples:\n  rstory doctor\n  rstory doctor --json | jq '.checks[] | select(.status != \"ok\")'"
+    },
+    {
+      "name": "tray",
+      "args": [
+        "tray",
+        "--help"
+      ],
+      "exit": 0,
+      "help": "Show the tray icon from a separate process (for `tray = false`)\n\nUsage: rstory tray [OPTIONS]\n\nOptions:\n      --ascii\n          Use only ASCII glyphs (also the default in a non-UTF-8 locale)\n\n  -h, --help\n          Print help (see a summary with '-h')\n\n  -V, --version\n          Print version\n\nExamples:\n  rstory tray"
+    },
+    {
+      "name": "install-autostart",
+      "args": [
+        "install-autostart",
+        "--help"
+      ],
+      "exit": 0,
+      "help": "Start the rstory daemon at login.\n\nUsage: rstory install-autostart [--systemd] [--now] [--uninstall]\n\n  --systemd    write a systemd user unit instead of an XDG autostart entry\n  --now        also start the daemon now\n  --uninstall  remove both kinds\n\nExamples:\n  rstory install-autostart\n  rstory install-autostart --systemd --now"
+    },
+    {
+      "name": "install-gnome-extension",
+      "args": [
+        "install-gnome-extension",
+        "--help"
+      ],
+      "exit": 0,
+      "help": "Install the rstory GNOME Shell extension (Shell 48 to 50) from this binary.\n\nUsage: rstory install-gnome-extension [--enable | --uninstall]\n\n  --enable     also run `gnome-extensions enable` (works after a re-login)\n  --uninstall  remove the extension\n\nExamples:\n  rstory install-gnome-extension\n  rstory install-gnome-extension --uninstall"
+    },
+    {
+      "name": "completions",
+      "args": [
+        "completions",
+        "--help"
+      ],
+      "exit": 0,
+      "help": "Print a shell completion script\n\nUsage: rstory completions [OPTIONS] <SHELL>\n\nArguments:\n  <SHELL>\n          The shell\n\n          Possible values:\n          - bash: bash\n          - zsh:  zsh\n          - fish: fish\n\nOptions:\n      --ascii\n          Use only ASCII glyphs (also the default in a non-UTF-8 locale)\n\n  -h, --help\n          Print help (see a summary with '-h')\n\n  -V, --version\n          Print version\n\nExamples:\n  rstory completions bash > ~/.local/share/bash-completion/completions/rstory\n  rstory completions fish > ~/.config/fish/completions/rstory.fish"
+    }
+  ],
+  "config_defaults": "# $XDG_CONFIG_HOME/rstory/config.toml (not found, showing the defaults)\nmax_entries = 20\nmax_pinned = 10\nmax_entry_bytes = 1048576\nttl = \"7d\"\ntheme = \"terminal\"",
+  "doctor": {
+    "exit": 2,
+    "checks": [
+      {
+        "id": "session",
+        "status": "fail",
+        "message": "no graphical session: no Wayland or X display was found",
+        "hint": "run rstory from a terminal inside your desktop session"
+      },
+      {
+        "id": "backend",
+        "status": "fail",
+        "message": "No clipboard access: there is no graphical session to watch.",
+        "hint": "run rstory from a terminal inside your desktop session"
+      },
+      {
+        "id": "store",
+        "status": "ok",
+        "message": "no history yet (created private on first copy)",
+        "hint": ""
+      },
+      {
+        "id": "daemon",
+        "status": "fail",
+        "message": "not running",
+        "hint": "run `rstory daemon` or `rstory install-autostart`"
+      },
+      {
+        "id": "picker",
+        "status": "warn",
+        "message": "no terminal found for the picker (searched: xdg-terminal-exec, ghostty, kitty, alacritty, foot, wezterm, ptyxis, kgx, gnome-terminal, konsole, xfce4-terminal, xterm)",
+        "hint": "set picker_command in config.toml, for example picker_command = \"xterm -e rstory pick\""
+      },
+      {
+        "id": "autostart",
+        "status": "info",
+        "message": "rstory does not start at login",
+        "hint": "run `rstory install-autostart` to start it at login"
+      }
+    ]
+  },
+  "completions": {
+    "bash": true,
+    "zsh": true,
+    "fish": true
+  }
+}

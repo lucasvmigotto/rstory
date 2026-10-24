@@ -1,0 +1,40 @@
+{
+  "name": "rstory-docs",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The rstory documentation site",
+  "license": "GPL-3.0-or-later",
+  "scripts": {
+    "dev": "bun --bun vite",
+    "build": "bun --bun vite build && bun scripts/generate-llm.ts && bun scripts/verify-dist.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check .",
+    "format": "biome check --write .",
+    "test": "bun --bun vitest run",
+    "test:watch": "bun --bun vitest"
+  },
+  "dependencies": {
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "react-router-dom": "7.18.4"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.15",
+    "@tailwindcss/vite": "4.3.3",
+    "@testing-library/dom": "10.4.2",
+    "@testing-library/jest-dom": "7.0.1",
+    "@testing-library/react": "16.3.3",
+    "@types/node": "26.6.5",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.2",
+    "axe-core": "4.14.0",
+    "happy-dom": "20.14.6",
+    "tailwindcss": "4.3.3",
+    "typescript": "7.0.2",
+    "vite": "8.3.4",
+    "vitest": "5.0.3",
+    "vitest-axe": "0.1.0"
+  }
+}
