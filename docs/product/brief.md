@@ -753,7 +753,7 @@ re-check on 49–51 and the rest of S2 (§17) run alongside features 003 and
 |---|---|---|---|
 | Q1 | Which sensitive hints to honor? | S2 | **Partly resolved.** `x-kde-passwordManagerHint` is honored, and `pass` is covered by the timed pause. Still to test: KeePassXC, Bitwarden, 1Password, Chromium, Firefox behavior (feature 006). |
 | Q2 | Terminal detection list and order. | Owner | **Resolved:** `$TERMINAL` → `xdg-terminal-exec` → ghostty, kitty, alacritty, foot, wezterm, ptyxis, kgx, gnome-terminal, konsole, xfce4-terminal, xterm. |
-| Q3 | GNOME Shell versions. | Owner | **Resolved:** 48–51. |
+| Q3 | GNOME Shell versions. | Owner | **Resolved:** 48–51; the extension declares 48–50 until 51 is accepted (2026-10-24). |
 | Q4 | Extra store caps. | Owner | **Resolved:** 20 entries in all and 10 pins by default, both configurable. |
 | Q5 | GNOME capture path. | S1 | **Resolved:** the XWayland bridge (verified on 48). |
 | Q6 | Extension ↔ daemon channel. | Owner | **Resolved:** the control socket. |
@@ -788,3 +788,4 @@ re-check on 49–51 and the rest of S2 (§17) run alongside features 003 and
 | 2026-10-21 | **Timed pause** (`pause --for`, plus a tray "Pause for 1 minute" item) in the MVP, with a documented `passc` wrapper. `x-kde-passwordManagerHint` is the MVP sensitive hint. `CLIPBOARD_STATE` is dropped. | Document the gap only, content heuristic | Spike S2: `pass -c` sets no hint. The owner chose the timed pause. |
 | 2026-10-21 | Clarify round (`project:spec`): pins count toward the 20; `clear --all` exists with a confirm; a restored entry moves to the top; a pause survives restarts; the licence is `GPL-3.0-or-later`. | See each spec's Clarifications | Owner answers. Confirms A6, A7, A8 and A17. |
 | 2026-10-22 | When caps are lowered below the pins already stored, **existing pins are kept and new pins are refused** until the count is under the cap. `doctor` and `status` show the over-cap counts. | Unpin the oldest pins; refuse to start | Owner answer (store review). Nothing pinned is lost automatically. |
+| 2026-10-24 | The extension declares **GNOME Shell 48–50**; 51 follows in a later upload. It is published on extensions.gnome.org **right after 0.1.0**, by a manual zip upload (`make ext-pack`). | Declare 48–51 and let a reviewer decide; publish now as a preview | Owner answer. Shexli rejects 51; without a released daemon the extension does nothing. |

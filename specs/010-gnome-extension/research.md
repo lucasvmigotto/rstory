@@ -4,7 +4,7 @@ Phase 0 for `010-gnome-extension`. Every Technical Context item is resolved; no 
 
 ## R1. Extension format
 
-- **Decision**: ESM (GNOME 45+), `shell-version` 48–51
+- **Decision**: ESM (GNOME 45+), `shell-version` 48–50 (51 deferred, decision 2026-10-24)
 - **Alternatives rejected**: legacy imports (unsupported since 45)
 
 ## R2. Socket from GJS

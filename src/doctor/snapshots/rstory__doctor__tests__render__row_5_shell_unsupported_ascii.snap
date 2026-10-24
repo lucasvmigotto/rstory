@@ -2,12 +2,12 @@
 source: src/doctor/tests.rs
 expression: "render::text(&evaluate(&f), &term(ascii))"
 ---
-ok   Session      Wayland (GNOME Shell 52.1)
+ok   Session      Wayland (GNOME Shell 51.1)
 ok   Backend      x11 via XWayland bridge (no data-control on this compositor)
 ok   Store        private (0700/0600), 8 entries
 ok   Daemon       running, recording
-warn GNOME Shell  panel icon not supported on GNOME Shell 52; CLI and picker work
-  -> the panel icon needs GNOME Shell 48 to 51
+warn GNOME Shell  panel icon not supported on GNOME Shell 51; CLI and picker work
+  -> the panel icon needs GNOME Shell 48 to 50
 ok   Extension    installed 0.1.0, enabled
 ok   Picker       ghostty
 ok   Autostart    /home/u/.config/autostart/rstory.desktop

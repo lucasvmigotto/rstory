@@ -160,10 +160,7 @@ fn metadata_declares_uuid_shell_versions_and_the_crate_version() {
     f.run(plain());
     let m = metadata(&f.target());
     assert_eq!(m["uuid"], UUID);
-    assert_eq!(
-        m["shell-version"],
-        serde_json::json!(["48", "49", "50", "51"])
-    );
+    assert_eq!(m["shell-version"], serde_json::json!(["48", "49", "50"]));
     assert_eq!(m["version-name"], VERSION);
 }
 

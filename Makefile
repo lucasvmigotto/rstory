@@ -42,7 +42,7 @@ NPM_VOLUME ?= rstory-tools-npm
 EXT_MOUNT := -v $(NPM_VOLUME):/src/extension/node_modules
 TTY := $(shell [ -t 0 ] && echo -it)
 
-.PHONY: help image fetch fmt fmt-check lint check test test-quarantine bench test-integration test-e2e test-e2e-smoke test-perf test-soak build build-static test-launch ext-lint ext-test ext-deps ext-typecheck deny audit secret-scan publish-dry-run publish doctor shell clean-cache
+.PHONY: help image fetch fmt fmt-check lint check test test-quarantine bench test-integration test-e2e test-e2e-smoke test-perf test-soak build build-static test-launch ext-lint ext-test ext-pack ext-deps ext-typecheck deny audit secret-scan publish-dry-run publish doctor shell clean-cache
 
 help: ## List recipes
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-17s %s\n", $$1, $$2}'
@@ -116,6 +116,10 @@ ext-typecheck: image ## Type-check the extension (tsc --checkJs, JSDoc), offline
 
 ext-test: image ## Run the extension's gjs fixture tests (fake socket server), offline
 	$(RUN) $(OFFLINE) $(IMAGE) sh -c 'for t in extension/tests/*.test.js; do echo "== $$t"; gjs -m "$$t" || exit 1; done'
+
+EXT_ZIP := dist/rstory@lucasvmigotto.github.io.shell-extension.zip
+ext-pack: image ## Zip the extension for extensions.gnome.org (dev-only files excluded, as the installer does) into dist/, offline
+	$(RUN) $(OFFLINE) $(IMAGE) python3 -I scripts/ext-pack.py extension $(EXT_ZIP)
 
 deny: image ## cargo-deny bans, licences, sources (fitness F3, F4), offline
 	$(RUN) $(OFFLINE) $(IMAGE) cargo deny --locked --offline check bans licenses sources

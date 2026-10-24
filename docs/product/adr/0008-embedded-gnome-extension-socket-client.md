@@ -62,3 +62,12 @@ transpiled, and no generated JS is committed.
   `extension/dist/` with a freshness check, only if the extension gains
   real logic. That is likely to come with brief feature 016 (GNOME
   popup list).
+
+## Amendment 2026-10-24 — declared Shell range 48–50
+
+`metadata.json` declares `shell-version` 48, 49 and 50. extensions.gnome.org's
+analyzer (Shexli) rejects 51 as an implausible future release, and only 48 has
+passed the manual matrix so far. 51 is added in a later upload once the site
+accepts it and its manual check passes. Capture through the XWayland bridge
+doesn't depend on the extension and keeps its 48–51 checks. `doctor`'s
+supported range is pinned to `metadata.json` by a test.
