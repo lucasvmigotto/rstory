@@ -42,10 +42,11 @@ make ext-lint ext-test  # GNOME extension: eslint + gjs fixture tests
 make deny audit         # cargo-deny: bans/licences/sources (F3, F4) offline; RustSec advisories (networked)
 make secret-scan        # gitleaks over the working tree
 make doctor             # tool versions per layer; fails on drift from rust-toolchain.toml
+make clean [dry=1]      # remove this worktree's containers and volumes and our dangling images
 make shell              # interactive shell in the tools image
 ```
 
-CI runs the same recipes, so a green run locally means the same as a green run in CI. Parallel worktrees pass their own build cache: `make TARGET_VOLUME=rstory-tools-target-<name> test`.
+CI runs the same recipes, so a green run locally means the same as a green run in CI. Parallel worktrees pass their own build cache: `make TARGET_VOLUME=rstory-tools-target-<name> test` (or set `AI_GENT_WORKTREE=<name>`). Everything the recipes create carries the labels `me.lucasvmigotto.ai-gent.project=rstory` and `me.lucasvmigotto.ai-gent.worktree=rstory/<name>`, so `make clean` removes exactly that worktree's leftovers and never another project's; `make image` drops our own dangling images after each rebuild.
 
 ### Moving parts
 

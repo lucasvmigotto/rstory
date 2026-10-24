@@ -5,9 +5,18 @@ ENGINE ?= $(or $(CONTAINER_ENGINE),$(shell command -v podman >/dev/null 2>&1 && 
 IMAGE  := localhost/rstory-tools:dev
 RUST_VERSION := $(shell sed -n 's/^channel *= *"\(.*\)"/\1/p' rust-toolchain.toml)
 
-# Per-worktree build cache, so parallel worktrees don't share one target dir
-# (e.g. make TARGET_VOLUME=rstory-tools-target-x11 test).
-TARGET_VOLUME ?= rstory-tools-target
+# Ownership labels (ai-gent containers.md §9a): every image, volume and container this file makes
+# carries the project label, and the worktree label `rstory/<slug>`, so `make clean` removes exactly
+# ours and never another project's.
+PROJECT := rstory
+PKEY := me.lucasvmigotto.ai-gent.project
+WKEY := me.lucasvmigotto.ai-gent.worktree
+OWN := --label $(PKEY)=$(PROJECT)
+
+# Per-worktree build cache, so parallel worktrees don't share one target dir. AI_GENT_WORKTREE
+# (set by agents:parallel) picks it; an explicit TARGET_VOLUME=rstory-tools-target-<slug> also works.
+TARGET_VOLUME ?= $(if $(AI_GENT_WORKTREE),rstory-tools-target-$(AI_GENT_WORKTREE),rstory-tools-target)
+WT := $(or $(AI_GENT_WORKTREE),$(patsubst rstory-tools-target-%,%,$(filter rstory-tools-target-%,$(TARGET_VOLUME))),main)
 
 # Limits: at most about half of an 8-CPU / 8 GiB host (containers.md §7); override per call.
 CPUS   ?= 4
@@ -21,7 +30,15 @@ USERNS := --user 1000:1000
 RUNDIR := --tmpfs /run/user/1000:rw,mode=0700,uid=1000,gid=1000
 endif
 
-RUN := $(ENGINE) run --rm --init $(USERNS) \
+# Extension dev tools volume (EXT_MOUNT below).
+NPM_VOLUME ?= rstory-tools-npm
+
+# Named volumes are created labelled before first use (`run -v` would create them unlabelled).
+# Host paths (CI passes $$RUNNER_TEMP directories) are left alone.
+ensure_vol = case "$(1)" in */*) ;; *) $(ENGINE) volume inspect $(1) >/dev/null 2>&1 || $(ENGINE) volume create $(OWN) --label $(WKEY)=$(PROJECT)/$(2) $(1) >/dev/null ;; esac;
+ENSURE := $(call ensure_vol,rstory-tools-cargo,main) $(call ensure_vol,$(TARGET_VOLUME),$(WT)) $(call ensure_vol,$(NPM_VOLUME),main)
+
+RUN := $(ENSURE) $(ENGINE) run --rm --init $(USERNS) $(OWN) --label $(WKEY)=$(PROJECT)/$(WT) \
 	--cpus $(CPUS) --memory $(MEMORY) --pids-limit 2048 \
 	-v "$(CURDIR)":/src:Z \
 	-v rstory-tools-cargo:/home/dev/.cargo \
@@ -38,17 +55,17 @@ FEATURES := --features fault-injection
 # Lint and check also compile the session tests (Xvfb / mutter), which `make test` skips.
 LINT_FEATURES := --features fault-injection,session-tests,perf-tests
 # Extension dev tools (typescript, @girs types) live in a named volume, so nothing lands in the repo.
-NPM_VOLUME ?= rstory-tools-npm
 EXT_MOUNT := -v $(NPM_VOLUME):/src/extension/node_modules
 TTY := $(shell [ -t 0 ] && echo -it)
 
-.PHONY: help image fetch fmt fmt-check lint check test test-quarantine bench test-integration test-e2e test-e2e-smoke test-perf test-soak build build-static test-launch ext-lint ext-test ext-pack ext-deps ext-typecheck deny audit secret-scan publish-dry-run publish sc001-test doctor shell clean-cache
+.PHONY: help image fetch fmt fmt-check lint check test test-quarantine bench test-integration test-e2e test-e2e-smoke test-perf test-soak build build-static test-launch ext-lint ext-test ext-pack ext-deps ext-typecheck deny audit secret-scan publish-dry-run publish sc001-test doctor shell clean clean-cache
 
 help: ## List recipes
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-17s %s\n", $$1, $$2}'
 
-image: ## Build the tools image (from Containerfile, target tools)
-	$(ENGINE) build --target tools -t $(IMAGE) -f Containerfile .
+image: ## Build the tools image (from Containerfile, target tools), then drop our own dangling images
+	$(ENGINE) build $(OWN) --target tools -t $(IMAGE) -f Containerfile .
+	@$(ENGINE) images -q --filter dangling=true --filter label=$(PKEY)=$(PROJECT) | xargs -r $(ENGINE) rmi >/dev/null 2>&1 || true
 
 fetch: image ## Resolve crates into the cache volume (the only networked step)
 	$(RUN) $(IMAGE) cargo fetch --locked
@@ -150,6 +167,12 @@ doctor: image ## Print tool versions per layer; fail on drift from rust-toolchai
 
 shell: image ## Interactive shell in the tools image (networked)
 	$(RUN) $(TTY) $(IMAGE) bash
+
+clean: ## Remove this worktree's labelled containers and volumes and our dangling images; dry=1 only lists (keeps the main caches)
+	@sel=label=$(WKEY)=$(PROJECT)/$(WT); \
+	for c in $$($(ENGINE) ps -aq --filter $$sel); do echo "container $$c"; [ -n "$(dry)" ] || $(ENGINE) rm -f $$c >/dev/null; done; \
+	if [ "$(WT)" != main ]; then for v in $$($(ENGINE) volume ls -q --filter $$sel); do echo "volume $$v"; [ -n "$(dry)" ] || $(ENGINE) volume rm $$v >/dev/null; done; fi; \
+	for i in $$($(ENGINE) images -q --filter dangling=true --filter label=$(PKEY)=$(PROJECT)); do echo "image $$i"; [ -n "$(dry)" ] || $(ENGINE) rmi $$i >/dev/null; done
 
 clean-cache: ## Remove this project's cache volumes
 	-$(ENGINE) volume rm rstory-tools-cargo $(TARGET_VOLUME)
