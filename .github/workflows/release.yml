@@ -328,9 +328,26 @@ jobs:
               --verify-tag --title "rstory $VERSION" --generate-notes
           fi
 
+  # docs.yml cannot rely on workflow_run here: this run is started by tag.yml with the built-in token,
+  # and such a run raises no workflow_run when it ends. A workflow_dispatch sent with the same token does.
+  docs:
+    name: Start the docs deploy
+    needs: [verify, github-release]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      actions: write # start docs.yml; this job only
+    steps:
+      - name: Dispatch docs.yml for this version
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          VERSION: ${{ needs.verify.outputs.version }}
+        run: gh workflow run docs.yml --ref main -f tag="$VERSION"
+
   report-failure:
     name: report failure
-    needs: [verify, ci, build, checksums, publish-dry-run, publish, github-release]
+    needs: [verify, ci, build, checksums, publish-dry-run, publish, github-release, docs]
     if: failure() && contains(fromJSON('["push","repository_dispatch"]'), github.event_name)
     runs-on: ubuntu-24.04
     timeout-minutes: 5

@@ -63,6 +63,13 @@ ok "docs.yml: deploy accepts repository_dispatch releases" has "workflow_run.eve
 ok "docs.yml: deploy still accepts tag pushes" has "workflow_run.event == 'push'" "$docs"
 ok "docs.yml: tag read from the run's display_title" has 'workflow_run.display_title' "$docs"
 ok "docs.yml: no head_branch as the tag" lacks 'head_branch' "$docs"
+ok "docs.yml: also starts from a dispatch with a tag input" has 'workflow_dispatch:' "$docs"
+ok "docs.yml: a dispatch deploys only from main" has "github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'" "$docs"
+ok "docs.yml: a dispatched tag is checked to be on main" has 'is not on main' "$docs"
+ok "docs.yml: the social banner is synced" has 'dist/og.png' "$docs"
+ok "release.yml: a docs job starts docs.yml after the GitHub release" has 'gh workflow run docs.yml --ref main' "$rel"
+ok "release.yml: the docs job needs the GitHub release (so dry runs never deploy)" bash -c 'grep -A3 "^  docs:" <<<"$1" | grep -q "needs: \[verify, github-release\]"' _ "$rel"
+ok "release.yml: actions: write is held by the docs job only" test "$(printf '%s\n' "$rel" | grep -c 'actions: write')" -eq 1
 
 echo "$((n - bad))/$n release workflow checks passed"
 [ "$bad" -eq 0 ]
