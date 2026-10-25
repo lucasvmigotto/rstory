@@ -186,6 +186,10 @@ jobs:
             echo "DOCS_CACHE_VOLUME=$RUNNER_TEMP/docs-bun-cache"
           } >> "$GITHUB_ENV"
 
+      # As in verify: the Bun container runs as uid 1000 and the runner owns the checkout.
+      - name: Let the container user write under docs/site
+        run: chmod -R a+rwX docs/site
+
       - name: Install, check and build (this output is what gets deployed)
         run: make docs-install docs-check docs-build
 
