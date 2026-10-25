@@ -85,10 +85,8 @@ proptest! {
             }
         }
         prop_assert_eq!(reads, expected_reads);
-        // No hinted job's bytes were stored; the log shows sizes only.
-        for j in jobs.iter().filter(|j| hinted(j) && !j.content.is_empty()) {
-            prop_assert!(!stored.iter().any(|s| s == &j.content));
-        }
+        // A hinted job is never recorded (asserted per job above; comparing bytes would trip on a
+        // later unhinted job that copied the same bytes). The log shows sizes only.
         // Decisions print as variant names and sizes: no stored text can appear in the log.
         for s in &stored {
             if let Ok(text) = std::str::from_utf8(s) {

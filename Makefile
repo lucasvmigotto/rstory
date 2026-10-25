@@ -58,7 +58,7 @@ LINT_FEATURES := --features fault-injection,session-tests,perf-tests
 EXT_MOUNT := -v $(NPM_VOLUME):/src/extension/node_modules
 TTY := $(shell [ -t 0 ] && echo -it)
 
-.PHONY: help image fetch fmt fmt-check lint check test test-quarantine bench test-integration test-e2e test-e2e-smoke test-perf test-soak build build-static dist test-launch ext-lint ext-test ext-pack ext-deps ext-typecheck deny audit secret-scan publish-dry-run publish sc001-test doctor shell clean clean-cache docs-install docs-dev docs-check docs-build docs-reference docs-fmt
+.PHONY: help image fetch fmt fmt-check lint check test test-quarantine bench test-integration test-e2e test-e2e-smoke test-perf test-soak build build-static dist test-launch brand ext-lint ext-test ext-pack ext-shexli ext-deps ext-typecheck deny audit secret-scan publish-dry-run publish sc001-test doctor shell clean clean-cache docs-install docs-dev docs-check docs-build docs-reference docs-fmt
 
 help: ## List recipes
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-17s %s\n", $$1, $$2}'
@@ -126,6 +126,9 @@ dist: build-static ## Copy the static binary to dist/rstory (then: install -m 07
 	$(RUN) $(OFFLINE) $(IMAGE) sh -c 'mkdir -p dist && cp /target/$$(uname -m)-unknown-linux-musl/release/rstory dist/rstory'
 	@ls -l dist/rstory
 
+brand: image ## Render the brand PNGs from assets/brand/*.svg (docs Open Graph banner, extensions.gnome.org icon), offline
+	$(RUN) $(OFFLINE) $(IMAGE) sh -c 'rsvg-convert -w 1200 -h 630 assets/brand/og-banner.svg -o docs/site/public/og.png && rsvg-convert -w 256 -h 256 assets/brand/icon.svg -o assets/brand/icon-256.png && ls -l docs/site/public/og.png assets/brand/icon-256.png'
+
 ext-lint: image ## Lint the GNOME extension (eslint from the npm volume), offline
 	$(RUN) $(OFFLINE) $(EXT_MOUNT) -w /src/extension $(IMAGE) npx --no-install eslint .
 
@@ -138,9 +141,15 @@ ext-typecheck: image ## Type-check the extension (tsc --checkJs, JSDoc), offline
 ext-test: image ## Run the extension's gjs fixture tests (fake socket server), offline
 	$(RUN) $(OFFLINE) $(IMAGE) sh -c 'for t in extension/tests/*.test.js; do echo "== $$t"; gjs -m "$$t" || exit 1; done'
 
-EXT_ZIP := dist/rstory@lucasvmigotto.github.io.shell-extension.zip
+EXT_ZIP := dist/rstory@lucasvmigotto.me.shell-extension.zip
 ext-pack: image ## Zip the extension for extensions.gnome.org (dev-only files excluded, as the installer does) into dist/, offline
 	$(RUN) $(OFFLINE) $(IMAGE) python3 -I scripts/ext-pack.py extension $(EXT_ZIP)
+
+# extensions.gnome.org's static analyzer. Shexli exits 0 even with findings, so the recipe requires "clean".
+SHEXLI_IMAGE   := docker.io/library/python:3.13-slim@sha256:70729b46c69b4f1e97c4822c1af3df53a1476cf5ddc6c087c0c10bc3a5678c2f
+SHEXLI_VERSION := 0.2.1
+ext-shexli: ext-pack ## Check the zip with Shexli (extensions.gnome.org's analyzer); must be clean, networked (pip)
+	$(ENGINE) run --rm $(OWN) -v "$(CURDIR)/dist":/ego:ro,Z $(SHEXLI_IMAGE) sh -c 'pip install -q --disable-pip-version-check --root-user-action=ignore shexli==$(SHEXLI_VERSION) && shexli /ego/$(notdir $(EXT_ZIP)) > /tmp/out; cat /tmp/out; grep -q "^shexli: clean" /tmp/out'
 
 deny: image ## cargo-deny bans, licences, sources (fitness F3, F4), offline
 	$(RUN) $(OFFLINE) $(IMAGE) cargo deny --locked --offline check bans licenses sources
@@ -158,8 +167,9 @@ publish: image ## cargo publish --no-verify (publish-dry-run verified the same c
 	@[ -n "$$CARGO_REGISTRY_TOKEN" ] || { echo "CARGO_REGISTRY_TOKEN is not set (see docs/release.md)"; exit 1; }
 	$(RUN) -e CARGO_REGISTRY_TOKEN $(IMAGE) cargo publish --locked --no-verify
 
-sc001-test: ## Fixture test of the SC-001 token check (.github/scripts/no-publish-token.sh); pure bash, no container
+sc001-test: ## Fixture test of the SC-001 token check (.github/scripts/no-publish-token.sh) and the release workflows' shape; pure bash, no container
 	scripts/test-no-publish-token.sh
+	scripts/test-release-workflows.sh
 
 doctor: image ## Print tool versions per layer; fail on drift from rust-toolchain.toml
 	@echo "rust-toolchain.toml: $(RUST_VERSION)"

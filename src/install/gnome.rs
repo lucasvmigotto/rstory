@@ -17,7 +17,7 @@ use include_dir::{Dir, include_dir};
 static EXTENSION: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/extension");
 
 /// The extension's uuid (architecture §13).
-pub const UUID: &str = "rstory@lucasvmigotto.github.io";
+pub const UUID: &str = "rstory@lucasvmigotto.me";
 
 const EXIT_USAGE: u8 = 2;
 const EXIT_UNEXPECTED: u8 = 1;

@@ -1,20 +1,21 @@
 # Release runbook
 
 How rstory is checked and released: the pipelines and their gates, the one-time owner setup, the
-first release by hand (brief K9), every later release from a tag, and the Tier-1 manual matrix
+first release by hand (brief K9), every later release from a version bump, and the Tier-1 manual matrix
 that signs a release off. Spec 013 owns this page up to "Tier-1 manual matrix: sign-off"; the
 manual check sections after it belong to the features named in them (002, 003, 009, 010, 012).
 
 ## Pipelines
 
-Three workflows on GitHub Actions (ADR-0009), all running the project's `make` recipes in the
+Four workflows on GitHub Actions (ADR-0009), all running the project's `make` recipes in the
 `tools` image, exactly as a developer does (README "Development"). A green `make` run locally
 means the same as a green job in CI.
 
 | Workflow | Runs on | Jobs |
 |---|---|---|
 | `.github/workflows/ci.yml` | PRs into `dev` and `main`; pushes to `dev` and `main`; called by `release.yml` | `plan`, `checks`, `lint`, `test`, `integration`, `e2e`, `static`, `perf`, `ci-ok`, `report-failure` |
-| `.github/workflows/release.yml` | tags `X.Y.Z` (plain SemVer, no `v`); manual `workflow_dispatch` (dry run only) | `verify`, `ci` (the main set), `package`, `SHA256SUMS`, `cargo publish --dry-run`, `publish`, `GitHub release`, `report-failure` |
+| `.github/workflows/tag.yml` | pushes to `main`; manual `workflow_dispatch` from `main` (retry) | `tag`: tags the `Cargo.toml` version if it has no tag, then sends `repository_dispatch` `release` |
+| `.github/workflows/release.yml` | tags `X.Y.Z` (plain SemVer, no `v`) pushed by hand; `repository_dispatch` `release` from `tag.yml`; manual `workflow_dispatch` (dry run only) | `verify`, `ci` (the main set), `package`, `SHA256SUMS`, `cargo publish --dry-run`, `publish`, `GitHub release`, `report-failure` |
 | `.github/workflows/nightly.yml` | every day 03:17 UTC; manual | `property`, `soak`, `audit`, `quarantine`, `report-failure` |
 
 Job graph of `ci.yml` (the `lint`, `test`, `integration`, `e2e`, `static` and `perf` jobs run once per
@@ -51,8 +52,19 @@ verify ──┬─ ci (calls ci.yml, main set) ──────────�
 any failure on a tag ── report-failure
 ```
 
-- `verify` refuses a tag that is not `X.Y.Z`, not on `main`, or not equal to the `Cargo.toml`
-  version, before anything is built. It also runs the SC-001 assertion
+- `tag.yml` reads `version` from `Cargo.toml` on the pushed `main` commit. No tag `X.Y.Z`: it
+  creates the annotated tag on that commit, pushes it with the built-in token (`contents: write`,
+  that job only) and sends `repository_dispatch` `release` with `{tag, sha}`. (A tag pushed with
+  the built-in token starts no workflow; a dispatch sent with it does.) The tag already on that
+  commit: nothing happens. The tag on an older commit (the version is already released): nothing happens either, until the next bump. It reads no secret and
+  publishes nothing; one run at a time, never cancelled.
+- `release.yml` takes the tag from `github.ref_name` (a tag pushed by hand) or from the dispatch
+  payload, which reaches the shell only through `env` and is checked against `^[0-9]+\.[0-9]+\.[0-9]+$`
+  (the sha against 40 hex digits). A dispatch runs on the default branch, so every job checks out
+  `refs/tags/X.Y.Z` explicitly (`ci.yml` takes a `ref` input for this). The run's title is
+  `release X.Y.Z <sha>`; `docs.yml` reads the tag and commit from it.
+- `verify` refuses a tag that is not `X.Y.Z`, not on `main`, not equal to the `Cargo.toml`
+  version, or not resolving to the announced commit, before anything is built. It also runs the SC-001 assertion
   (`.github/scripts/no-publish-token.sh`), which rejects any use of the `secrets` context
   (including `toJSON(secrets)` and `secrets: inherit`), credential-like `vars.*`, and any
   `CARGO_REGISTRY_TOKEN` or `CARGO_REGISTRIES_*_TOKEN` not set from the OIDC exchange;
@@ -120,6 +132,7 @@ From `docs/product/test-strategy.md` §6. `plan` in `ci.yml` picks the set.
 | PR into `dev` | `ci.yml`, both architectures | fmt, clippy, unit, property (`PROPTEST_CASES=1000`), snapshots, contract, integration (Xvfb, sway, bridge), fitness F1, F2, F3, F4, F5, F9, F10, F11, RSS and burst, advisories, secret scan, extension lint, type-check and tests. Nextest profile `ci`: no retries. |
 | Push to `dev` | `ci.yml` | the PR set + perf smoke (`make bench`, `make test-perf`). Nextest profile `ci-dev`: one rerun, reported. |
 | PR `dev` → `main`, push to `main` | `ci.yml` | the PR set + perf smoke, property with `PROPTEST_CASES=10000`. Nextest profile `ci`. |
+| Version bump on `main` | `tag.yml`, then `release.yml` | `tag.yml` tags and dispatches; `release.yml` runs the gates below on the tag. |
 | Tag `X.Y.Z` | `release.yml` | the main set (through `ci.yml`) + tag, version and SC-001 checks, both tarballs with F2/F5, `cargo publish --dry-run`. The manual matrix is signed off in the release PR (below). |
 | Nightly | `nightly.yml` | property with `PROPTEST_CASES=100000` (`store_crash`, `history_props`, `filter_props`), advisories, quarantined tests on both architectures. A failure opens or updates the issue `CI failing: nightly on <branch>`. |
 
@@ -203,14 +216,18 @@ The workflows cannot configure these; the owner does, once. Nothing here is a st
    requests" off; require approval for workflows from first-time outside contributors.
 3. **Environment `release`** (Settings > Environments > New environment):
    - required reviewer: the owner;
-   - deployment branches and tags: "Selected branches and tags", add the tag rule `*.*.*`
-     (only release tags reach it);
+   - deployment branches and tags: "Selected branches and tags", add the tag rule `*.*.*` and the
+     branch rule `main`. A run started by `tag.yml`'s dispatch runs on the default branch, so
+     without the `main` rule the `publish` job is rejected; the tag rule serves tags pushed by
+     hand. Approval by the reviewer still gates every publish;
    - no environment secrets and no variables.
 4. **Rulesets for `dev` and `main`**: require a pull request; require the status check `ci-ok`
    (it appears after the first CI run); block force pushes and deletions.
    **Also required: a tag ruleset** that lets only the owner create tags matching `*.*.*`.
    Without it any collaborator with write access can push a release tag, and the environment's
-   reviewer would be the only gate before publish.
+   reviewer would be the only gate before publish. **Add "GitHub Actions" to that ruleset's bypass
+   list** (Bypass list > Add bypass > GitHub Actions), or `tag.yml` cannot create the tag and its
+   run fails with a rejected push.
 5. **Labels**: create `quarantine` (flaky-test policy). The failure reporter needs no label; it
    finds its issue by title.
 6. **Security settings**: secret scanning with push protection, Dependabot alerts.
@@ -244,19 +261,27 @@ the shell history.
    If it fails on the token's scope, nothing is published: fix the scope and repeat.
 4. On crates.io, crate `rstory` > Settings > Trusted Publishing > Add: GitHub, owner
    `lucasvmigotto`, repository `rstory`, workflow file `release.yml`, environment `release`.
-5. Optional: tag `0.1.0` on `main` (`git tag -a 0.1.0 -m 0.1.0`, push the tag) to attach the
-   tarballs. The release workflow finds 0.1.0 already on crates.io, skips the publish, and
-   creates the GitHub release after the `release` environment approval.
+5. `0.1.0` exists only on crates.io: it has no git tag and no GitHub release (owner decision
+   2026-10-25). `0.1.1` is the first version `tag.yml` tags and the release workflow publishes
+   with tarballs and the extension zip, after the `release` environment approval. Publish the
+   first version by hand (steps 1 to 3) before promoting `tag.yml` to `main`, or the first
+   automatic run waits at `publish` for a crates.io upload the token-less workflow cannot make.
 
 ## Publish the extension on extensions.gnome.org (after 0.1.0)
+
+A zip built before 0.1.1 has the UUID `rstory@lucasvmigotto.github.io` and a `url` that was not the
+repository. Withdraw that upload on the site and upload the 0.1.1 zip: the UUID is
+`rstory@lucasvmigotto.me`, and `url` must be the GitHub repository (the reviewers reject a URL that
+returns 404 or is not a GitHub or GitLab repository).
 
 The extension does nothing without the daemon, so it goes up only once 0.1.0 is released (owner
 decision 2026-10-24). The first upload is manual, and later versions use the same form.
 
-1. `make ext-pack`: writes `dist/rstory@lucasvmigotto.github.io.shell-extension.zip`, the files
-   `install-gnome-extension` installs, with fixed timestamps.
-2. Run the site's analyzer in a throwaway container. It must report `clean`:
-   `podman run --rm --name scratch-rstory-shexli -v "$PWD/dist":/ego:ro,Z docker.io/library/python:3.13-slim sh -c 'pip install -q shexli && shexli /ego/rstory@lucasvmigotto.github.io.shell-extension.zip'`
+1. Take the zip from the GitHub release: every version tag's release workflow builds
+   `rstory@lucasvmigotto.me.shell-extension.zip`, checks it with Shexli, and attaches it next to the tarballs
+   (listed in `SHA256SUMS`). Locally, `make ext-shexli` does the same: `make ext-pack`, then Shexli, failing unless clean.
+2. To run the analyzer by hand instead, in a throwaway container. It must report `clean`:
+   `podman run --rm --name scratch-rstory-shexli -v "$PWD/dist":/ego:ro,Z docker.io/library/python:3.13-slim sh -c 'pip install -q shexli && shexli /ego/rstory@lucasvmigotto.me.shell-extension.zip'`
 3. Upload the zip at <https://extensions.gnome.org/upload/> and accept both terms (the GNOME Shell
    license clause, and that site staff may remove, modify or reassign the extension).
 4. On the extension's page, add a description that says it needs the rstory daemon, with the
@@ -276,7 +301,11 @@ matrix passes and Shexli accepts it.
    release PR. Copy the "Tier-1 manual matrix: sign-off" table into the PR body and
    fill it in.
 2. Promote `dev` to `main` with a PR; `ci-ok` must be green on it.
-3. Tag the merge commit on `main`: `git tag -a X.Y.Z -m X.Y.Z && git push origin X.Y.Z`.
+3. Nothing to tag: the push to `main` runs `tag.yml`, which tags the merge commit `X.Y.Z` and
+   dispatches `release.yml`. If that run failed (tag rejected, dispatch failed), fix the cause and
+   run it again from `main`: `gh workflow run tag.yml --ref main` (add `-f redispatch=true` when
+   the tag exists on the commit and only the dispatch is missing). Tagging by hand
+   (`git tag -a X.Y.Z -m X.Y.Z && git push origin X.Y.Z`) still works and starts `release.yml` too.
 4. Approve the `release` environment when `publish` waits for it. Follow the run with
    `gh run watch`.
 5. Check: crates.io shows `X.Y.Z` published by the trusted publisher (ADR-0009 Confirmation); the
@@ -292,8 +321,8 @@ exists anywhere.
 
 | Failure | State | What to do |
 |---|---|---|
-| `verify` fails (tag format, not on `main`, version mismatch) | nothing built or published | delete the tag (`git push origin :refs/tags/X.Y.Z`), fix, re-tag |
-| `ci`, `package`, `SHA256SUMS` or `cargo publish --dry-run` fails | nothing published | fix on `dev`, promote, tag a new patch version (or delete and re-push the tag if nothing was published) |
+| `verify` fails (tag format, not on `main`, version mismatch) | nothing built or published | delete the tag (`git push origin :refs/tags/X.Y.Z`), fix, then bump to a new patch version, or re-run `tag.yml` from `main` (or tag by hand) |
+| `ci`, `package`, `SHA256SUMS` or `cargo publish --dry-run` fails | nothing published | fix on `dev`, promote with a new patch version (or, if nothing was published, delete the tag and re-run `tag.yml` or re-push the tag by hand) |
 | `publish` fails (OIDC exchange, Trusted Publisher config) | nothing published, no GitHub release | check the Trusted Publisher fields (workflow `release.yml`, environment `release`), re-run the failed jobs |
 | `GitHub release` fails after a successful publish | crate published, no GitHub release | re-run the failed jobs: `publish` sees the version on crates.io and skips; the release is created or its assets re-uploaded |
 | A published version is broken | crate on crates.io | `cargo yank --version X.Y.Z` (with a short-lived token or the web UI), release a fixed patch version; never delete a tag that was published |
@@ -455,8 +484,8 @@ rstory`. Nothing in that log may contain entry text; only error codes.
 
 | # | Step | Expected |
 |---|---|---|
-| 1 | `rstory install-gnome-extension` | Exit 0; prints `GNOME extension installed. Log out and back in, then run: gnome-extensions enable rstory@lucasvmigotto.github.io`; no stderr warning |
-| 2 | Log out and back in, then `gnome-extensions enable rstory@lucasvmigotto.github.io` (or `rstory install-gnome-extension --enable` on the next login) | `gnome-extensions info rstory@lucasvmigotto.github.io` shows `Enabled: Yes` and a State other than ERROR |
+| 1 | `rstory install-gnome-extension` | Exit 0; prints `GNOME extension installed. Log out and back in, then run: gnome-extensions enable rstory@lucasvmigotto.me`; no stderr warning |
+| 2 | Log out and back in, then `gnome-extensions enable rstory@lucasvmigotto.me` (or `rstory install-gnome-extension --enable` on the next login) | `gnome-extensions info rstory@lucasvmigotto.me` shows `Enabled: Yes` and a State other than ERROR |
 | 3 | Look at the top bar | An rstory clipboard icon (recording shape: three lines). It follows the panel color on light and dark |
 | 4 | Copy three different lines of text, then open the menu | The newest entries appear first, one per line, at most 10; the status line says `Recording`; Pause recording, Pause for 1 minute and Open picker are present; `Clear history…` is last |
 | 5 | Copy a two-line text | Its menu line shows `⏎` where the newline is |
@@ -472,7 +501,7 @@ rstory`. Nothing in that log may contain entry text; only error codes.
 | 15 | `pkill rstory` with the menu open | The icon becomes the disconnected shape (clipboard with a slash); the menu shows only `rstory daemon not running` |
 | 16 | Start the daemon again (`rstory daemon &`) | Within 30 s (1 s, 2 s, 4 s, ... backoff) the icon is back to recording and the entries are listed |
 | 17 | `rstory install-gnome-extension` again | Same version: the plain `installed` message. After a version bump: `GNOME extension updated to X. Log out and back in to load it.` |
-| 18 | `rstory install-gnome-extension --uninstall`, then log out and back in | The icon is gone; `~/.local/share/gnome-shell/extensions/rstory@lucasvmigotto.github.io` does not exist |
+| 18 | `rstory install-gnome-extension --uninstall`, then log out and back in | The icon is gone; `~/.local/share/gnome-shell/extensions/rstory@lucasvmigotto.me` does not exist |
 
 Record per Shell version: version, distribution, panel theme, result per row, and anything odd
 (for example the icon not following the panel color, or a Shell error in the journal on enable).
@@ -488,7 +517,7 @@ The gjs tests check `disable()` cleanup against fakes (20 enable and disable cyc
 it in the real Shell, where leaked signal handlers, timers or actors would show.
 
 1. Note the Shell's memory: `ps -o rss= -C gnome-shell`.
-2. Run 50 cycles: `for i in $(seq 50); do gnome-extensions disable rstory@lucasvmigotto.github.io; gnome-extensions enable rstory@lucasvmigotto.github.io; sleep 0.2; done`.
+2. Run 50 cycles: `for i in $(seq 50); do gnome-extensions disable rstory@lucasvmigotto.me; gnome-extensions enable rstory@lucasvmigotto.me; sleep 0.2; done`.
 3. Open and close the menu a few times, then check the journal: `journalctl --user -b /usr/bin/gnome-shell | grep -i rstory`.
 
 Expected: exactly one rstory icon in the top bar; no `rstory` warnings or JS errors in the journal

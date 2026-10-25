@@ -14,6 +14,10 @@ on:
         description: Gate set to run; the release workflow passes "release" (the main set).
         type: string
         required: true
+      ref:
+        description: Ref to check out in every job; the release workflow passes the tag. Empty means the triggering ref.
+        type: string
+        default: ""
 
 permissions: {}
 
@@ -75,6 +79,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ inputs.ref }}
           persist-credentials: false
       - name: No publishing token referenced (SC-001)
         run: .github/scripts/no-publish-token.sh .github
@@ -113,6 +118,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ inputs.ref }}
           persist-credentials: false
       - uses: ./.github/actions/tools
       - name: Clippy -D warnings (make lint)
@@ -137,6 +143,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ inputs.ref }}
           persist-credentials: false
       - uses: ./.github/actions/tools
       - name: Unit, property, snapshot, contract, fitness F1/F9/F10/F11 (make test)
@@ -171,6 +178,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ inputs.ref }}
           persist-credentials: false
       - uses: ./.github/actions/tools
       - name: Xvfb, headless sway + XWayland, headless mutter bridge mode (make test-integration)
@@ -206,6 +214,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ inputs.ref }}
           persist-credentials: false
       - uses: ./.github/actions/tools
       - name: End-to-end journeys, smoke K2/K3/K6 on pull requests, K1-K7 and PEER on dev and main (make test-e2e)
@@ -238,6 +247,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ inputs.ref }}
           persist-credentials: false
       - uses: ./.github/actions/tools
       - name: Static musl release build, F2 static + F5 size (make build-static)
@@ -260,6 +270,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ inputs.ref }}
           persist-credentials: false
       - uses: ./.github/actions/tools
       - name: Store benchmarks and F6 picker first frame, p95 within 2x budget = the CI budget (make bench)

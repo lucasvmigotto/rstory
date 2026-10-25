@@ -208,7 +208,7 @@ fn rows() -> Vec<Row> {
             id: "gnome_extension",
             status: Status::Warn,
             message: "installed 0.1.0, not enabled",
-            hint: "gnome-extensions enable rstory@lucasvmigotto.github.io",
+            hint: "gnome-extensions enable rstory@lucasvmigotto.me",
         },
         Row {
             name: "4c_extension_outdated",

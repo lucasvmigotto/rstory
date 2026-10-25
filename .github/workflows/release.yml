@@ -3,11 +3,25 @@
 # token) in the protected `release` environment, then creates the GitHub release with the
 # tarballs and SHA256SUMS. If publishing fails, no release is created.
 # Manual runs (workflow_dispatch) are always dry runs: artifacts + cargo publish --dry-run.
+#
+# Two ways in, both ending in the same guards: the owner pushes the tag by hand, or tag.yml tags a
+# version bump on main and sends repository_dispatch `release` with {tag, sha} (a tag pushed with
+# the built-in token starts no workflow, a dispatch sent with it does). Publishing stays in this
+# file: the OIDC token must come from release.yml in the `release` environment.
+# A dispatch runs on the default branch, so every job checks out refs/tags/<tag> explicitly.
 name: release
+
+# Tag and commit in the title, for docs.yml (it reads them from the finished run).
+run-name: >-
+  ${{ github.event_name == 'repository_dispatch' && format('release {0} {1}', github.event.client_payload.tag, github.event.client_payload.sha)
+  || github.event_name == 'push' && format('release {0} {1}', github.ref_name, github.sha)
+  || 'release dry run' }}
 
 on:
   push:
     tags: ["[0-9]+.[0-9]+.[0-9]+"]
+  repository_dispatch:
+    types: [release]
   workflow_dispatch:
     inputs:
       dry_run:
@@ -35,37 +49,77 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
       publish: ${{ steps.version.outputs.publish }}
+      tag: ${{ steps.tag.outputs.tag }}
+      ref: ${{ steps.tag.outputs.ref }}
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0
-          persist-credentials: false
       - name: Refuse a manual run that is not a dry run
         if: github.event_name == 'workflow_dispatch' && !inputs.dry_run
         run: |
           echo "::error::manual runs are dry runs only; publish by pushing a tag X.Y.Z on main (docs/release.md)"
           exit 1
-      - name: Tag is X.Y.Z, on main, and equals the crate version
-        id: version
+      # Before any checkout: the ref to check out comes from here. Event data reaches the shell
+      # only through env; both values are validated strictly before they are used anywhere.
+      - name: Which tag? (push ref, or the dispatch payload), strictly X.Y.Z at a full sha
+        id: tag
         env:
           EVENT: ${{ github.event_name }}
           REF_TYPE: ${{ github.ref_type }}
-          TAG: ${{ github.ref_name }}
+          REF_NAME: ${{ github.ref_name }}
+          EVENT_SHA: ${{ github.sha }}
+          PAYLOAD_TAG: ${{ github.event.client_payload.tag }}
+          PAYLOAD_SHA: ${{ github.event.client_payload.sha }}
+        run: |
+          set -euo pipefail
+          tag=''; sha=''
+          case "$EVENT" in
+            push)
+              [ "$REF_TYPE" = tag ] || { echo "::error::release runs on tags only"; exit 1; }
+              tag=$REF_NAME; sha=$EVENT_SHA ;;
+            repository_dispatch)
+              tag=$PAYLOAD_TAG; sha=$PAYLOAD_SHA ;;
+          esac
+          if [ -z "$tag" ]; then
+            # A manual dry run: no tag, the triggering commit.
+            echo "ref=$EVENT_SHA" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if ! [[ "$tag" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::tag is not plain SemVer X.Y.Z"; exit 1
+          fi
+          if ! [[ "$sha" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::the commit is not a full 40-character sha"; exit 1
+          fi
+          {
+            echo "tag=$tag"
+            echo "sha=$sha"
+            echo "ref=refs/tags/$tag"
+          } >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ steps.tag.outputs.ref }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Tag is on main, resolves to the announced commit, and equals the crate version
+        id: version
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+          SHA: ${{ steps.tag.outputs.sha }}
         run: |
           set -euo pipefail
           version=$(sed -n 's/^version *= *"\([^"]*\)".*/\1/p' Cargo.toml | head -n1)
           [ -n "$version" ] || { echo "::error::no version in Cargo.toml"; exit 1; }
           publish=false
-          if [ "$EVENT" = push ]; then
-            [ "$REF_TYPE" = tag ] || { echo "::error::release runs on tags only"; exit 1; }
-            if ! [[ "$TAG" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-              echo "::error::tag $TAG is not plain SemVer X.Y.Z"; exit 1
-            fi
+          if [ -n "$TAG" ]; then
             if [ "$TAG" != "$version" ]; then
               echo "::error::tag $TAG does not match Cargo.toml version $version"; exit 1
             fi
-            # HEAD is the tagged commit (annotated tags dereferenced by the checkout).
-            if ! git merge-base --is-ancestor "$(git rev-parse 'HEAD^{commit}')" origin/main; then
+            # The tag, annotated tags dereferenced, is the commit that was announced (the pushed
+            # commit, or the dispatch payload's sha) and the commit that is checked out.
+            tagged=$(git rev-parse "refs/tags/$TAG^{commit}")
+            if [ "$tagged" != "$SHA" ] || [ "$(git rev-parse 'HEAD^{commit}')" != "$SHA" ]; then
+              echo "::error::tag $TAG does not resolve to the announced commit"; exit 1
+            fi
+            if ! git merge-base --is-ancestor "$tagged" origin/main; then
               echo "::error::tag $TAG is not on main; releases are cut from main only"; exit 1
             fi
             publish=true
@@ -85,6 +139,7 @@ jobs:
     uses: ./.github/workflows/ci.yml
     with:
       stage: release
+      ref: ${{ needs.verify.outputs.ref }}
 
   build:
     name: package (${{ matrix.arch }})
@@ -102,6 +157,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ needs.verify.outputs.ref }}
           persist-credentials: false
       - uses: ./.github/actions/tools
       - name: Static musl release build, F2 + F5 (make build-static)
@@ -130,9 +186,34 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+  extension:
+    name: GNOME extension zip (Shexli clean)
+    needs: verify
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.verify.outputs.ref }}
+          persist-credentials: false
+      - uses: ./.github/actions/tools
+      # The container user (uid 1000) writes dist/ into the runner-owned checkout.
+      - name: Let the container user write dist/
+        run: install -d -m 0777 dist
+      - name: Pack the extension and run extensions.gnome.org's analyzer (make ext-shexli)
+        run: make ext-shexli
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ext-zip
+          path: dist/*.shell-extension.zip
+          if-no-files-found: error
+          retention-days: 14
+
   checksums:
     name: SHA256SUMS
-    needs: [verify, build]
+    needs: [verify, build, extension]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions: {}
@@ -142,13 +223,18 @@ jobs:
           pattern: dist-*
           path: dist
           merge-multiple: true
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: ext-zip
+          path: dist
       - name: Write SHA256SUMS
         run: |
           set -euo pipefail
           cd dist
           n=$(find . -maxdepth 1 -name 'rstory-*-unknown-linux-musl.tar.gz' | wc -l)
           [ "$n" -eq 2 ] || { echo "::error::expected 2 tarballs, found $n"; exit 1; }
-          sha256sum rstory-*-unknown-linux-musl.tar.gz > SHA256SUMS
+          ls ./*.shell-extension.zip >/dev/null || { echo "::error::the extension zip is missing"; exit 1; }
+          sha256sum rstory-*-unknown-linux-musl.tar.gz ./*.shell-extension.zip > SHA256SUMS
           cat SHA256SUMS | tee -a "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
@@ -167,6 +253,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ needs.verify.outputs.ref }}
           persist-credentials: false
       - uses: ./.github/actions/tools
       - name: Package and verify the crate (make publish-dry-run)
@@ -185,6 +272,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ needs.verify.outputs.ref }}
           persist-credentials: false
       - name: Already on crates.io? (a re-run after a failed release step)
         id: existing
@@ -224,7 +312,7 @@ jobs:
         with:
           name: release-assets
           path: dist
-      - name: Create the release with the tarballs and SHA256SUMS
+      - name: Create the release with the tarballs, the extension zip and SHA256SUMS
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
@@ -234,16 +322,16 @@ jobs:
           cd dist
           sha256sum -c SHA256SUMS
           if gh release view "$VERSION" >/dev/null 2>&1; then
-            gh release upload "$VERSION" rstory-*-unknown-linux-musl.tar.gz SHA256SUMS --clobber
+            gh release upload "$VERSION" rstory-*-unknown-linux-musl.tar.gz ./*.shell-extension.zip SHA256SUMS --clobber
           else
-            gh release create "$VERSION" rstory-*-unknown-linux-musl.tar.gz SHA256SUMS \
+            gh release create "$VERSION" rstory-*-unknown-linux-musl.tar.gz ./*.shell-extension.zip SHA256SUMS \
               --verify-tag --title "rstory $VERSION" --generate-notes
           fi
 
   report-failure:
     name: report failure
     needs: [verify, ci, build, checksums, publish-dry-run, publish, github-release]
-    if: failure() && github.event_name == 'push'
+    if: failure() && contains(fromJSON('["push","repository_dispatch"]'), github.event_name)
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
@@ -253,7 +341,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          TITLE: "CI failing: ${{ github.workflow }} on ${{ github.ref_name }}"
+          TITLE: "CI failing: ${{ github.workflow }} on ${{ needs.verify.outputs.tag || github.ref_name }}"
           RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           set -euo pipefail

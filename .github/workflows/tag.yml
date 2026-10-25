@@ -1,0 +1,84 @@
+# Tag on version bump (spec 013 US2, ADR-0009): when the version in Cargo.toml on main has no tag
+# yet, create the annotated tag X.Y.Z on the pushed commit and start the release workflow.
+#
+# Why a dispatch: a tag pushed with the built-in GITHUB_TOKEN starts no other workflow, but a
+# repository_dispatch sent with it does. release.yml receives {tag, sha}, then re-checks
+# everything itself (tag format, on main, equals Cargo.toml, resolves to sha) and publishes only
+# after the `release` environment is approved. Nothing is published from this file.
+#
+# Owner setting: add "GitHub Actions" to the tag ruleset's bypass list, or creating the tag is
+# rejected (docs/release.md "Owner setup").
+# A manual run (workflow_dispatch, from main) is the retry: it tags a version that has no tag,
+# and sends the dispatch again only when asked to (redispatch), for a tag that already exists.
+name: tag
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      redispatch:
+        description: The tag already exists on this commit; send the release dispatch again.
+        type: boolean
+        default: false
+
+permissions: {}
+
+concurrency:
+  group: tag
+  cancel-in-progress: false
+
+jobs:
+  tag:
+    name: tag the version and start the release
+    # A manual run must be from main: it tags the commit it runs on.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write # push the tag and send the repository_dispatch; this job only
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Tag X.Y.Z on this commit if it has none, then dispatch the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+          REDISPATCH: ${{ inputs.redispatch }}
+        run: |
+          set -euo pipefail
+          TAG=$(sed -n 's/^version *= *"\([^"]*\)".*/\1/p' Cargo.toml | head -n1)
+          if ! [[ "$TAG" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Cargo.toml version is not plain SemVer X.Y.Z"; exit 1
+          fi
+          [ "$(git rev-parse HEAD)" = "$SHA" ] || { echo "::error::checkout is not $SHA"; exit 1; }
+
+          dispatch() {
+            gh api "repos/$GH_REPO/dispatches" \
+              -f event_type=release -f "client_payload[tag]=$TAG" -f "client_payload[sha]=$SHA"
+            echo "dispatched release $TAG at $SHA" | tee -a "$GITHUB_STEP_SUMMARY"
+          }
+
+          # Tags come from the remote as it is now, not from the checkout alone.
+          git fetch --quiet --force --tags origin
+          if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
+            tagged=$(git rev-parse "refs/tags/$TAG^{commit}")
+            if [ "$tagged" != "$SHA" ]; then
+              # The normal state after a release: later pushes to main keep the released version
+              # until the next bump. Nothing to tag; a redispatch would release the wrong commit.
+              echo "version $TAG is already released at $tagged; nothing to do until the version is bumped" | tee -a "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            echo "tag $TAG already exists on this commit; nothing to do" | tee -a "$GITHUB_STEP_SUMMARY"
+            if [ "$REDISPATCH" = true ]; then dispatch; fi
+            exit 0
+          fi
+
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+            tag -a "$TAG" -m "$TAG" "$SHA"
+          git push "https://x-access-token:${GH_TOKEN}@github.com/${GH_REPO}.git" "refs/tags/$TAG"
+          echo "tagged $TAG at $SHA" | tee -a "$GITHUB_STEP_SUMMARY"
+          dispatch

@@ -52,6 +52,9 @@ pub struct DaemonProc {
 
 impl DaemonProc {
     pub async fn start() -> Self {
+        // Measure the daemon, not the host's writeback: right after a build (every CI run) the
+        // daemon's first fsyncs can wait ~250 ms for the compiler's dirty pages to flush.
+        let _ = Command::new("sync").status();
         let x = Xvfb::start().expect("Xvfb");
         let dirs = Dirs::new();
         let root = dirs._tmp.path();

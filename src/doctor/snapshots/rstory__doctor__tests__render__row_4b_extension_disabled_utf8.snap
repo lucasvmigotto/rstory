@@ -7,7 +7,7 @@ expression: "render::text(&evaluate(&f), &term(ascii))"
 ✓ Store      private (0700/0600), 8 entries
 ✓ Daemon     running, recording
 ! Extension  installed 0.1.0, not enabled
-  → gnome-extensions enable rstory@lucasvmigotto.github.io
+  → gnome-extensions enable rstory@lucasvmigotto.me
 ✓ Picker     ghostty
 ✓ Autostart  /home/u/.config/autostart/rstory.desktop
 
