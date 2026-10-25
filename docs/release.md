@@ -1,20 +1,21 @@
 # Release runbook
 
 How rstory is checked and released: the pipelines and their gates, the one-time owner setup, the
-first release by hand (brief K9), every later release from a tag, and the Tier-1 manual matrix
+first release by hand (brief K9), every later release from a version bump, and the Tier-1 manual matrix
 that signs a release off. Spec 013 owns this page up to "Tier-1 manual matrix: sign-off"; the
 manual check sections after it belong to the features named in them (002, 003, 009, 010, 012).
 
 ## Pipelines
 
-Three workflows on GitHub Actions (ADR-0009), all running the project's `make` recipes in the
+Four workflows on GitHub Actions (ADR-0009), all running the project's `make` recipes in the
 `tools` image, exactly as a developer does (README "Development"). A green `make` run locally
 means the same as a green job in CI.
 
 | Workflow | Runs on | Jobs |
 |---|---|---|
 | `.github/workflows/ci.yml` | PRs into `dev` and `main`; pushes to `dev` and `main`; called by `release.yml` | `plan`, `checks`, `lint`, `test`, `integration`, `e2e`, `static`, `perf`, `ci-ok`, `report-failure` |
-| `.github/workflows/release.yml` | tags `X.Y.Z` (plain SemVer, no `v`); manual `workflow_dispatch` (dry run only) | `verify`, `ci` (the main set), `package`, `SHA256SUMS`, `cargo publish --dry-run`, `publish`, `GitHub release`, `report-failure` |
+| `.github/workflows/tag.yml` | pushes to `main`; manual `workflow_dispatch` from `main` (retry) | `tag`: tags the `Cargo.toml` version if it has no tag, then sends `repository_dispatch` `release` |
+| `.github/workflows/release.yml` | tags `X.Y.Z` (plain SemVer, no `v`) pushed by hand; `repository_dispatch` `release` from `tag.yml`; manual `workflow_dispatch` (dry run only) | `verify`, `ci` (the main set), `package`, `SHA256SUMS`, `cargo publish --dry-run`, `publish`, `GitHub release`, `report-failure` |
 | `.github/workflows/nightly.yml` | every day 03:17 UTC; manual | `property`, `soak`, `audit`, `quarantine`, `report-failure` |
 
 Job graph of `ci.yml` (the `lint`, `test`, `integration`, `e2e`, `static` and `perf` jobs run once per
@@ -51,8 +52,19 @@ verify ──┬─ ci (calls ci.yml, main set) ──────────�
 any failure on a tag ── report-failure
 ```
 
-- `verify` refuses a tag that is not `X.Y.Z`, not on `main`, or not equal to the `Cargo.toml`
-  version, before anything is built. It also runs the SC-001 assertion
+- `tag.yml` reads `version` from `Cargo.toml` on the pushed `main` commit. No tag `X.Y.Z`: it
+  creates the annotated tag on that commit, pushes it with the built-in token (`contents: write`,
+  that job only) and sends `repository_dispatch` `release` with `{tag, sha}`. (A tag pushed with
+  the built-in token starts no workflow; a dispatch sent with it does.) The tag already on that
+  commit: nothing happens. The tag on an older commit (the version is already released): nothing happens either, until the next bump. It reads no secret and
+  publishes nothing; one run at a time, never cancelled.
+- `release.yml` takes the tag from `github.ref_name` (a tag pushed by hand) or from the dispatch
+  payload, which reaches the shell only through `env` and is checked against `^[0-9]+\.[0-9]+\.[0-9]+$`
+  (the sha against 40 hex digits). A dispatch runs on the default branch, so every job checks out
+  `refs/tags/X.Y.Z` explicitly (`ci.yml` takes a `ref` input for this). The run's title is
+  `release X.Y.Z <sha>`; `docs.yml` reads the tag and commit from it.
+- `verify` refuses a tag that is not `X.Y.Z`, not on `main`, not equal to the `Cargo.toml`
+  version, or not resolving to the announced commit, before anything is built. It also runs the SC-001 assertion
   (`.github/scripts/no-publish-token.sh`), which rejects any use of the `secrets` context
   (including `toJSON(secrets)` and `secrets: inherit`), credential-like `vars.*`, and any
   `CARGO_REGISTRY_TOKEN` or `CARGO_REGISTRIES_*_TOKEN` not set from the OIDC exchange;
@@ -120,6 +132,7 @@ From `docs/product/test-strategy.md` §6. `plan` in `ci.yml` picks the set.
 | PR into `dev` | `ci.yml`, both architectures | fmt, clippy, unit, property (`PROPTEST_CASES=1000`), snapshots, contract, integration (Xvfb, sway, bridge), fitness F1, F2, F3, F4, F5, F9, F10, F11, RSS and burst, advisories, secret scan, extension lint, type-check and tests. Nextest profile `ci`: no retries. |
 | Push to `dev` | `ci.yml` | the PR set + perf smoke (`make bench`, `make test-perf`). Nextest profile `ci-dev`: one rerun, reported. |
 | PR `dev` → `main`, push to `main` | `ci.yml` | the PR set + perf smoke, property with `PROPTEST_CASES=10000`. Nextest profile `ci`. |
+| Version bump on `main` | `tag.yml`, then `release.yml` | `tag.yml` tags and dispatches; `release.yml` runs the gates below on the tag. |
 | Tag `X.Y.Z` | `release.yml` | the main set (through `ci.yml`) + tag, version and SC-001 checks, both tarballs with F2/F5, `cargo publish --dry-run`. The manual matrix is signed off in the release PR (below). |
 | Nightly | `nightly.yml` | property with `PROPTEST_CASES=100000` (`store_crash`, `history_props`, `filter_props`), advisories, quarantined tests on both architectures. A failure opens or updates the issue `CI failing: nightly on <branch>`. |
 
@@ -203,14 +216,18 @@ The workflows cannot configure these; the owner does, once. Nothing here is a st
    requests" off; require approval for workflows from first-time outside contributors.
 3. **Environment `release`** (Settings > Environments > New environment):
    - required reviewer: the owner;
-   - deployment branches and tags: "Selected branches and tags", add the tag rule `*.*.*`
-     (only release tags reach it);
+   - deployment branches and tags: "Selected branches and tags", add the tag rule `*.*.*` and the
+     branch rule `main`. A run started by `tag.yml`'s dispatch runs on the default branch, so
+     without the `main` rule the `publish` job is rejected; the tag rule serves tags pushed by
+     hand. Approval by the reviewer still gates every publish;
    - no environment secrets and no variables.
 4. **Rulesets for `dev` and `main`**: require a pull request; require the status check `ci-ok`
    (it appears after the first CI run); block force pushes and deletions.
    **Also required: a tag ruleset** that lets only the owner create tags matching `*.*.*`.
    Without it any collaborator with write access can push a release tag, and the environment's
-   reviewer would be the only gate before publish.
+   reviewer would be the only gate before publish. **Add "GitHub Actions" to that ruleset's bypass
+   list** (Bypass list > Add bypass > GitHub Actions), or `tag.yml` cannot create the tag and its
+   run fails with a rejected push.
 5. **Labels**: create `quarantine` (flaky-test policy). The failure reporter needs no label; it
    finds its issue by title.
 6. **Security settings**: secret scanning with push protection, Dependabot alerts.
@@ -244,9 +261,12 @@ the shell history.
    If it fails on the token's scope, nothing is published: fix the scope and repeat.
 4. On crates.io, crate `rstory` > Settings > Trusted Publishing > Add: GitHub, owner
    `lucasvmigotto`, repository `rstory`, workflow file `release.yml`, environment `release`.
-5. Optional: tag `0.1.0` on `main` (`git tag -a 0.1.0 -m 0.1.0`, push the tag) to attach the
-   tarballs. The release workflow finds 0.1.0 already on crates.io, skips the publish, and
-   creates the GitHub release after the `release` environment approval.
+5. Optional: attach the tarballs. Once `tag.yml` is on `main` it tags `0.1.0` and dispatches the
+   release by itself (or tag by hand: `git tag -a 0.1.0 -m 0.1.0`, push the tag). The release
+   workflow finds 0.1.0 already on crates.io, skips the publish, and creates the GitHub release
+   after the `release` environment approval. Publish 0.1.0 by hand (steps 1 to 3) before
+   promoting `tag.yml` to `main`, or the first automatic run waits at `publish` for you to
+   approve a crates.io upload that the token-less workflow cannot yet make.
 
 ## Publish the extension on extensions.gnome.org (after 0.1.0)
 
@@ -277,7 +297,11 @@ matrix passes and Shexli accepts it.
    release PR. Copy the "Tier-1 manual matrix: sign-off" table into the PR body and
    fill it in.
 2. Promote `dev` to `main` with a PR; `ci-ok` must be green on it.
-3. Tag the merge commit on `main`: `git tag -a X.Y.Z -m X.Y.Z && git push origin X.Y.Z`.
+3. Nothing to tag: the push to `main` runs `tag.yml`, which tags the merge commit `X.Y.Z` and
+   dispatches `release.yml`. If that run failed (tag rejected, dispatch failed), fix the cause and
+   run it again from `main`: `gh workflow run tag.yml --ref main` (add `-f redispatch=true` when
+   the tag exists on the commit and only the dispatch is missing). Tagging by hand
+   (`git tag -a X.Y.Z -m X.Y.Z && git push origin X.Y.Z`) still works and starts `release.yml` too.
 4. Approve the `release` environment when `publish` waits for it. Follow the run with
    `gh run watch`.
 5. Check: crates.io shows `X.Y.Z` published by the trusted publisher (ADR-0009 Confirmation); the
@@ -293,8 +317,8 @@ exists anywhere.
 
 | Failure | State | What to do |
 |---|---|---|
-| `verify` fails (tag format, not on `main`, version mismatch) | nothing built or published | delete the tag (`git push origin :refs/tags/X.Y.Z`), fix, re-tag |
-| `ci`, `package`, `SHA256SUMS` or `cargo publish --dry-run` fails | nothing published | fix on `dev`, promote, tag a new patch version (or delete and re-push the tag if nothing was published) |
+| `verify` fails (tag format, not on `main`, version mismatch) | nothing built or published | delete the tag (`git push origin :refs/tags/X.Y.Z`), fix, then bump to a new patch version, or re-run `tag.yml` from `main` (or tag by hand) |
+| `ci`, `package`, `SHA256SUMS` or `cargo publish --dry-run` fails | nothing published | fix on `dev`, promote with a new patch version (or, if nothing was published, delete the tag and re-run `tag.yml` or re-push the tag by hand) |
 | `publish` fails (OIDC exchange, Trusted Publisher config) | nothing published, no GitHub release | check the Trusted Publisher fields (workflow `release.yml`, environment `release`), re-run the failed jobs |
 | `GitHub release` fails after a successful publish | crate published, no GitHub release | re-run the failed jobs: `publish` sees the version on crates.io and skips; the release is created or its assets re-uploaded |
 | A published version is broken | crate on crates.io | `cargo yank --version X.Y.Z` (with a short-lived token or the web UI), release a fixed patch version; never delete a tag that was published |

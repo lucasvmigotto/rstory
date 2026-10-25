@@ -164,8 +164,9 @@ publish: image ## cargo publish --no-verify (publish-dry-run verified the same c
 	@[ -n "$$CARGO_REGISTRY_TOKEN" ] || { echo "CARGO_REGISTRY_TOKEN is not set (see docs/release.md)"; exit 1; }
 	$(RUN) -e CARGO_REGISTRY_TOKEN $(IMAGE) cargo publish --locked --no-verify
 
-sc001-test: ## Fixture test of the SC-001 token check (.github/scripts/no-publish-token.sh); pure bash, no container
+sc001-test: ## Fixture test of the SC-001 token check (.github/scripts/no-publish-token.sh) and the release workflows' shape; pure bash, no container
 	scripts/test-no-publish-token.sh
+	scripts/test-release-workflows.sh
 
 doctor: image ## Print tool versions per layer; fail on drift from rust-toolchain.toml
 	@echo "rust-toolchain.toml: $(RUST_VERSION)"
