@@ -1,6 +1,6 @@
 {
   "_generated": "make docs-reference - do not hand-edit",
-  "rstory": "0.1.0",
+  "rstory": "0.1.1",
   "commands": [
     {
       "name": "rstory",
