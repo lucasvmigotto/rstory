@@ -58,7 +58,7 @@ LINT_FEATURES := --features fault-injection,session-tests,perf-tests
 EXT_MOUNT := -v $(NPM_VOLUME):/src/extension/node_modules
 TTY := $(shell [ -t 0 ] && echo -it)
 
-.PHONY: help image fetch fmt fmt-check lint check test test-quarantine bench test-integration test-e2e test-e2e-smoke test-perf test-soak build build-static dist test-launch brand ext-lint ext-test ext-pack ext-shexli ext-deps ext-typecheck deny audit secret-scan publish-dry-run publish sc001-test doctor shell clean clean-cache docs-install docs-dev docs-check docs-build docs-reference docs-fmt
+.PHONY: help image fetch fmt fmt-check lint check test test-quarantine bench test-integration test-e2e test-e2e-smoke test-perf test-soak build build-static dist test-launch brand ext-lint ext-test ext-pack ext-shexli ext-deps ext-typecheck deny audit secret-scan publish-dry-run publish sc001-test release-plan release-prepare doctor shell clean clean-cache docs-install docs-dev docs-check docs-build docs-reference docs-fmt
 
 help: ## List recipes
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-17s %s\n", $$1, $$2}'
@@ -167,9 +167,16 @@ publish: image ## cargo publish --no-verify (publish-dry-run verified the same c
 	@[ -n "$$CARGO_REGISTRY_TOKEN" ] || { echo "CARGO_REGISTRY_TOKEN is not set (see docs/release.md)"; exit 1; }
 	$(RUN) -e CARGO_REGISTRY_TOKEN $(IMAGE) cargo publish --locked --no-verify
 
-sc001-test: ## Fixture test of the SC-001 token check (.github/scripts/no-publish-token.sh) and the release workflows' shape; pure bash, no container
+sc001-test: ## Fixture tests of the SC-001 token check (.github/scripts/no-publish-token.sh), the release workflows' shape and scripts/release.py; pure bash, no container
 	scripts/test-no-publish-token.sh
 	scripts/test-release-workflows.sh
+	scripts/test-release.sh
+
+release-plan: ## Which version the commits since the last tag warrant, and the CHANGELOG section (writes nothing; host python3 and git)
+	python3 -I scripts/release.py --dry-run
+
+release-prepare: ## Bump every version file and write CHANGELOG.md from the commits since the last tag (commit the result as chore(release): X.Y.Z)
+	python3 -I scripts/release.py
 
 doctor: image ## Print tool versions per layer; fail on drift from rust-toolchain.toml
 	@echo "rust-toolchain.toml: $(RUST_VERSION)"
