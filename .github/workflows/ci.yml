@@ -85,6 +85,8 @@ jobs:
         run: .github/scripts/no-publish-token.sh .github
       - name: The SC-001 check catches every forbidden pattern (make sc001-test)
         run: scripts/test-no-publish-token.sh
+      - name: release.py picks the version and bumps every file (make sc001-test)
+        run: scripts/test-release.sh
       - uses: ./.github/actions/tools
       - name: Format (make fmt-check)
         run: make fmt-check
