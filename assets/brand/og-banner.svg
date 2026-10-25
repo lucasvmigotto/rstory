@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <!-- Open Graph banner for the docs site (1200x630). Text is DejaVu Sans, which the tools image
+       ships, so `make brand` renders the same everywhere. Colours: docs/site dark tokens. -->
+  <rect width="1200" height="630" fill="#1c1c1c"/>
+  <rect width="1200" height="8" fill="#2aa198"/>
+  <g transform="translate(110 165)">
+    <rect width="300" height="300" rx="66" fill="#2aa198"/>
+    <g transform="translate(38 38) scale(14)" fill="none" stroke="#1c1c1c" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round">
+      <rect x="2.6" y="2.6" width="10.8" height="12" rx="1.6"/>
+      <rect x="5.6" y="1.2" width="4.8" height="2.6" rx="0.8" fill="#1c1c1c" stroke="none"/>
+      <path d="M5 7h6M5 9.6h6M5 12.2h4"/>
+    </g>
+  </g>
+  <g font-family="DejaVu Sans" fill="#e8e8e8">
+    <text x="470" y="290" font-size="112" font-weight="bold">rstory</text>
+    <text x="474" y="360" font-size="38" fill="#c8c8c8">A small, private clipboard history</text>
+    <text x="474" y="410" font-size="38" fill="#c8c8c8">for Linux (Wayland and X11)</text>
+    <text x="474" y="470" font-size="26" fill="#2aa198">docs.lucasvmigotto.me/rstory</text>
+  </g>
+</svg>
