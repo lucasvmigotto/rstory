@@ -38,9 +38,16 @@ fn stats(mut samples: Vec<Duration>) -> Stats {
 
 /// Runs `f` `warmup` times, then `iters` times, timing each call.
 fn measure(warmup: usize, iters: usize, mut f: impl FnMut()) -> Stats {
+    // Measure the store, not the host's writeback: right after a build (every CI run) the first
+    // fsyncs can wait on the compiler's dirty pages, and a batch scenario has only 20 samples.
+    let flush = || {
+        let _ = std::process::Command::new("sync").status();
+    };
+    flush();
     for _ in 0..warmup {
         f();
     }
+    flush();
     let samples = (0..iters)
         .map(|_| {
             let t = Instant::now();
