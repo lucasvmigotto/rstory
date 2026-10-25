@@ -40,7 +40,7 @@ pub const CLI_INACTIVE: &str =
 pub const CLI_READONLY: &str = "(daemon not running, read-only)";
 pub const INSTALL_AUTOSTART_DONE: &str =
     "Autostart installed: {path}. rstory starts at your next login, or run `rstory daemon` now.";
-pub const INSTALL_GNOME_DONE: &str = "GNOME extension installed. Log out and back in, then run: gnome-extensions enable rstory@lucasvmigotto.github.io";
+pub const INSTALL_GNOME_DONE: &str = "GNOME extension installed. Log out and back in, then run: gnome-extensions enable rstory@lucasvmigotto.me";
 pub const DOCTOR_ALL_OK: &str = "Everything looks good.";
 
 /// Every key with its text, in ux-vision order.

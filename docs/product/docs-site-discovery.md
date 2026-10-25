@@ -279,7 +279,7 @@ Test-only variables (`RSTORY_SOAK_SECS`, `PROPTEST_CASES`, `CI`) and X11 atom na
 
 | Item | Status | Evidence |
 |---|---|---|
-| UUID `rstory@lucasvmigotto.github.io`, installed to `$XDG_DATA_HOME/gnome-shell/extensions/<uuid>` | Implemented | `src/install/gnome.rs:20,112`, `tests/install_gnome.rs:110` |
+| UUID `rstory@lucasvmigotto.me`, installed to `$XDG_DATA_HOME/gnome-shell/extensions/<uuid>` | Implemented | `src/install/gnome.rs:20,112`, `tests/install_gnome.rs:110` |
 | Panel icon and menu over the control socket; disconnected icon; no process spawning, no D-Bus | Implemented | `extension/tests/panel.test.js:39-204`, `extension/tests/hygiene.test.js:30-39` |
 | GNOME Shell 48, 49, 50 | Implemented | `dev@b4a998e`: `extension/metadata.json:5`, `src/doctor/checks.rs:20`, `src/install/gnome.rs:309` |
 | `make ext-pack` builds the extensions.gnome.org zip (dev tooling) | Implemented | `dev@b4a998e`: `Makefile` `ext-pack`, `scripts/ext-pack.py` |
@@ -338,7 +338,7 @@ Never show `--ascii`, `daemon --help`, `rstory help <pick|doctor|install-*>` (it
 - `$XDG_RUNTIME_DIR/rstory/control.sock` (`/run/user/<uid>/…` fallback)
 - `$XDG_CONFIG_HOME/autostart/rstory.desktop`
 - `$XDG_CONFIG_HOME/systemd/user/rstory.service`
-- `$XDG_DATA_HOME/gnome-shell/extensions/rstory@lucasvmigotto.github.io/`
+- `$XDG_DATA_HOME/gnome-shell/extensions/rstory@lucasvmigotto.me/`
 
 **Exit codes.** `0 1 2 3 4 5 6 7 130`, and doctor's `0 1 2`, with the meanings in §1.4.
 

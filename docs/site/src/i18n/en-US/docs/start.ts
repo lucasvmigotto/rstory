@@ -165,12 +165,12 @@ export const start: Record<"overview" | "install" | "first-run" | "desktops", Pa
       },
       {
         t: "p",
-        text: "The extension goes to `$XDG_DATA_HOME/gnome-shell/extensions/rstory@lucasvmigotto.github.io/`. Without `--enable` it prints:",
+        text: "The extension goes to `$XDG_DATA_HOME/gnome-shell/extensions/rstory@lucasvmigotto.me/`. Without `--enable` it prints:",
       },
       {
         t: "code",
         lang: "text",
-        text: "GNOME extension installed. Log out and back in, then run: gnome-extensions enable rstory@lucasvmigotto.github.io",
+        text: "GNOME extension installed. Log out and back in, then run: gnome-extensions enable rstory@lucasvmigotto.me",
       },
       {
         t: "p",

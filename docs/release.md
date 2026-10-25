@@ -261,23 +261,27 @@ the shell history.
    If it fails on the token's scope, nothing is published: fix the scope and repeat.
 4. On crates.io, crate `rstory` > Settings > Trusted Publishing > Add: GitHub, owner
    `lucasvmigotto`, repository `rstory`, workflow file `release.yml`, environment `release`.
-5. Optional: attach the tarballs. Once `tag.yml` is on `main` it tags `0.1.0` and dispatches the
-   release by itself (or tag by hand: `git tag -a 0.1.0 -m 0.1.0`, push the tag). The release
-   workflow finds 0.1.0 already on crates.io, skips the publish, and creates the GitHub release
-   after the `release` environment approval. Publish 0.1.0 by hand (steps 1 to 3) before
-   promoting `tag.yml` to `main`, or the first automatic run waits at `publish` for you to
-   approve a crates.io upload that the token-less workflow cannot yet make.
+5. `0.1.0` exists only on crates.io: it has no git tag and no GitHub release (owner decision
+   2026-10-25). `0.1.1` is the first version `tag.yml` tags and the release workflow publishes
+   with tarballs and the extension zip, after the `release` environment approval. Publish the
+   first version by hand (steps 1 to 3) before promoting `tag.yml` to `main`, or the first
+   automatic run waits at `publish` for a crates.io upload the token-less workflow cannot make.
 
 ## Publish the extension on extensions.gnome.org (after 0.1.0)
+
+A zip built before 0.1.1 has the UUID `rstory@lucasvmigotto.github.io` and a `url` that was not the
+repository. Withdraw that upload on the site and upload the 0.1.1 zip: the UUID is
+`rstory@lucasvmigotto.me`, and `url` must be the GitHub repository (the reviewers reject a URL that
+returns 404 or is not a GitHub or GitLab repository).
 
 The extension does nothing without the daemon, so it goes up only once 0.1.0 is released (owner
 decision 2026-10-24). The first upload is manual, and later versions use the same form.
 
 1. Take the zip from the GitHub release: every version tag's release workflow builds
-   `rstory@lucasvmigotto.github.io.shell-extension.zip`, checks it with Shexli, and attaches it next to the tarballs
+   `rstory@lucasvmigotto.me.shell-extension.zip`, checks it with Shexli, and attaches it next to the tarballs
    (listed in `SHA256SUMS`). Locally, `make ext-shexli` does the same: `make ext-pack`, then Shexli, failing unless clean.
 2. To run the analyzer by hand instead, in a throwaway container. It must report `clean`:
-   `podman run --rm --name scratch-rstory-shexli -v "$PWD/dist":/ego:ro,Z docker.io/library/python:3.13-slim sh -c 'pip install -q shexli && shexli /ego/rstory@lucasvmigotto.github.io.shell-extension.zip'`
+   `podman run --rm --name scratch-rstory-shexli -v "$PWD/dist":/ego:ro,Z docker.io/library/python:3.13-slim sh -c 'pip install -q shexli && shexli /ego/rstory@lucasvmigotto.me.shell-extension.zip'`
 3. Upload the zip at <https://extensions.gnome.org/upload/> and accept both terms (the GNOME Shell
    license clause, and that site staff may remove, modify or reassign the extension).
 4. On the extension's page, add a description that says it needs the rstory daemon, with the
@@ -480,8 +484,8 @@ rstory`. Nothing in that log may contain entry text; only error codes.
 
 | # | Step | Expected |
 |---|---|---|
-| 1 | `rstory install-gnome-extension` | Exit 0; prints `GNOME extension installed. Log out and back in, then run: gnome-extensions enable rstory@lucasvmigotto.github.io`; no stderr warning |
-| 2 | Log out and back in, then `gnome-extensions enable rstory@lucasvmigotto.github.io` (or `rstory install-gnome-extension --enable` on the next login) | `gnome-extensions info rstory@lucasvmigotto.github.io` shows `Enabled: Yes` and a State other than ERROR |
+| 1 | `rstory install-gnome-extension` | Exit 0; prints `GNOME extension installed. Log out and back in, then run: gnome-extensions enable rstory@lucasvmigotto.me`; no stderr warning |
+| 2 | Log out and back in, then `gnome-extensions enable rstory@lucasvmigotto.me` (or `rstory install-gnome-extension --enable` on the next login) | `gnome-extensions info rstory@lucasvmigotto.me` shows `Enabled: Yes` and a State other than ERROR |
 | 3 | Look at the top bar | An rstory clipboard icon (recording shape: three lines). It follows the panel color on light and dark |
 | 4 | Copy three different lines of text, then open the menu | The newest entries appear first, one per line, at most 10; the status line says `Recording`; Pause recording, Pause for 1 minute and Open picker are present; `Clear history…` is last |
 | 5 | Copy a two-line text | Its menu line shows `⏎` where the newline is |
@@ -497,7 +501,7 @@ rstory`. Nothing in that log may contain entry text; only error codes.
 | 15 | `pkill rstory` with the menu open | The icon becomes the disconnected shape (clipboard with a slash); the menu shows only `rstory daemon not running` |
 | 16 | Start the daemon again (`rstory daemon &`) | Within 30 s (1 s, 2 s, 4 s, ... backoff) the icon is back to recording and the entries are listed |
 | 17 | `rstory install-gnome-extension` again | Same version: the plain `installed` message. After a version bump: `GNOME extension updated to X. Log out and back in to load it.` |
-| 18 | `rstory install-gnome-extension --uninstall`, then log out and back in | The icon is gone; `~/.local/share/gnome-shell/extensions/rstory@lucasvmigotto.github.io` does not exist |
+| 18 | `rstory install-gnome-extension --uninstall`, then log out and back in | The icon is gone; `~/.local/share/gnome-shell/extensions/rstory@lucasvmigotto.me` does not exist |
 
 Record per Shell version: version, distribution, panel theme, result per row, and anything odd
 (for example the icon not following the panel color, or a Shell error in the journal on enable).
@@ -513,7 +517,7 @@ The gjs tests check `disable()` cleanup against fakes (20 enable and disable cyc
 it in the real Shell, where leaked signal handlers, timers or actors would show.
 
 1. Note the Shell's memory: `ps -o rss= -C gnome-shell`.
-2. Run 50 cycles: `for i in $(seq 50); do gnome-extensions disable rstory@lucasvmigotto.github.io; gnome-extensions enable rstory@lucasvmigotto.github.io; sleep 0.2; done`.
+2. Run 50 cycles: `for i in $(seq 50); do gnome-extensions disable rstory@lucasvmigotto.me; gnome-extensions enable rstory@lucasvmigotto.me; sleep 0.2; done`.
 3. Open and close the menu a few times, then check the journal: `journalctl --user -b /usr/bin/gnome-shell | grep -i rstory`.
 
 Expected: exactly one rstory icon in the top bar; no `rstory` warnings or JS errors in the journal
