@@ -141,7 +141,7 @@ ext-typecheck: image ## Type-check the extension (tsc --checkJs, JSDoc), offline
 ext-test: image ## Run the extension's gjs fixture tests (fake socket server), offline
 	$(RUN) $(OFFLINE) $(IMAGE) sh -c 'for t in extension/tests/*.test.js; do echo "== $$t"; gjs -m "$$t" || exit 1; done'
 
-EXT_ZIP := dist/rstory@lucasvmigotto.github.io.shell-extension.zip
+EXT_ZIP := dist/rstory@lucasvmigotto.me.shell-extension.zip
 ext-pack: image ## Zip the extension for extensions.gnome.org (dev-only files excluded, as the installer does) into dist/, offline
 	$(RUN) $(OFFLINE) $(IMAGE) python3 -I scripts/ext-pack.py extension $(EXT_ZIP)
 

@@ -204,7 +204,7 @@ spec 007).
 | Artifact | `rstory-<version>-<arch>-unknown-linux-musl.tar.gz`, containing the static binary, LICENSE, README and `SHA256SUMS`. Also `cargo install rstory`. |
 | Install | Copy to `~/.local/bin` (or anywhere on `PATH`). No root. |
 | Start | `rstory install-autostart` writes `~/.config/autostart/rstory.desktop` (`Exec=rstory daemon`). With `--systemd`, it writes `~/.config/systemd/user/rstory.service` instead (`Restart=on-failure`, `RestartSec=1`, `PartOf=graphical-session.target`). |
-| GNOME | `rstory install-gnome-extension` writes `~/.local/share/gnome-shell/extensions/rstory@lucasvmigotto.github.io/` (ESM extension, `shell-version` 48–51 `[ASSUMPTION: UUID format]`). |
+| GNOME | `rstory install-gnome-extension` writes `~/.local/share/gnome-shell/extensions/rstory@lucasvmigotto.me/` (ESM extension, `shell-version` 48–51 `[ASSUMPTION: UUID format]`). |
 | Paths | Socket `$XDG_RUNTIME_DIR/rstory/control.sock` (dir `0700`). Store `$XDG_STATE_HOME/rstory/` (default `~/.local/state/rstory`). Config `$XDG_CONFIG_HOME/rstory/config.toml`. |
 | Environments | dev (`cargo run`, nested sessions), CI (headless sway + Xvfb), release (GitHub Actions on tags). No staging: the "production" is each user's machine. |
 
@@ -332,7 +332,7 @@ which is enough for this project.
 ## 13. Open questions & assumptions
 
 - AA1–AA4 (§3).
-- `[ASSUMPTION]` GNOME extension UUID `rstory@lucasvmigotto.github.io`.
+- `[ASSUMPTION]` GNOME extension UUID `rstory@lucasvmigotto.me`.
 - Licence expression `GPL-3.0-or-later`: confirmed 2026-10-21.
 - `[ASSUMPTION]` F10's wake-up bound is set in `qa:strategy`.
 - Open: brief Q7 (bridge on GNOME 49–51). Q8 is resolved (pins count toward the 20).

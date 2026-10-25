@@ -217,7 +217,7 @@ export const reference: Record<R, PageContent> = {
             "The systemd user unit, from `rstory install-autostart --systemd`.",
           ],
           [
-            "`$XDG_DATA_HOME/gnome-shell/extensions/rstory@lucasvmigotto.github.io/`",
+            "`$XDG_DATA_HOME/gnome-shell/extensions/rstory@lucasvmigotto.me/`",
             "The GNOME extension, from `rstory install-gnome-extension`.",
           ],
         ],

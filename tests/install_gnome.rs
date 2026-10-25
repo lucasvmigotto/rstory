@@ -12,7 +12,7 @@ use rstory::install::gnome::{
 use tempfile::TempDir;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
-const DONE: &str = "GNOME extension installed. Log out and back in, then run: gnome-extensions enable rstory@lucasvmigotto.github.io\n";
+const DONE: &str = "GNOME extension installed. Log out and back in, then run: gnome-extensions enable rstory@lucasvmigotto.me\n";
 
 struct Fixture {
     dir: TempDir,
@@ -108,13 +108,13 @@ fn metadata(dir: &Path) -> serde_json::Value {
 
 #[test]
 fn the_uuid_is_the_documented_one() {
-    assert_eq!(UUID, "rstory@lucasvmigotto.github.io");
+    assert_eq!(UUID, "rstory@lucasvmigotto.me");
     let f = Fixture::new(None);
     assert_eq!(
         f.target(),
         f.env
             .data_home
-            .join("gnome-shell/extensions/rstory@lucasvmigotto.github.io")
+            .join("gnome-shell/extensions/rstory@lucasvmigotto.me")
     );
 }
 
@@ -235,7 +235,7 @@ fn reinstall_over_an_older_version_replaces_the_files() {
     fs::create_dir_all(&t).unwrap();
     fs::write(
         t.join("metadata.json"),
-        r#"{"uuid":"rstory@lucasvmigotto.github.io","version-name":"0.0.1"}"#,
+        r#"{"uuid":"rstory@lucasvmigotto.me","version-name":"0.0.1"}"#,
     )
     .unwrap();
     fs::write(t.join("stale.js"), "old").unwrap();

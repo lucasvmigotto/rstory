@@ -7,7 +7,7 @@ ok   Backend    x11 via XWayland bridge (no data-control on this compositor)
 ok   Store      private (0700/0600), 8 entries
 ok   Daemon     running, recording
 warn Extension  installed 0.1.0, not enabled
-  -> gnome-extensions enable rstory@lucasvmigotto.github.io
+  -> gnome-extensions enable rstory@lucasvmigotto.me
 ok   Picker     ghostty
 ok   Autostart  /home/u/.config/autostart/rstory.desktop
 

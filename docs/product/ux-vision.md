@@ -354,7 +354,7 @@ Avoid: clip, item, snippet, buffer, paste (rstory never pastes), service.
 | `cli.inactive` | No clipboard access in this session. Run `rstory doctor` for details. |
 | `cli.readonly` | (daemon not running, read-only) |
 | `install.autostart.done` | Autostart installed: {path}. rstory starts at your next login, or run `rstory daemon` now. |
-| `install.gnome.done` | GNOME extension installed. Log out and back in, then run: gnome-extensions enable rstory@lucasvmigotto.github.io |
+| `install.gnome.done` | GNOME extension installed. Log out and back in, then run: gnome-extensions enable rstory@lucasvmigotto.me |
 | `doctor.all_ok` | Everything looks good. |
 
 The CLI and picker strings are Rust constants grouped by key (English

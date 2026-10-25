@@ -18,11 +18,11 @@
 
 **Why this priority**: The v0.1 gate on the owner's GNOME 48 needs a panel icon, with no AppIndicator.
 
-**Independent Test**: Run with `XDG_DATA_HOME` set to a temp dir. The files appear under `gnome-shell/extensions/rstory@lucasvmigotto.github.io/`, `metadata.json` lists shell-version 48–50 and the rstory version, and the output explains the re-login.
+**Independent Test**: Run with `XDG_DATA_HOME` set to a temp dir. The files appear under `gnome-shell/extensions/rstory@lucasvmigotto.me/`, `metadata.json` lists shell-version 48–50 and the rstory version, and the output explains the re-login.
 
 **Acceptance Scenarios**:
 
-1. **Given** no extension installed, **When** `rstory install-gnome-extension` runs, **Then** it writes `metadata.json`, `extension.js`, `stylesheet.css` and the icons, and prints "Log out and back in, then run: gnome-extensions enable rstory@lucasvmigotto.github.io".
+1. **Given** no extension installed, **When** `rstory install-gnome-extension` runs, **Then** it writes `metadata.json`, `extension.js`, `stylesheet.css` and the icons, and prints "Log out and back in, then run: gnome-extensions enable rstory@lucasvmigotto.me".
 2. **Given** `--enable`, **When** `gnome-extensions` is on `PATH`, **Then** it also runs `gnome-extensions enable …` and reports the result.
 3. **Given** an older version installed, **When** the command runs, **Then** the files are replaced and the output says a re-login is needed to load the new version.
 4. **Given** `--uninstall`, **When** it runs, **Then** the directory is removed (after `gnome-extensions disable` when available).
@@ -57,7 +57,7 @@ Once enabled, the extension shows an rstory icon in the top bar with the same me
 ### Functional Requirements
 
 - **FR-001**: The extension source MUST live in `extension/` in the repository and be embedded in the binary with `include_dir`.
-- **FR-002**: `metadata.json` MUST declare `uuid: rstory@lucasvmigotto.github.io`, `shell-version: ["48","49","50"]` (51 is added once extensions.gnome.org accepts it and its manual check passes; decision 2026-10-24) and `version-name` equal to the crate version.
+- **FR-002**: `metadata.json` MUST declare `uuid: rstory@lucasvmigotto.me`, `shell-version: ["48","49","50"]` (51 is added once extensions.gnome.org accepts it and its manual check passes; decision 2026-10-24) and `version-name` equal to the crate version.
 - **FR-003**: The extension MUST be an ESM extension (`export default class … extends Extension`) using `PanelMenu.Button` and `PopupMenu`.
 - **FR-004**: It MUST talk only through the control socket (protocol v1), using `Gio.SocketClient` + `Gio.UnixSocketAddress` and line-based reads. No D-Bus, no subprocess.
 - **FR-005**: It MUST contain no history logic: everything it shows comes from `list`, `status` and `subscribe`.
@@ -79,4 +79,4 @@ Once enabled, the extension shows an rstory icon in the top bar with the same me
 
 ## Assumptions
 
-- UUID `rstory@lucasvmigotto.github.io` (architecture §13).
+- UUID `rstory@lucasvmigotto.me` (architecture §13).
