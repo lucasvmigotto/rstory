@@ -4,10 +4,10 @@ Written by `repo:sync` (`plugins/repo/references/sync.md`): the tracker items th
 mirror this feature. Commits and pull requests reference the `Item` column.
 
 - Platform: github (lucasvmigotto/rstory)
-- Last sync: 2026-10-22
+- Last sync: 2026-10-25
 
 | Key | Item | Id | State | Hash | URL |
 |---|---|---|---|---|---|
-| feature | #43 | 5984278116 | todo | f11c980fd6 | https://github.com/lucasvmigotto/rstory/issues/43 |
-| US1 | #44 | 5984278322 | todo | d7b97934a4 | https://github.com/lucasvmigotto/rstory/issues/44 |
-| US2 | #45 | 5984278875 | todo | 08bdbce28f | https://github.com/lucasvmigotto/rstory/issues/45 |
+| feature | #43 | 5984278116 | done | b2f160439e | https://github.com/lucasvmigotto/rstory/issues/43 |
+| US1 | #44 | 5984278322 | done | 893c7e9a02 | https://github.com/lucasvmigotto/rstory/issues/44 |
+| US2 | #45 | 5984278875 | done | 917b8bc0c6 | https://github.com/lucasvmigotto/rstory/issues/45 |
