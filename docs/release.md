@@ -296,10 +296,21 @@ matrix passes and Shexli accepts it.
 
 ## Every later release (0.1.1 on)
 
-1. On a branch off `dev`, bump `version` in `Cargo.toml`, update `Cargo.lock` with `cargo update
-   --workspace` inside `make shell` (the diff must change only rstory's own version), and open the
-   release PR. Copy the "Tier-1 manual matrix: sign-off" table into the PR body and
-   fill it in.
+1. On a branch off `dev` (after merging `main` back into `dev`, so the last tag is reachable),
+   run `make release-plan`: it prints the version the commits since the last tag warrant and the
+   CHANGELOG section, and exits 3 when nothing releasable happened (docs, ci, chore, test and
+   style commits alone). Then `make release-prepare` bumps `Cargo.toml`, `Cargo.lock`,
+   `extension/metadata.json` (`version-name`) and the docs site's `cli-help.json` together and
+   writes `CHANGELOG.md`. Commit it as `chore(release): X.Y.Z` and open the release PR. Copy the
+   "Tier-1 manual matrix: sign-off" table into the PR body and fill it in.
+
+   The rules (`scripts/release.py`, tested by `make sc001-test`): `feat`, `fix`, `perf` and
+   `refactor` raise the patch; `!` or a `BREAKING CHANGE:` footer raises the minor; docs, ci, chore,
+   test, style and build commits and merge commits count for nothing. From 1.0.0 `feat` raises the
+   minor and a breaking change the major. 1.0.0 itself is a decision: `python3 scripts/release.py
+   --version 1.0.0`. A `## Unreleased` section in `CHANGELOG.md` is renamed instead of generated,
+   so hand-written notes win. Never bump a version file by hand: the script refuses to run when
+   the files and the last tag disagree.
 2. Promote `dev` to `main` with a PR; `ci-ok` must be green on it.
 3. Nothing to tag: the push to `main` runs `tag.yml`, which tags the merge commit `X.Y.Z` and
    dispatches `release.yml`. If that run failed (tag rejected, dispatch failed), fix the cause and
@@ -311,6 +322,10 @@ matrix passes and Shexli accepts it.
 5. Check: crates.io shows `X.Y.Z` published by the trusted publisher (ADR-0009 Confirmation); the
    GitHub release has both tarballs and `SHA256SUMS`; `sha256sum -c SHA256SUMS` passes on a
    download.
+6. The release's last job starts `docs.yml`, which deploys the site to
+   <https://docs.lucasvmigotto.me/rstory/> (a `workflow_run` trigger cannot do it: the release run
+   is started by `tag.yml` with the built-in token, and such a run raises no `workflow_run`). To
+   redeploy a released tag by hand: `gh workflow run docs.yml --ref main -f tag=X.Y.Z`.
 
 **Token retirement** (SC-001): after 0.1.1 is published by the workflow, revoke the personal
 token on crates.io and delete its password-store entry. Optionally enable the crate's
