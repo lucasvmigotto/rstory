@@ -322,6 +322,10 @@ matrix passes and Shexli accepts it.
 5. Check: crates.io shows `X.Y.Z` published by the trusted publisher (ADR-0009 Confirmation); the
    GitHub release has both tarballs and `SHA256SUMS`; `sha256sum -c SHA256SUMS` passes on a
    download.
+6. The release's last job starts `docs.yml`, which deploys the site to
+   <https://docs.lucasvmigotto.me/rstory/> (a `workflow_run` trigger cannot do it: the release run
+   is started by `tag.yml` with the built-in token, and such a run raises no `workflow_run`). To
+   redeploy a released tag by hand: `gh workflow run docs.yml --ref main -f tag=X.Y.Z`.
 
 **Token retirement** (SC-001): after 0.1.1 is published by the workflow, revoke the personal
 token on crates.io and delete its password-store entry. Optionally enable the crate's

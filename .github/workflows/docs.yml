@@ -25,6 +25,15 @@ on:
   workflow_run:
     workflows: [release]
     types: [completed]
+  # release.yml starts this after its GitHub release: a run started by the built-in token (tag.yml's
+  # dispatch) does not raise workflow_run when it ends, but a workflow_dispatch it sends does. The
+  # owner can run it too, to redeploy a released tag: gh workflow run docs.yml --ref main -f tag=X.Y.Z
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: The released version to deploy (plain X.Y.Z, already on main).
+        type: string
+        required: true
 
 permissions: {}
 
@@ -99,9 +108,10 @@ jobs:
     # Gate: a successful release run caused by a tag push or by tag.yml's dispatch (a manual dry run is
     # workflow_dispatch and never matches). The tag itself is checked in the first step.
     if: >-
-      github.event_name == 'workflow_run' &&
+      (github.event_name == 'workflow_run' &&
       github.event.workflow_run.conclusion == 'success' &&
-      (github.event.workflow_run.event == 'push' || github.event.workflow_run.event == 'repository_dispatch')
+      (github.event.workflow_run.event == 'push' || github.event.workflow_run.event == 'repository_dispatch')) ||
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
@@ -121,14 +131,22 @@ jobs:
       R2_PREFIX: /rstory/
       # Event data reaches shell steps only through env.
       RUN_TITLE: ${{ github.event.workflow_run.display_title }}
+      EVENT_NAME: ${{ github.event_name }}
+      INPUT_TAG: ${{ inputs.tag }}
     steps:
       # A dispatch run's head_branch/head_sha are the default branch's, not the release's, so both
       # come from the run's title, which release.yml sets to "release X.Y.Z <40-hex sha>" for either
       # trigger. The run succeeded, so its verify job already checked this tag and commit.
-      - name: The release run was for a plain X.Y.Z tag at a full commit
+      # A dispatch names only the tag: the checkout below resolves it, and the next steps check it.
+      - name: The release is a plain X.Y.Z tag (at a full commit, for a finished release run)
         id: release
         run: |
           set -euo pipefail
+          if [ "$EVENT_NAME" = workflow_dispatch ]; then
+            [[ "$INPUT_TAG" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::tag must be a plain X.Y.Z"; exit 1; }
+            echo "tag=$INPUT_TAG" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           re='^release ([0-9]+\.[0-9]+\.[0-9]+) ([0-9a-f]{40})$'
           if ! [[ "$RUN_TITLE" =~ $re ]]; then
             echo "::error::the release run is not for a plain X.Y.Z tag; nothing is deployed"; exit 1
@@ -140,7 +158,7 @@ jobs:
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ steps.release.outputs.sha }}
+          ref: ${{ steps.release.outputs.sha || format('refs/tags/{0}', steps.release.outputs.tag) }}
           fetch-depth: 0 # tags: the footer shows rstory@vX.Y.Z, linked to the tag
           persist-credentials: false
 
@@ -152,6 +170,11 @@ jobs:
           [ "$(git rev-parse "refs/tags/$TAG^{commit}")" = "$(git rev-parse HEAD)" ] || { echo "::error::tag $TAG is not the release commit"; exit 1; }
           version=$(sed -n 's/^version *= *"\([^"]*\)".*/\1/p' Cargo.toml | head -n1)
           [ "$version" = "$TAG" ] || { echo "::error::tag $TAG != Cargo.toml version $version"; exit 1; }
+          if [ "$EVENT_NAME" = workflow_dispatch ]; then
+            # A release run already verified a run-triggered deploy; a dispatch has to prove it itself.
+            git fetch --quiet origin main
+            git merge-base --is-ancestor HEAD origin/main || { echo "::error::tag $TAG is not on main"; exit 1; }
+          fi
 
       - name: Point the docs volumes at runner-local directories
         run: |
@@ -194,6 +217,11 @@ jobs:
             --endpoint-url "$R2_ENDPOINT" --content-type "text/javascript; charset=utf-8" --cache-control "no-cache"
           aws s3 cp docs/site/dist/favicon.svg "s3://$R2_BUCKET${R2_PREFIX}favicon.svg" \
             --endpoint-url "$R2_ENDPOINT" --content-type "image/svg+xml" --cache-control "public, max-age=86400"
+
+      - name: Sync the social banner (og.png, a day)
+        run: |
+          aws s3 cp docs/site/dist/og.png "s3://$R2_BUCKET${R2_PREFIX}og.png" \
+            --endpoint-url "$R2_ENDPOINT" --content-type "image/png" --cache-control "public, max-age=86400"
 
       - name: Sync llms.txt and llms-full.txt (no-cache)
         run: |
