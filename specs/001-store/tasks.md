@@ -18,9 +18,9 @@ description: "Task list for Store & history"
 
 ## Phase 1: Setup
 
-- [x] T001 Create the crate skeleton: `Cargo.toml` (edition 2024, `license = "GPL-3.0-or-later"`, `rust-version`), `src/main.rs`, `src/lib.rs` with `#![forbid(unsafe_code)]` and the module tree from plan.md — Executor: builder · Reviewer: thinker · Effort: low
-- [x] T002 [P] Add `rust-toolchain.toml` (pinned), `rustfmt.toml`, `clippy.toml`, `deny.toml` (bans F3, licenses F4) — Executor: builder · Reviewer: thinker · Effort: low
-- [x] T003 [P] Add `tests/fitness/boundaries.rs` (F1 module-dependency rules from architecture §5.3) — failing until modules exist — Executor: builder · Reviewer: thinker
+- [x] T001 Create the crate skeleton: `Cargo.toml` (edition 2024, `license = "GPL-3.0-or-later"`, `rust-version`), `src/main.rs`, `src/lib.rs` with `#![forbid(unsafe_code)]` and the module tree from plan.md — Executor: builder · Reviewer: thinker · Effort: low · Tokens: projected — | used 827k
+- [x] T002 [P] Add `rust-toolchain.toml` (pinned), `rustfmt.toml`, `clippy.toml`, `deny.toml` (bans F3, licenses F4) — Executor: builder · Reviewer: thinker · Effort: low · Tokens: with T001
+- [x] T003 [P] Add `tests/fitness/boundaries.rs` (F1 module-dependency rules from architecture §5.3) — failing until modules exist — Executor: builder · Reviewer: thinker · Tokens: with T001
 
 ---
 
@@ -28,8 +28,8 @@ description: "Task list for Store & history"
 
 **⚠️ CRITICAL**: blocks every story in this feature.
 
-- [x] T004 [P] Define `Fs` abstraction with real and fault-injecting implementations in `src/store/fs.rs` (used by crash tests) — Executor: builder · Reviewer: thinker
-- [x] T005 [P] Implement `config` caps parsing/validation with defaults (20/10/1 MiB/7d) in `src/config/mod.rs` + unit tests — Executor: builder · Reviewer: thinker
+- [x] T004 [P] Define `Fs` abstraction with real and fault-injecting implementations in `src/store/fs.rs` (used by crash tests) — Executor: builder · Reviewer: thinker · Tokens: with T001
+- [x] T005 [P] Implement `config` caps parsing/validation with defaults (20/10/1 MiB/7d) in `src/config/mod.rs` + unit tests — Executor: builder · Reviewer: thinker · Tokens: with T001
 
 **Checkpoint**: foundation ready.
 
@@ -41,13 +41,13 @@ description: "Task list for Store & history"
 
 ### Tests for User Story 1 ⚠️
 
-- [x] T006 [P] [US1] proptest crash-injection suite in `tests/store_crash.rs` (SC-001) — Executor: builder · Reviewer: thinker
-- [x] T007 [P] [US1] permission tests (dir 0700, files 0600, `store_too_open`) in `tests/fitness/perms.rs` (F9) — Executor: builder · Reviewer: thinker
-- [x] T008 [P] [US1] orphan-sweep and unknown-version tests in `tests/store_open.rs` — Executor: builder · Reviewer: thinker
+- [x] T006 [P] [US1] proptest crash-injection suite in `tests/store_crash.rs` (SC-001) — Executor: builder · Reviewer: thinker · Tokens: projected — | used 672k
+- [x] T007 [P] [US1] permission tests (dir 0700, files 0600, `store_too_open`) in `tests/fitness/perms.rs` (F9) — Executor: builder · Reviewer: thinker · Tokens: with T006
+- [x] T008 [P] [US1] orphan-sweep and unknown-version tests in `tests/store_open.rs` — Executor: builder · Reviewer: thinker · Tokens: with T006
 
 ### Implementation for User Story 1
 
-- [x] T009 [US1] Backend implementation — see `## Backend` (appended by `backend:spec`) — Executor: builder · Reviewer: thinker
+- [x] T009 [US1] Backend implementation — see `## Backend` (appended by `backend:spec`) — Executor: builder · Reviewer: thinker · Tokens: with T006
 
 **Checkpoint**: User Story 1 passes its tests independently.
 
@@ -113,22 +113,22 @@ Appended by `backend:spec`. Built by `backend:build` (ticks only this section). 
 
 ### Backend Setup
 
-- [x] T018 Add deps (serde, serde_json, blake3 `pure`, rustix `fs`, time, rand, thiserror, tracing) and dev-deps (proptest, tempfile) to `Cargo.toml` — Executor: builder · Reviewer: thinker · Effort: low
+- [x] T018 Add deps (serde, serde_json, blake3 `pure`, rustix `fs`, time, rand, thiserror, tracing) and dev-deps (proptest, tempfile) to `Cargo.toml` — Executor: builder · Reviewer: thinker · Effort: low · Tokens: with T001
 
 **Checkpoint**: `cargo build` and `cargo test` green; setup pieces covered by unit tests.
 
 ### Backend Foundational
 
-- [x] T019 `Redacted<T>` wrapper + tracing init helper in `src/domain/redact.rs`, `src/daemon/log.rs` — Executor: builder · Reviewer: thinker
-- [x] T020 `EntryId` (ULID layout), `ShortId`, `EntryRef` value objects with unit tests in `src/domain/ids.rs` — Executor: builder · Reviewer: thinker
+- [x] T019 `Redacted<T>` wrapper + tracing init helper in `src/domain/redact.rs`, `src/daemon/log.rs` — Executor: builder · Reviewer: thinker · Tokens: with T001
+- [x] T020 `EntryId` (ULID layout), `ShortId`, `EntryRef` value objects with unit tests in `src/domain/ids.rs` — Executor: builder · Reviewer: thinker · Tokens: with T001
 
 **Checkpoint**: `cargo build` and `cargo test` green; foundational pieces covered by unit tests.
 
 ### Backend US1 — Recorded entries survive restarts
 
-- [x] T021 [US1] `Content`, `ContentHash`, `Preview` value objects in `src/domain/entry.rs` — Executor: builder · Reviewer: thinker
-- [x] T022 [US1] Atomic write helpers + `Store::open_exclusive` with perms check and orphan sweep in `src/store/{mod,fs,perms}.rs` — Executor: builder · Reviewer: reviewer · Effort: high
-- [x] T023 [US1] Index v1 serde types + load/commit in `src/store/index.rs` — Executor: builder · Reviewer: thinker
+- [x] T021 [US1] `Content`, `ContentHash`, `Preview` value objects in `src/domain/entry.rs` — Executor: builder · Reviewer: thinker · Tokens: with T006
+- [x] T022 [US1] Atomic write helpers + `Store::open_exclusive` with perms check and orphan sweep in `src/store/{mod,fs,perms}.rs` — Executor: builder · Reviewer: reviewer · Effort: high · Tokens: with T006
+- [x] T023 [US1] Index v1 serde types + load/commit in `src/store/index.rs` — Executor: builder · Reviewer: thinker · Tokens: with T006
 
 **Checkpoint**: the US1 tests in this file's story phase pass (`cargo test`), plus the contract tests where they apply.
 

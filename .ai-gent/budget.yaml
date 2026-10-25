@@ -1,0 +1,6 @@
+session_billable: 8M          # cap for the current session
+week_billable: 40M            # cap for the last 7 days, every project of the account
+reserve_pct: 10               # left unspent
+coordinator_overhead_pct: 38  # the main thread's cost on top of the subagents' (measured on rstory)
+max_opus: 1                   # concurrent Opus subagents
+max_agents: 2                 # concurrent subagents
